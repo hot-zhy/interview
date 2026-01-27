@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+    (function() {
+        // Get the correct window object
+        const win = (window.parent !== window) ? window.parent : window;
+        
+        function restoreAuth() {
+            try {
+                const authData = win.localStorage.getItem('auth_data');
+                if (authData) {
+                    const data = JSON.parse(authData);
+                    if (data.authenticated && data.user_id && data.user_email) {
+                        const url = new URL(win.location);
+                        if (!url.searchParams.has('_auth_loaded')) {
+                            url.searchParams.set('_auth_user_id', data.user_id);
+                            url.searchParams.set('_auth_user_email', encodeURIComponent(data.user_email));
+                            url.searchParams.set('_auth_authenticated', 'true');
+                            url.searchParams.set('_auth_loaded', '1');
+                            win.history.replaceState({}, '', url);
+                            win.location.reload();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Auth restore error:', e);
+            }
+        }
+        
+        if (win.document.readyState === 'loading') {
+            win.document.addEventListener('DOMContentLoaded', restoreAuth);
+        } else {
+            setTimeout(restoreAuth, 100);
+        }
+    })();
+    </script>
+</head>
+<body></body>
+</html>
+
