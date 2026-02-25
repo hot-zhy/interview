@@ -182,37 +182,40 @@ def main():
                     else:
                         # Audio recording: use component that returns bytes to Python (no hidden input / sessionStorage)
                         st.info("💡 点击下方录音按钮，录完后将自动提交；分析在后台进行，面试结束后可在报告中查看结果。")
-                        if st.session_state.get("_audio_last_round") != session.current_round:
-                            st.session_state["_audio_last_hash"] = None
-                        st.session_state["_audio_last_round"] = session.current_round
+                        # 不要在新轮次清空 _audio_last_hash，否则 rerun 后同段短录音会反复被当作“新录音”重复提交
 
                         wav_audio_data = st_audiorec()
                         if wav_audio_data is not None:
                             import hashlib
-                            h = hashlib.sha256(wav_audio_data).hexdigest()
-                            # 避免 rerun 后同一段音频被重复提交导致多题一次出现
-                            already_submitted = (
-                                st.session_state.get("_audio_submitted_round") == session.current_round
-                                and st.session_state.get("_audio_last_hash") == h
-                            )
-                            if not already_submitted and st.session_state.get("_audio_last_hash") != h:
-                                st.session_state["_audio_last_hash"] = h
-                                audio_data = {
-                                    "audioData": base64.b64encode(wav_audio_data).decode("utf-8"),
-                                    "audioFormat": "wav",
-                                    "duration": 0,
-                                }
-                                with st.spinner("正在提交并分析语音回答..."):
-                                    result = submit_answer(
-                                        db, session_id, answer_text=None, answer_type="audio", audio_data=audio_data
-                                    )
-                                if "error" in result:
-                                    st.error(result["error"])
-                                else:
-                                    # 标记本轮已提交，防止 rerun 后同段音频再次提交
-                                    st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
-                                    st.session_state.avatar_state = "idle"
-                                    st.rerun()
+                            # 过短录音（如刚点 start 就 stop）不提交，避免误触导致整场面试被刷完
+                            MIN_AUDIO_BYTES = 8000  # 约 0.25 秒 16kHz 16bit 单声道
+                            if len(wav_audio_data) < MIN_AUDIO_BYTES:
+                                st.warning("⚠️ 录音太短，请录制至少约 1 秒后再提交。")
+                            else:
+                                h = hashlib.sha256(wav_audio_data).hexdigest()
+                                # 避免 rerun 后同一段音频被重复提交（同一轮次且同一 hash 视为已提交）
+                                already_submitted = (
+                                    st.session_state.get("_audio_submitted_round") == session.current_round
+                                    and st.session_state.get("_audio_last_hash") == h
+                                )
+                                if not already_submitted and st.session_state.get("_audio_last_hash") != h:
+                                    st.session_state["_audio_last_hash"] = h
+                                    audio_data = {
+                                        "audioData": base64.b64encode(wav_audio_data).decode("utf-8"),
+                                        "audioFormat": "wav",
+                                        "duration": 0,
+                                    }
+                                    with st.spinner("正在提交并分析语音回答..."):
+                                        result = submit_answer(
+                                            db, session_id, answer_text=None, answer_type="audio", audio_data=audio_data
+                                        )
+                                    if "error" in result:
+                                        st.error(result["error"])
+                                    else:
+                                        # 标记本轮已提交，防止 rerun 后同段音频再次提交
+                                        st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
+                                        st.session_state.avatar_state = "idle"
+                                        st.rerun()
 
                         st.session_state.avatar_state = "listening"
 
