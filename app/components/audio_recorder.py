@@ -110,8 +110,13 @@ def render_audio_recorder(key: str = "audio_recorder"):
                             sessionStorage.removeItem('audio_downloaded_{key}');
                             console.log('Audio recorded and stored, duration:', duration, 's');
                             
-                            statusSpan.textContent = '✅ 录音已保存，请上传音频文件';
+                            statusSpan.textContent = '✅ 录音已保存，正在自动提交分析...';
                             statusSpan.style.color = '#51cf66';
+                            
+                            // Notify page to auto-submit so backend starts analysis without extra click
+                            try {{
+                                window.dispatchEvent(new CustomEvent('audio_recording_stopped_{key}'));
+                            }} catch (e) {{ console.warn('Dispatch event:', e); }}
                         }};
                         reader.readAsDataURL(audioBlob);
                         

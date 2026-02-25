@@ -3,7 +3,7 @@ import streamlit as st
 from sqlalchemy.orm import Session
 from backend.db.base import get_db
 from backend.db.models import (
-    User, Resume, QuestionBank, InterviewSession, Evaluation
+    User, Resume, QuestionBank, InterviewSession, Evaluation, AskedQuestion
 )
 from sqlalchemy import func
 from app.components.auth_utils import init_session_state, check_auth
@@ -57,11 +57,12 @@ def main():
                 
                 # Get average score if completed
                 if session.status == "completed":
-                    avg_score = db.query(func.avg(Evaluation.overall_score)).join(
-                        AskedQuestion
-                    ).filter(
-                        AskedQuestion.session_id == session.id
-                    ).scalar()
+                    avg_score = (
+                        db.query(func.avg(Evaluation.overall_score))
+                        .join(AskedQuestion, Evaluation.asked_question)
+                        .filter(AskedQuestion.session_id == session.id)
+                        .scalar()
+                    )
                     
                     if avg_score:
                         st.metric("平均得分", f"{avg_score:.2f}")

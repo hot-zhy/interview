@@ -1,0 +1,50 @@
+% System Architecture Diagram
+% Use with: \input{figures/architecture.tex}
+
+\begin{tikzpicture}[
+    node distance=1.5cm and 2cm,
+    box/.style={rectangle, draw, fill=blue!20, text width=3.5cm, text centered, minimum height=1cm, rounded corners},
+    service/.style={rectangle, draw, fill=green!20, text width=3cm, text centered, minimum height=0.8cm, rounded corners},
+    data/.style={cylinder, draw, fill=orange!20, text width=2.5cm, text centered, minimum height=1cm, shape border rotate=90},
+    arrow/.style={->, >=stealth, thick}
+]
+
+% Presentation Layer
+\node[box, fill=blue!30] (ui) {Presentation Layer\\Streamlit UI};
+
+% Business Logic Layer
+\node[service, below=of ui, xshift=-3cm] (engine) {Adaptive\\Interview Engine};
+\node[service, right=of engine] (selector) {Question\\Selector};
+\node[service, right=of selector] (evaluator) {Evaluation\\Engine};
+\node[service, below=of engine] (parser) {Resume\\Parser};
+\node[service, right=of parser] (speech) {Speech\\Analyzer};
+\node[service, right=of speech] (report) {Report\\Generator};
+
+% Data Layer
+\node[data, below=of parser, xshift=3cm] (db) {Database\\SQLAlchemy ORM};
+
+% Connections
+\draw[arrow] (ui) -- (engine);
+\draw[arrow] (ui) -- (selector);
+\draw[arrow] (ui) -- (evaluator);
+\draw[arrow] (ui) -- (report);
+
+\draw[arrow] (engine) -- (selector);
+\draw[arrow] (selector) -- (evaluator);
+\draw[arrow] (parser) -- (selector);
+\draw[arrow] (speech) -- (evaluator);
+\draw[arrow] (evaluator) -- (report);
+
+\draw[arrow] (engine) -- (db);
+\draw[arrow] (selector) -- (db);
+\draw[arrow] (evaluator) -- (db);
+\draw[arrow] (parser) -- (db);
+\draw[arrow] (report) -- (db);
+
+% Labels
+\node[above=0.2cm of ui] {\textbf{User Interface}};
+\node[above=0.2cm of engine, xshift=-1.5cm] {\textbf{Business Logic Layer}};
+\node[below=0.2cm of db] {\textbf{Data Layer}};
+
+\end{tikzpicture}
+

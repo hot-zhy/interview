@@ -4,11 +4,28 @@
 """
 import math
 from typing import List, Optional, Dict, Tuple
+from difflib import SequenceMatcher
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from backend.db.models import (
     InterviewSession, AskedQuestion, Evaluation, QuestionBank
 )
+from backend.core.config import settings
+
+try:
+    from rapidfuzz import fuzz as _rf_fuzz  # type: ignore
+except Exception:  # pragma: no cover
+    _rf_fuzz = None
+
+
+def _partial_ratio(a: str, b: str) -> int:
+    a = (a or "").lower()
+    b = (b or "").lower()
+    if not a or not b:
+        return 0
+    if _rf_fuzz is not None:
+        return int(_rf_fuzz.partial_ratio(a, b))
+    return int(SequenceMatcher(None, a, b).ratio() * 100)
 
 
 class AdaptiveInterviewEngine:
@@ -135,6 +152,10 @@ class AdaptiveInterviewEngine:
         Returns:
             建议的难度等级 (1-5)
         """
+        # Strategy switch (backward compatible default: "heuristic")
+        if getattr(settings, "difficulty_strategy", "heuristic") == "target_score_control":
+            return self._calculate_difficulty_target_score_control()
+
         # 获取最近的评估
         recent_asked = self.db.query(AskedQuestion).filter(
             AskedQuestion.session_id == self.session.id
@@ -186,6 +207,53 @@ class AdaptiveInterviewEngine:
             new_difficulty = max(current_difficulty - 1, 1)
         
         return new_difficulty
+
+    def _calculate_difficulty_target_score_control(self) -> int:
+        """
+        A slightly more advanced difficulty controller:
+        - Targets a desired score level (settings.target_score)
+        - Uses proportional error + trend (derivative-like) to adjust difficulty
+        - Smooths using a small window (self.window_size)
+        """
+        recent_asked = self.db.query(AskedQuestion).filter(
+            AskedQuestion.session_id == self.session.id
+        ).order_by(AskedQuestion.created_at.desc()).limit(self.window_size).all()
+
+        if not recent_asked:
+            return self.session.level
+
+        scores: List[float] = []
+        difficulties: List[int] = []
+        for aq in reversed(recent_asked):
+            if aq.evaluation:
+                scores.append(float(aq.evaluation.overall_score))
+                difficulties.append(int(aq.difficulty))
+
+        if not scores:
+            return self.session.level
+
+        current_difficulty = difficulties[-1] if difficulties else self.session.level
+        target = float(getattr(settings, "target_score", 0.70))
+        kp = float(getattr(settings, "difficulty_kp", 1.2))
+        kd = float(getattr(settings, "difficulty_kd", 0.6))
+        step = float(getattr(settings, "difficulty_step", 1.0))
+
+        # Window average and trend
+        avg = sum(scores) / len(scores)
+        trend = scores[-1] - scores[-2] if len(scores) >= 2 else 0.0
+
+        # Control signal (positive => increase difficulty if avg > target)
+        error = avg - target
+        delta = kp * error + kd * trend
+
+        # Convert to discrete step with clipping
+        # We cap per-update magnitude to avoid oscillation
+        delta = max(-step, min(step, delta))
+        if abs(delta) < 0.15:
+            return current_difficulty
+
+        new_difficulty = current_difficulty + (1 if delta > 0 else -1)
+        return max(1, min(5, new_difficulty))
     
     def _count_followups_for_question(self, asked_question_id: int) -> int:
         """统计某个问题被追问的次数"""
@@ -244,7 +312,6 @@ class AdaptiveInterviewEngine:
         
         # 检查该问题之后的 interviewer 消息是否包含类似的 missing_point
         from backend.db.models import InterviewTurn
-        from rapidfuzz import fuzz
         
         interviewer_turns = self.db.query(InterviewTurn).filter(
             InterviewTurn.session_id == self.session.id,
@@ -254,7 +321,7 @@ class AdaptiveInterviewEngine:
         
         for turn in interviewer_turns:
             # 检查相似度
-            similarity = fuzz.partial_ratio(missing_point.lower(), turn.content.lower())
+            similarity = _partial_ratio(missing_point, turn.content)
             if similarity > 70:  # 70% 相似度阈值
                 return True
         

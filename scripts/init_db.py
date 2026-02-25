@@ -59,6 +59,40 @@ def init_db():
         print(f"已创建的表 ({len(tables)} 个):")
         for table in sorted(tables):
             print(f"  - {table}")
+
+        # --- Ensure new columns for existing installations (idempotent fixups) ---
+        # Fix missing 'speech_analysis_json' on evaluations table for MySQL setups
+        try:
+            if "mysql" in settings.database_url:
+                eval_columns = [col["name"] for col in inspector.get_columns("evaluations")]
+                if "speech_analysis_json" not in eval_columns:
+                    print()
+                    print("检测到 evaluations 表缺少字段 'speech_analysis_json'，正在自动修复...")
+                    with engine.connect() as conn:
+                        # Prefer JSON type; fallback to TEXT if JSON is not supported
+                        try:
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE evaluations "
+                                    "ADD COLUMN speech_analysis_json JSON NULL"
+                                )
+                            )
+                            conn.commit()
+                            print("✅ 已添加字段 'speech_analysis_json' (JSON)")
+                        except Exception as inner_e:
+                            print(f"⚠️ 使用 JSON 类型添加字段失败，尝试使用 TEXT 类型: {inner_e}")
+                            conn.rollback()
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE evaluations "
+                                    "ADD COLUMN speech_analysis_json TEXT NULL"
+                                )
+                            )
+                            conn.commit()
+                            print("✅ 已添加字段 'speech_analysis_json' (TEXT)")
+        except Exception as fix_e:
+            # 不影响主流程，只打印提示
+            print(f"⚠️ 检查/修复 evaluations.speech_analysis_json 字段时出错: {fix_e}")
         
         print()
         print(f"数据库初始化完成: {settings.database_url}")

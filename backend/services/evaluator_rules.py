@@ -1,7 +1,22 @@
 """Rule-based evaluator (no LLM required)."""
 import re
 from typing import Dict, List
-from rapidfuzz import fuzz
+from difflib import SequenceMatcher
+
+try:
+    from rapidfuzz import fuzz as _rf_fuzz  # type: ignore
+except Exception:  # pragma: no cover
+    _rf_fuzz = None
+
+
+def _ratio(a: str, b: str) -> int:
+    a = (a or "").lower()
+    b = (b or "").lower()
+    if not a or not b:
+        return 0
+    if _rf_fuzz is not None:
+        return int(_rf_fuzz.token_set_ratio(a, b))
+    return int(SequenceMatcher(None, a, b).ratio() * 100)
 from backend.schemas.evaluation import Scores
 
 
@@ -32,7 +47,7 @@ def evaluate_answer(
     structure_scores = _evaluate_structure(user_answer)
     
     # Calculate similarity
-    similarity = fuzz.token_set_ratio(user_answer.lower(), correct_answer.lower()) / 100.0
+    similarity = _ratio(user_answer, correct_answer) / 100.0
     
     # Combine scores
     correctness = (coverage_scores['coverage'] * 0.6 + similarity * 0.4)
@@ -124,7 +139,8 @@ def _calculate_coverage(user_answer: str, key_points: List[str]) -> Dict:
     for point in key_points:
         point_lower = point.lower()
         # Check if point is covered
-        ratio = fuzz.partial_ratio(user_lower, point_lower) / 100.0
+        # Use token-set ratio as a robust approximation when RapidFuzz is unavailable
+        ratio = _ratio(user_lower, point_lower) / 100.0
         
         if ratio > 0.5:  # Threshold for coverage
             covered_count += 1
@@ -175,7 +191,7 @@ def _identify_missing_points(user_answer: str, key_points: List[str]) -> List[st
     
     for point in key_points:
         point_lower = point.lower()
-        ratio = fuzz.partial_ratio(user_lower, point_lower) / 100.0
+        ratio = _ratio(user_lower, point_lower) / 100.0
         
         if ratio < 0.5:  # Not well covered
             missing.append(point)

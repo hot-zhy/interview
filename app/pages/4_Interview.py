@@ -9,10 +9,9 @@ from backend.services.interview_engine import (
 from backend.core.config import settings
 from app.components.avatar import render_avatar
 from app.components.tts import speak_text
-from app.components.ui import show_evaluation
 from app.components.audio_submit import render_audio_submit
-from app.components.audio_recorder import render_audio_recorder
 from app.components.auth_utils import init_session_state, check_auth
+from st_audiorec import st_audiorec
 from app.components.auth_loader import load_auth_on_page_load
 import time
 import base64
@@ -181,471 +180,90 @@ def main():
                         if answer_text:
                             st.session_state.avatar_state = "listening"
                     else:
-                        # Audio recording - direct submit (no manual upload needed)
-                        st.info("💡 点击下方按钮开始录音，录音完成后点击停止，然后直接点击提交回答")
-                        render_audio_recorder(key="answer_audio")
-                        
-                        # JavaScript to auto-handle audio on submit
-                        # When submit button is clicked, automatically extract audio from sessionStorage
-                        # and create a file-like object for Python
-                        auto_handle_audio_js = f"""
-                        <script>
-                        (function() {{
-                            // This script runs when submit button is clicked
-                            // It extracts audio from sessionStorage and makes it available to Python
-                            
-                            function setupAudioAutoSubmit() {{
-                                // Find submit button
-                                const checkInterval = setInterval(function() {{
-                                    const submitBtn = document.querySelector('button[kind="primaryFormSubmit"]') ||
-                                                     Array.from(document.querySelectorAll('button')).find(btn => 
-                                                         btn.textContent && btn.textContent.trim() === '提交回答');
-                                    
-                                    if (submitBtn && !submitBtn.dataset.audioHandlerAdded) {{
-                                        submitBtn.dataset.audioHandlerAdded = 'true';
-                                        clearInterval(checkInterval);
-                                        
-                                        // Add click handler
-                                        submitBtn.addEventListener('click', function(e) {{
-                                            // Check if audio mode is selected
-                                            const radios = document.querySelectorAll('input[type="radio"]');
-                                            let isAudioMode = false;
-                                            radios.forEach(radio => {{
-                                                if (radio.checked) {{
-                                                    const label = document.querySelector(`label[for="${{radio.id}}"]`);
-                                                    if (label && label.textContent && label.textContent.includes('语音')) {{
-                                                        isAudioMode = true;
-                                                    }}
-                                                }}
-                                            }});
-                                            
-                                            if (isAudioMode) {{
-                                                // Get audio data from sessionStorage
-                                                const audioDataStr = sessionStorage.getItem('audio_data_answer_audio');
-                                                if (audioDataStr) {{
-                                                    try {{
-                                                        const audioData = JSON.parse(audioDataStr);
-                                                        const base64Data = audioData.audioData;
-                                                        const format = audioData.audioFormat || 'webm';
-                                                        
-                                                        // Store in a way Python can access
-                                                        // We'll use a hidden input with the base64 data
-                                                        // Note: This has size limits, but works for most audio
-                                                        const inputId = 'hidden_audio_base64_answer_audio';
-                                                        let input = document.getElementById(inputId);
-                                                        if (!input) {{
-                                                            input = document.createElement('input');
-                                                            input.type = 'hidden';
-                                                            input.id = inputId;
-                                                            input.name = 'audio_base64';
-                                                            document.body.appendChild(input);
-                                                        }}
-                                                        input.value = base64Data;
-                                                        
-                                                        // Also store metadata
-                                                        const metaInputId = 'hidden_audio_meta_answer_audio';
-                                                        let metaInput = document.getElementById(metaInputId);
-                                                        if (!metaInput) {{
-                                                            metaInput = document.createElement('input');
-                                                            metaInput.type = 'hidden';
-                                                            metaInput.id = metaInputId;
-                                                            metaInput.name = 'audio_meta';
-                                                            document.body.appendChild(metaInput);
-                                                        }}
-                                                        metaInput.value = JSON.stringify({{
-                                                            format: format,
-                                                            duration: audioData.duration
-                                                        }});
-                                                        
-                                                        // Store in sessionStorage for Python to check
-                                                        sessionStorage.setItem('audio_submit_ready', 'true');
-                                                        sessionStorage.setItem('audio_base64_data', base64Data);
-                                                        sessionStorage.setItem('audio_format', format);
-                                                        
-                                                        console.log('Audio data prepared for Python submission');
-                                                    }} catch(err) {{
-                                                        console.error('Error preparing audio:', err);
-                                                    }}
-                                                }} else {{
-                                                    console.warn('No audio data in sessionStorage');
-                                                }}
-                                            }}
-                                        }}, true);
-                                    }}
-                                }}, 500);
-                            }}
-                            
-                            setupAudioAutoSubmit();
-                        }})();
-                        </script>
-                        """
-                        st.components.v1.html(auto_handle_audio_js, height=0, width=0)
-                        
-                        # Check if audio data is ready for submission
-                        # We'll check this when submit button is clicked
-                        
-                        # JavaScript helper to auto-download recorded audio for upload
-                        auto_download_js = """
-                        <script>
-                        (function() {
-                            // Check if audio was recorded and not yet downloaded
-                            const audioDataStr = sessionStorage.getItem('audio_data_answer_audio');
-                            const downloadedFlag = sessionStorage.getItem('audio_downloaded_answer_audio');
-                            
-                            if (audioDataStr && !downloadedFlag) {
-                                try {
-                                    const audioData = JSON.parse(audioDataStr);
-                                    const base64Data = audioData.audioData;
-                                    const format = audioData.audioFormat || 'webm';
-                                    
-                                    // Create and trigger download
-                                    const link = document.createElement('a');
-                                    link.href = 'data:audio/' + format + ';base64,' + base64Data;
-                                    link.download = 'recording.' + format;
-                                    link.style.display = 'none';
-                                    document.body.appendChild(link);
-                                    
-                                    // Auto-click after a short delay
-                                    setTimeout(() => {
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        
-                                        // Mark as downloaded
-                                        sessionStorage.setItem('audio_downloaded_answer_audio', 'true');
-                                        
-                                        // Show message
-                                        const msg = document.createElement('div');
-                                        msg.id = 'audio-download-msg';
-                                        msg.innerHTML = '💡 录音文件已自动下载，请使用上方的"上传音频文件"功能上传该文件';
-                                        msg.style.cssText = 'padding: 10px; background: #e3f2fd; border-radius: 5px; margin: 10px 0; color: #1976d2;';
-                                        const uploader = document.querySelector('[data-testid="stFileUploader"]');
-                                        if (uploader && uploader.parentElement) {
-                                            uploader.parentElement.insertBefore(msg, uploader);
-                                        }
-                                    }, 500);
-                                } catch(e) {
-                                    console.error('Error creating download:', e);
+                        # Audio recording: use component that returns bytes to Python (no hidden input / sessionStorage)
+                        st.info("💡 点击下方录音按钮，录完后将自动提交；分析在后台进行，面试结束后可在报告中查看结果。")
+                        if st.session_state.get("_audio_last_round") != session.current_round:
+                            st.session_state["_audio_last_hash"] = None
+                        st.session_state["_audio_last_round"] = session.current_round
+
+                        wav_audio_data = st_audiorec()
+                        if wav_audio_data is not None:
+                            import hashlib
+                            h = hashlib.sha256(wav_audio_data).hexdigest()
+                            # 避免 rerun 后同一段音频被重复提交导致多题一次出现
+                            already_submitted = (
+                                st.session_state.get("_audio_submitted_round") == session.current_round
+                                and st.session_state.get("_audio_last_hash") == h
+                            )
+                            if not already_submitted and st.session_state.get("_audio_last_hash") != h:
+                                st.session_state["_audio_last_hash"] = h
+                                audio_data = {
+                                    "audioData": base64.b64encode(wav_audio_data).decode("utf-8"),
+                                    "audioFormat": "wav",
+                                    "duration": 0,
                                 }
-                            }
-                        })();
-                        </script>
-                        """
-                        st.components.v1.html(auto_download_js, height=0, width=0)
-                        
-                        # JavaScript to get audio data from sessionStorage and create download
-                        audio_helper_js = """
-                        <script>
-                        (function() {
-                            // Function to get audio data and create download link
-                            window.getAudioDataForSubmit = function() {
-                                try {
-                                    const audioDataStr = sessionStorage.getItem('audio_data_answer_audio');
-                                    if (audioDataStr) {
-                                        return JSON.parse(audioDataStr);
-                                    }
-                                } catch(e) {
-                                    console.error('Error getting audio data:', e);
-                                }
-                                return null;
-                            };
-                            
-                            // Function to create audio file from base64
-                            window.createAudioFile = function() {
-                                const audioData = window.getAudioDataForSubmit();
-                                if (!audioData) return null;
-                                
-                                const base64Data = audioData.audioData;
-                                const format = audioData.audioFormat || 'webm';
-                                const binaryString = atob(base64Data);
-                                const bytes = new Uint8Array(binaryString.length);
-                                for (let i = 0; i < binaryString.length; i++) {
-                                    bytes[i] = binaryString.charCodeAt(i);
-                                }
-                                const blob = new Blob([bytes], { type: `audio/${format}` });
-                                return new File([blob], `recording.${format}`, { type: `audio/${format}` });
-                            };
-                        })();
-                        </script>
-                        """
-                        st.components.v1.html(audio_helper_js, height=0, width=0)
-                        
+                                with st.spinner("正在提交并分析语音回答..."):
+                                    result = submit_answer(
+                                        db, session_id, answer_text=None, answer_type="audio", audio_data=audio_data
+                                    )
+                                if "error" in result:
+                                    st.error(result["error"])
+                                else:
+                                    # 标记本轮已提交，防止 rerun 后同段音频再次提交
+                                    st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
+                                    st.session_state.avatar_state = "idle"
+                                    st.rerun()
+
                         st.session_state.avatar_state = "listening"
-                    
-                    # Hidden text input to receive audio base64 data from JavaScript
-                    audio_base64_input = st.text_input(
-                        "Audio Base64 (hidden)",
-                        value="",
-                        key="audio_base64_hidden",
-                        label_visibility="collapsed"
-                    )
-                    
-                    # JavaScript to auto-populate hidden input from sessionStorage when audio is recorded
-                    auto_populate_js = """
-                    <script>
-                    (function() {
-                        let lastAudioData = null;
-                        
-                        function populateAudioData() {
-                            const audioDataStr = sessionStorage.getItem('audio_data_answer_audio');
-                            if (audioDataStr && audioDataStr !== lastAudioData) {
-                                lastAudioData = audioDataStr;
-                                
-                                // Find the hidden text input by looking for input with empty value
-                                // that's in a Streamlit text input container
-                                const allInputs = Array.from(document.querySelectorAll('input[type="text"]'));
-                                
-                                // Try to find input that's empty and in a stTextInput container
-                                let hiddenInput = null;
-                                for (let input of allInputs) {
-                                    const container = input.closest('[data-testid*="stTextInput"]');
-                                    if (container && input.value === '') {
-                                        hiddenInput = input;
-                                        break;
-                                    }
-                                }
-                                
-                                // If still not found, use the last empty input
-                                if (!hiddenInput) {
-                                    hiddenInput = allInputs.find(inp => inp.value === '');
-                                }
-                                
-                                if (hiddenInput) {
-                                    hiddenInput.value = audioDataStr;
-                                    // Trigger multiple events to ensure Streamlit detects the change
-                                    hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-                                    hiddenInput.dispatchEvent(new Event('blur', { bubbles: true }));
-                                    console.log('Auto-populated audio data into hidden input, size:', audioDataStr.length);
-                                }
-                            }
-                        }
-                        
-                        // Run immediately and also set up interval to check for new recordings
-                        populateAudioData();
-                        setInterval(populateAudioData, 500);
-                    })();
-                    </script>
-                    """
-                    st.components.v1.html(auto_populate_js, height=0, width=0)
-                    
+
                     col_submit, col_end = st.columns([3, 1])
                     with col_submit:
-                        if st.button("提交回答", use_container_width=True, type="primary"):
+                        submit_clicked = st.button("提交回答", use_container_width=True, type="primary")
+
+                        if submit_clicked:
                             if answer_mode == "文字回答":
                                 if not answer_text or not answer_text.strip():
                                     st.warning("请先输入回答")
                                 else:
-                                    with st.spinner("正在评价..."):
+                                    with st.spinner("正在提交并评价..."):
                                         result = submit_answer(
                                             db, 
                                             session_id, 
                                             answer_text.strip(),
                                             answer_type="text"
                                         )
-                                    
                                     if "error" in result:
                                         st.error(result["error"])
                                     else:
-                                        # Show evaluation
-                                        if "evaluation" in result:
-                                            show_evaluation(result["evaluation"])
-                                        
-                                        # Update avatar state
+                                        # 分析结果在面试结束后于报告中统一查看
                                         st.session_state.avatar_state = "idle"
-                                        
                                         st.rerun()
                             else:
-                                # Audio answer - get audio data from hidden input populated by JavaScript
-                                # JavaScript will extract audio from sessionStorage and populate the hidden input
-                                
-                                # Set up JavaScript to extract audio and populate hidden input when submit is clicked
-                                extract_audio_js = f"""
-                                <script>
-                                (function() {{
-                                    function setupAudioExtraction() {{
-                                        // Find submit button
-                                        const submitBtn = Array.from(document.querySelectorAll('button')).find(btn => 
-                                            btn.textContent && btn.textContent.trim() === '提交回答');
-                                        
-                                        if (submitBtn && !submitBtn.dataset.audioExtractorSetup) {{
-                                            submitBtn.dataset.audioExtractorSetup = 'true';
-                                            
-                                            submitBtn.addEventListener('click', function(e) {{
-                                                // Small delay to ensure Streamlit has processed the click
-                                                setTimeout(function() {{
-                                                    // Check if we're in audio mode
-                                                    const audioModeRadios = document.querySelectorAll('input[type="radio"]');
-                                                    let isAudioMode = false;
-                                                    audioModeRadios.forEach(radio => {{
-                                                        if (radio.checked) {{
-                                                            const label = document.querySelector(`label[for="${{radio.id}}"]`);
-                                                            if (label && label.textContent && label.textContent.includes('语音')) {{
-                                                                isAudioMode = true;
-                                                            }}
-                                                        }}
-                                                    }});
-                                                    
-                                                    if (isAudioMode) {{
-                                                        // Get audio data from sessionStorage
-                                                        const audioDataStr = sessionStorage.getItem('audio_data_answer_audio');
-                                                        if (audioDataStr) {{
-                                                            try {{
-                                                                // Find the hidden text input by looking for input with key 'audio_base64_hidden'
-                                                                // Streamlit creates inputs with data-testid attributes
-                                                                const allInputs = Array.from(document.querySelectorAll('input[type="text"]'));
-                                                                let foundInput = null;
-                                                                
-                                                                // Try to find input that's hidden (has display:none or is in a hidden container)
-                                                                for (let input of allInputs) {{
-                                                                    const style = window.getComputedStyle(input);
-                                                                    const parent = input.closest('[data-testid*="stTextInput"]');
-                                                                    if (parent && (style.display === 'none' || input.value === '')) {{
-                                                                        foundInput = input;
-                                                                        break;
-                                                                    }}
-                                                                }}
-                                                                
-                                                                // If not found, try finding by position (should be near submit button)
-                                                                if (!foundInput && allInputs.length > 0) {{
-                                                                    // Find input that's empty and closest to submit button
-                                                                    const submitRect = submitBtn.getBoundingClientRect();
-                                                                    foundInput = allInputs.reduce((closest, input) => {{
-                                                                        if (input.value !== '') return closest;
-                                                                        const inputRect = input.getBoundingClientRect();
-                                                                        if (!closest) return input;
-                                                                        const closestRect = closest.getBoundingClientRect();
-                                                                        const dist1 = Math.abs(inputRect.top - submitRect.top);
-                                                                        const dist2 = Math.abs(closestRect.top - submitRect.top);
-                                                                        return dist1 < dist2 ? input : closest;
-                                                                    }}, null);
-                                                                }}
-                                                                
-                                                                if (foundInput) {{
-                                                                    // Store audio data as JSON string in the input
-                                                                    foundInput.value = audioDataStr;
-                                                                    foundInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                                                    foundInput.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                                                    // Also trigger focus/blur to ensure Streamlit detects the change
-                                                                    foundInput.focus();
-                                                                    foundInput.blur();
-                                                                    console.log('Audio data populated in hidden input, length:', audioDataStr.length);
-                                                                }} else {{
-                                                                    console.warn('Could not find hidden input to populate');
-                                                                    // Fallback: store in a data attribute on the submit button
-                                                                    submitBtn.dataset.audioData = audioDataStr;
-                                                                }}
-                                                            }} catch(err) {{
-                                                                console.error('Error extracting audio:', err);
-                                                            }}
-                                                        }} else {{
-                                                            console.warn('No audio data in sessionStorage');
-                                                        }}
-                                                    }}
-                                                }}, 100);
-                                            }}, true);
-                                        }} else if (!submitBtn) {{
-                                            setTimeout(setupAudioExtraction, 500);
-                                        }}
-                                    }}
-                                    
-                                    if (document.readyState === 'loading') {{
-                                        document.addEventListener('DOMContentLoaded', setupAudioExtraction);
-                                    }} else {{
-                                        setupAudioExtraction();
-                                    }}
-                                }})();
-                                </script>
-                                """
-                                st.components.v1.html(extract_audio_js, height=0, width=0)
-                                
-                                # Check if audio data was populated in the hidden input
-                                if audio_base64_input and audio_base64_input.strip():
-                                    try:
-                                        # Parse JSON data from hidden input
-                                        audio_data_dict = json.loads(audio_base64_input)
-                                        
-                                        # Process audio answer
-                                        with st.spinner("正在分析语音回答..."):
-                                            result = submit_answer(
-                                                db,
-                                                session_id,
-                                                answer_text=None,
-                                                answer_type="audio",
-                                                audio_data=audio_data_dict
-                                            )
-                                        
-                                        if "error" in result:
-                                            st.error(result["error"])
-                                        else:
-                                            # Show evaluation
-                                            if "evaluation" in result:
-                                                show_evaluation(result["evaluation"])
-                                            
-                                            # Update avatar state
-                                            st.session_state.avatar_state = "idle"
-                                            
-                                            # Clear audio data from session state
-                                            if "audio_base64_hidden" in st.session_state:
-                                                st.session_state.audio_base64_hidden = ""
-                                            
-                                            st.rerun()
-                                    except json.JSONDecodeError:
-                                        st.error("音频数据格式错误，请重新录音")
-                                    except Exception as e:
-                                        st.error(f"处理音频时出错：{str(e)}")
-                                else:
-                                    # No audio data yet - show fallback uploader
-                                    uploaded_audio_fallback = st.file_uploader(
-                                        "如果自动提交失败，请上传录音文件",
-                                        type=['webm', 'wav', 'mp3', 'ogg'],
-                                        key="audio_upload_fallback"
-                                    )
-                                    
-                                    if uploaded_audio_fallback:
-                                        # Process uploaded audio file
-                                        import base64
-                                        audio_bytes = uploaded_audio_fallback.read()
-                                        audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-                                        
-                                        audio_data = {
-                                            "audioData": audio_base64,
-                                            "audioFormat": uploaded_audio_fallback.name.split('.')[-1] if '.' in uploaded_audio_fallback.name else "webm",
-                                            "duration": 0
-                                        }
-                                        
-                                        with st.spinner("正在分析语音回答..."):
-                                            result = submit_answer(
-                                                db,
-                                                session_id,
-                                                answer_text=None,
-                                                answer_type="audio",
-                                                audio_data=audio_data
-                                            )
-                                        
-                                        if "error" in result:
-                                            st.error(result["error"])
-                                        else:
-                                            # Show evaluation
-                                            if "evaluation" in result:
-                                                show_evaluation(result["evaluation"])
-                                            
-                                            # Update avatar state
-                                            st.session_state.avatar_state = "idle"
-                                            
-                                            st.rerun()
+                                # Audio mode: component auto-submits when recording is done. If user clicked submit, show upload fallback.
+                                st.warning("⚠️ 请使用上方录音组件录完音（将自动提交），或在此上传录音文件")
+                                uploaded_audio_fallback = st.file_uploader(
+                                    "上传录音文件",
+                                    type=['webm', 'wav', 'mp3', 'ogg'],
+                                    key="audio_upload_fallback"
+                                )
+                                if uploaded_audio_fallback:
+                                    audio_bytes = uploaded_audio_fallback.read()
+                                    audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                                    ext = uploaded_audio_fallback.name.split('.')[-1] if '.' in uploaded_audio_fallback.name else "webm"
+                                    audio_data = {
+                                        "audioData": audio_b64,
+                                        "audioFormat": ext,
+                                        "duration": 0,
+                                    }
+                                    with st.spinner("正在提交并分析语音回答..."):
+                                        result = submit_answer(
+                                            db, session_id, answer_text=None, answer_type="audio", audio_data=audio_data
+                                        )
+                                    if "error" in result:
+                                        st.error(result["error"])
                                     else:
-                                        # Check if audio exists in sessionStorage and show helpful message
-                                        check_audio_js = """
-                                        <script>
-                                        (function() {
-                                            const audioDataStr = sessionStorage.getItem('audio_data_answer_audio');
-                                            if (audioDataStr) {
-                                                console.log('Audio data available in sessionStorage, ready to submit');
-                                            }
-                                        })();
-                                        </script>
-                                        """
-                                        st.components.v1.html(check_audio_js, height=0, width=0)
+                                        st.session_state.avatar_state = "idle"
+                                        st.rerun()
                     
                     with col_end:
                         if st.button("结束面试", use_container_width=True, type="secondary"):

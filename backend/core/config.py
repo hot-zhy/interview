@@ -52,6 +52,20 @@ class Settings(BaseSettings):
             "Java基础": 0.15,
         },
     }
+
+    # Adaptive algorithms (config flags; keep backward compatible defaults)
+    difficulty_strategy: str = "heuristic"  # "heuristic" | "target_score_control"
+    target_score: float = 0.70  # desired average score for difficulty control
+    difficulty_step: float = 1.0  # max step per update (in difficulty levels)
+    difficulty_kp: float = 1.2  # proportional gain for control update
+    difficulty_kd: float = 0.6  # trend gain (derivative-like)
+
+    selector_strategy: str = "weighted_random"  # "weighted_random" | "thompson_sampling"
+    thompson_alpha0: float = 1.0
+    thompson_beta0: float = 1.0
+    success_threshold: float = 0.70  # success if overall_score >= threshold
+    recent_chapter_avoid_k: int = 2  # avoid last k chapters when possible
+    thompson_context: str = "chapter_difficulty"  # "chapter" | "chapter_difficulty"
     
     class Config:
         env_file = ".env"

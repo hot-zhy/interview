@@ -125,11 +125,14 @@ def submit_answer(
         answer_text = processed_result["text"]
         audio_analysis = processed_result["audio_analysis"]
         
-        # Save candidate answer with audio indicator
+        # In chat show friendly text; full transcript used only for evaluation (stored in Evaluation)
+        display_content = _normalize_candidate_display_content(
+            answer_text if answer_text else ""
+        )
         candidate_turn = InterviewTurn(
             session_id=session_id,
             role="candidate",
-            content=f"[语音回答] {answer_text}"
+            content=display_content
         )
         db.add(candidate_turn)
         db.flush()
@@ -382,8 +385,20 @@ def _generate_followup(feedback: str, missing_points: List[str], original_questi
     return "能否再详细解释一下刚才提到的内容？"
 
 
+def _normalize_candidate_display_content(content: str) -> str:
+    """Replace voice placeholder / ASR-unconfigured text with a short friendly line for display."""
+    if not content or not content.strip():
+        return "（已提交语音回答）"
+    s = content.strip()
+    if s.startswith("[") or "需要配置语音" in s or "语音识别服务" in s or "[音频处理失败]" in s:
+        return "（已提交语音回答）"
+    if s.startswith("[语音回答]") and ("需要配置" in s or "语音识别" in s):
+        return "（已提交语音回答）"
+    return content
+
+
 def get_session_turns(db: Session, session_id: int) -> List[Dict]:
-    """Get all turns for a session."""
+    """Get all turns for a session. Candidate voice placeholders are normalized for display."""
     turns = db.query(InterviewTurn).filter(
         InterviewTurn.session_id == session_id
     ).order_by(InterviewTurn.created_at).all()
@@ -392,7 +407,7 @@ def get_session_turns(db: Session, session_id: int) -> List[Dict]:
         {
             "id": turn.id,
             "role": turn.role,
-            "content": turn.content,
+            "content": _normalize_candidate_display_content(turn.content) if turn.role == "candidate" else turn.content,
             "created_at": turn.created_at
         }
         for turn in turns
