@@ -60,12 +60,18 @@ class Settings(BaseSettings):
     difficulty_kp: float = 1.2  # proportional gain for control update
     difficulty_kd: float = 0.6  # trend gain (derivative-like)
 
-    selector_strategy: str = "weighted_random"  # "weighted_random" | "thompson_sampling"
+    selector_strategy: str = "personalized"  # "weighted_random" | "thompson_sampling" | "personalized"
+    personalized_exploration_rate: float = 0.15  # 个性化选题时的随机探索率（避免过于贪婪）
     thompson_alpha0: float = 1.0
     thompson_beta0: float = 1.0
     success_threshold: float = 0.70  # success if overall_score >= threshold
     recent_chapter_avoid_k: int = 2  # avoid last k chapters when possible
     thompson_context: str = "chapter_difficulty"  # "chapter" | "chapter_difficulty"
+    
+    # 面试结束与轮次
+    min_rounds_ratio: float = 0.5   # 最少轮次 = total_rounds * min_rounds_ratio
+    max_rounds_ratio: float = 1.2   # 最多轮次 = total_rounds * max_rounds_ratio（可略超用户设置）
+    max_rounds_cap: int = 20        # 轮次绝对上限
     
     class Config:
         env_file = ".env"

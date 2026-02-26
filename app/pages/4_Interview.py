@@ -11,6 +11,7 @@ from app.components.avatar import render_avatar
 from app.components.tts import speak_text
 from app.components.audio_submit import render_audio_submit
 from app.components.auth_utils import init_session_state, check_auth
+from app.components.styles import inject_global_styles
 from st_audiorec import st_audiorec
 from app.components.auth_loader import load_auth_on_page_load
 import time
@@ -18,6 +19,9 @@ import base64
 import json
 
 st.set_page_config(page_title="面试", page_icon="💼", layout="wide")
+
+# Inject global styles
+inject_global_styles()
 
 # Load auth from localStorage first
 load_auth_on_page_load()
@@ -32,6 +36,7 @@ def main():
     db = next(get_db())
     
     st.title("💼 开始面试")
+    st.caption("选择技术方向、难度和轮数，支持文字或语音回答")
     st.markdown("---")
     
     # Initialize session state
@@ -41,7 +46,7 @@ def main():
         st.session_state.avatar_state = "idle"
     
     # Create new interview
-    with st.expander("创建新面试", expanded=st.session_state.current_session_id is None):
+    with st.expander("📝 创建新面试", expanded=st.session_state.current_session_id is None):
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -81,7 +86,7 @@ def main():
             st.warning("请先上传简历")
             use_resume = False
         
-        if st.button("开始面试", use_container_width=True, type="primary"):
+        if st.button("🚀 开始面试", use_container_width=True, type="primary"):
             try:
                 session = create_session(
                     db=db,
@@ -108,11 +113,11 @@ def main():
             st.rerun()
         
         st.markdown("---")
-        st.markdown(f"### 面试进行中 - {session.track} (第 {session.current_round}/{session.total_rounds} 轮)")
+        st.markdown(f"### 🎙️ 面试进行中 · {session.track} · 第 {session.current_round}/{session.total_rounds} 轮")
         
         # Initialize interview if needed
         if session.current_round == 0:
-            if st.button("开始第一题", use_container_width=True, type="primary"):
+            if st.button("▶️ 开始第一题", use_container_width=True, type="primary"):
                 with st.spinner("正在准备题目..."):
                     result = start_interview(db, session_id)
                     if "error" in result:
@@ -269,7 +274,7 @@ def main():
                                         st.rerun()
                     
                     with col_end:
-                        if st.button("结束面试", use_container_width=True, type="secondary"):
+                        if st.button("⏹️ 结束面试", use_container_width=True, type="secondary"):
                             from backend.services.interview_engine import end_interview
                             result = end_interview(db, session_id)
                             st.session_state.current_session_id = None
@@ -280,13 +285,13 @@ def main():
         
         # Session info sidebar
         with st.sidebar:
-            st.markdown("### 面试信息")
+            st.markdown("### 📋 面试信息")
             st.text(f"方向: {session.track}")
             st.text(f"难度: {session.level}")
             st.text(f"状态: {session.status}")
             st.text(f"轮数: {session.current_round}/{session.total_rounds}")
             
-            if st.button("退出当前面试", use_container_width=True):
+            if st.button("⏹️ 退出当前面试", use_container_width=True):
                 st.session_state.current_session_id = None
                 st.rerun()
 

@@ -7,8 +7,12 @@ from backend.services.report_generator import generate_report
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.styles import inject_global_styles
 
 st.set_page_config(page_title="面试报告", page_icon="📊", layout="wide")
+
+# Inject global styles
+inject_global_styles()
 
 # Load auth from localStorage first
 load_auth_on_page_load()
@@ -23,6 +27,7 @@ def main():
     db = next(get_db())
     
     st.title("📊 面试报告")
+    st.caption("查看面试评分、优势短板、缺失知识点与学习建议")
     st.markdown("---")
     
     # Get user's completed interviews
@@ -32,7 +37,7 @@ def main():
     ).order_by(InterviewSession.ended_at.desc()).all()
     
     if not sessions:
-        st.info("暂无完成的面试，请先完成一次面试")
+        st.info("📭 暂无完成的面试，请先在「开始面试」页面完成一次面试")
         return
     
     # Session selector
@@ -54,7 +59,7 @@ def main():
     
     if not report:
         # Generate report
-        if st.button("生成报告", use_container_width=True, type="primary"):
+        if st.button("📄 生成报告", use_container_width=True, type="primary"):
             with st.spinner("正在生成报告..."):
                 try:
                     report_data = generate_report(db, session_id)
@@ -81,10 +86,10 @@ def main():
         # Summary metrics
         summary = report.summary_json
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("综合得分", f"{summary.get('overall_score', 0):.2f}")
-        col2.metric("优势数量", len(summary.get('strengths', [])))
-        col3.metric("待改进", len(summary.get('weaknesses', [])))
-        col4.metric("缺失知识点", len(summary.get('missing_knowledge', [])))
+        col1.metric("📈 综合得分", f"{summary.get('overall_score', 0):.2f}")
+        col2.metric("✅ 优势数量", len(summary.get('strengths', [])))
+        col3.metric("⚠️ 待改进", len(summary.get('weaknesses', [])))
+        col4.metric("📌 缺失知识点", len(summary.get('missing_knowledge', [])))
         
         # Display markdown report with custom table styling
         st.markdown("""
@@ -116,7 +121,7 @@ def main():
         
         # Download button
         st.download_button(
-            "下载报告 (Markdown)",
+            "📥 下载报告 (Markdown)",
             data=report.markdown,
             file_name=f"interview_report_{session_id}.md",
             mime="text/markdown"

@@ -9,9 +9,14 @@ from backend.db.models import (
 )
 from backend.services.question_selector import select_question, adjust_difficulty
 from backend.services.evaluator_rules import evaluate_answer
-from backend.services.llm_provider import evaluate_with_llm
+from backend.services.llm_provider import evaluate_with_llm, generate_followup_with_llm
 from backend.services.adaptive_interview import AdaptiveInterviewEngine
 from backend.services.audio_processor import process_audio_answer
+from backend.services.interview_phrases import (
+    get_first_question_phrase,
+    get_next_question_phrase,
+    get_followup_phrase,
+)
 
 
 def create_session(
@@ -75,11 +80,13 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
     )
     db.add(asked_q)
     
-    # Create interviewer turn
+    # Create interviewer turn (自适应开场语，有简历时体现个性化)
+    has_resume = bool(session.resume_id)
+    intro_content = get_first_question_phrase(question.question, has_resume=has_resume)
     interviewer_turn = InterviewTurn(
         session_id=session_id,
         role="interviewer",
-        content=f"你好！欢迎参加本次面试。让我们开始第一题：\n\n{question.question}"
+        content=intro_content
     )
     db.add(interviewer_turn)
     
@@ -239,11 +246,15 @@ def submit_answer(
         return end_interview(db, session_id)
     
     if should_followup and session.current_round < session.total_rounds:
-        # Generate follow-up question
+        # Generate follow-up question (LLM 优先，否则模板)
+        followup_count = adaptive_engine._count_followups_for_question(asked_q.id)
         followup_content = _generate_followup(
-            evaluation_result["feedback"],
-            evaluation_result["missing_points"],
-            asked_q.question_text
+            feedback=evaluation_result["feedback"],
+            missing_points=evaluation_result.get("missing_points", []),
+            original_question=asked_q.question_text,
+            user_answer=answer_text or "",
+            followup_count=followup_count,
+            correct_answer=asked_q.correct_answer_text or "",
         )
         
         interviewer_turn = InterviewTurn(
@@ -312,11 +323,19 @@ def submit_answer(
         )
         db.add(next_asked_q)
         
-        # Create interviewer turn
+        # Create interviewer turn (自适应过渡语)
+        last_score = evaluation_result.get("overall_score")
+        was_followup = adaptive_engine._count_followups_for_question(asked_q.id) > 0
+        next_content = get_next_question_phrase(
+            question=next_question.question,
+            last_score=last_score,
+            after_followup=was_followup,
+            next_chapter=next_question.chapter,
+        )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
             role="interviewer",
-            content=f"很好！让我们继续下一题：\n\n{next_question.question}"
+            content=next_content
         )
         db.add(interviewer_turn)
         
@@ -376,13 +395,26 @@ def _evaluate_answer_with_fallback(
     return evaluate_answer(question, correct_answer, user_answer)
 
 
-def _generate_followup(feedback: str, missing_points: List[str], original_question: str) -> str:
-    """Generate follow-up question based on evaluation."""
-    if missing_points:
-        point = missing_points[0]
-        return f"关于刚才的回答，我想进一步了解：{point}。请详细说明一下。"
-    
-    return "能否再详细解释一下刚才提到的内容？"
+def _generate_followup(
+    feedback: str,
+    missing_points: List[str],
+    original_question: str,
+    user_answer: str = "",
+    followup_count: int = 0,
+    correct_answer: str = "",
+) -> str:
+    """Generate follow-up question: LLM 优先（Misconception-Aware），否则使用多样化模板。"""
+    llm_result = generate_followup_with_llm(
+        original_question=original_question,
+        user_answer=user_answer,
+        feedback=feedback,
+        missing_points=missing_points,
+        followup_count=followup_count,
+        correct_answer=correct_answer,
+    )
+    if llm_result:
+        return llm_result
+    return get_followup_phrase(missing_points, feedback)
 
 
 def _normalize_candidate_display_content(content: str) -> str:

@@ -35,8 +35,14 @@ class AdaptiveInterviewEngine:
         self.db = db
         self.session = session
         self.followup_limit = 2  # 每个问题最多追问2次
-        self.min_rounds = 5  # 最少轮次
-        self.max_rounds = 15  # 最多轮次
+        # 轮次：以用户设置的 total_rounds 为基准
+        user_rounds = session.total_rounds or 10
+        min_ratio = float(getattr(settings, "min_rounds_ratio", 0.5))
+        max_ratio = float(getattr(settings, "max_rounds_ratio", 1.2))
+        max_cap = int(getattr(settings, "max_rounds_cap", 20))
+        self.min_rounds = max(3, int(user_rounds * min_ratio))
+        self.max_rounds = min(max_cap, int(user_rounds * max_ratio))
+        self.user_total_rounds = user_rounds  # 用户期望轮数（硬上限）
         self.window_size = 3  # 滑动窗口大小（用于计算最近N次表现）
     
     def should_ask_followup(
@@ -72,12 +78,17 @@ class AdaptiveInterviewEngine:
     
     def should_end_interview(self) -> Tuple[bool, str]:
         """
-        判断是否应该结束面试
+        判断是否应该结束面试。
+        
+        结束条件（满足任一即结束）：
+        1. 达到用户设置的 total_rounds（硬上限）
+        2. 达到 max_rounds（自适应上限，略高于用户设置）
+        3. 提前结束：表现优秀且稳定 / 表现很差且无改善 / 覆盖充分且稳定
+        4. 未达 min_rounds 前不提前结束
         
         Returns:
             (should_end, reason)
         """
-        # 获取所有已回答的问题
         asked_questions = self.db.query(AskedQuestion).filter(
             AskedQuestion.session_id == self.session.id
         ).all()
@@ -85,65 +96,55 @@ class AdaptiveInterviewEngine:
         if not asked_questions:
             return False, "尚未开始"
         
-        # 获取所有评估
-        evaluations = []
-        for aq in asked_questions:
-            if aq.evaluation:
-                evaluations.append(aq.evaluation)
+        evaluations = [aq.evaluation for aq in asked_questions if aq.evaluation]
         
         if not evaluations:
             return False, "尚无评估结果"
         
-        # 1. 检查轮次限制
-        if self.session.current_round >= self.max_rounds:
-            return True, f"已达到最大轮次限制（{self.max_rounds}轮）"
+        current = self.session.current_round
         
-        if self.session.current_round < self.min_rounds:
-            return False, f"未达到最少轮次（{self.min_rounds}轮）"
+        # 1. 硬上限：用户设置的轮数
+        if current >= self.user_total_rounds:
+            return True, f"已达到设定轮数（{self.user_total_rounds}轮）"
         
-        # 2. 计算整体表现指标
-        scores = [e.overall_score for e in evaluations]
+        # 2. 自适应上限
+        if current >= self.max_rounds:
+            return True, f"已达到最大轮次（{self.max_rounds}轮）"
+        
+        # 3. 未达最少轮次，不提前结束
+        if current < self.min_rounds:
+            return False, f"未达最少轮次（{self.min_rounds}轮）"
+        
+        # 4. 计算表现指标
+        scores = [float(e.overall_score) for e in evaluations]
         avg_score = sum(scores) / len(scores)
         recent_scores = scores[-self.window_size:] if len(scores) >= self.window_size else scores
         recent_avg = sum(recent_scores) / len(recent_scores)
         
-        # 3. 计算表现稳定性（标准差）
+        std_dev = 0.0
         if len(scores) >= 3:
             variance = sum((s - avg_score) ** 2 for s in scores) / len(scores)
             std_dev = math.sqrt(variance)
-        else:
-            std_dev = 0
         
-        # 4. 检查难度覆盖
         difficulties = [aq.difficulty for aq in asked_questions]
         difficulty_range = max(difficulties) - min(difficulties) if difficulties else 0
-        
-        # 5. 检查章节覆盖
-        chapters = set(aq.topic for aq in asked_questions)
+        chapters = set(aq.topic for aq in asked_questions if aq.topic)
         chapter_coverage = len(chapters)
         
-        # 6. 综合判断
-        # 情况1: 表现优秀且稳定，可以提前结束
+        # 5. 提前结束条件
+        # 5a. 表现优秀且稳定
         if avg_score >= 0.85 and recent_avg >= 0.85 and std_dev < 0.15:
-            if self.session.current_round >= self.min_rounds + 2:
-                return True, f"表现优秀且稳定（平均分{avg_score:.2f}），提前结束"
+            return True, f"表现优秀且稳定（平均分{avg_score:.2f}），提前结束"
         
-        # 情况2: 表现很差且无改善，可以结束
-        if avg_score < 0.4 and recent_avg < 0.4 and self.session.current_round >= self.min_rounds:
+        # 5b. 表现很差且无改善
+        if avg_score < 0.4 and recent_avg < 0.4:
             return True, f"表现较差且无改善（平均分{avg_score:.2f}），结束面试"
         
-        # 情况3: 达到最少轮次，且表现稳定
-        if self.session.current_round >= self.min_rounds:
-            # 如果最近表现稳定，且覆盖了足够的难度和章节
-            if std_dev < 0.2 and difficulty_range >= 2 and chapter_coverage >= 3:
-                if recent_avg >= 0.7:
-                    return True, f"表现稳定（平均分{recent_avg:.2f}），覆盖充分，结束面试"
+        # 5c. 覆盖充分且表现稳定（难度跨度≥2，章节≥3，最近平均≥0.7）
+        if std_dev < 0.2 and difficulty_range >= 2 and chapter_coverage >= 3 and recent_avg >= 0.7:
+            return True, f"表现稳定、覆盖充分（平均分{recent_avg:.2f}），结束面试"
         
-        # 情况4: 达到最大轮次
-        if self.session.current_round >= self.max_rounds:
-            return True, f"达到最大轮次（{self.max_rounds}轮）"
-        
-        return False, f"继续面试（当前{self.session.current_round}轮，平均分{avg_score:.2f}）"
+        return False, f"继续面试（当前{current}轮，平均分{avg_score:.2f}）"
     
     def calculate_adaptive_difficulty(self) -> int:
         """

@@ -9,8 +9,12 @@ from backend.services.question_bank_loader import import_questions_from_excel
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.styles import inject_global_styles
 
-st.set_page_config(page_title="题库管理", page_icon="📚")
+st.set_page_config(page_title="题库管理", page_icon="📚", layout="wide")
+
+# Inject global styles
+inject_global_styles()
 
 # Load auth from localStorage first
 load_auth_on_page_load()
@@ -22,12 +26,13 @@ def main():
     check_auth()
     
     st.title("📚 题库管理")
+    st.caption("从 data/question.xlsx 导入题目，支持按章节、难度筛选浏览")
     st.markdown("---")
     
     db = next(get_db())
     
     # Load from fixed file path
-    st.subheader("题库加载")
+    st.subheader("📥 题库加载")
     
     # Fixed file path
     question_file_path = "data/question.xlsx"
@@ -120,7 +125,7 @@ def main():
     st.markdown("---")
     
     # Statistics
-    st.subheader("题库统计")
+    st.subheader("📊 题库统计")
     
     # Create a fresh session to ensure we see latest data
     try:
@@ -157,19 +162,19 @@ def main():
         
         # Browse questions
         st.markdown("---")
-        st.subheader("浏览题目")
+        st.subheader("🔍 浏览题目")
         
         # Filters
         col1, col2 = st.columns(2)
         with col1:
             selected_chapter = st.selectbox(
-                "选择章节",
+                "按章节筛选",
                 options=["全部"] + [c[0] for c in chapters],
                 key="filter_chapter"
             )
         with col2:
             selected_difficulty = st.selectbox(
-                "选择难度",
+                "按难度筛选",
                 options=["全部"] + list(range(1, 6)),
                 key="filter_difficulty"
             )
