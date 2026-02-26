@@ -8,7 +8,6 @@ from backend.services.interview_engine import (
 )
 from backend.core.config import settings
 from app.components.avatar import render_avatar
-from app.components.tts import speak_text
 from app.components.audio_submit import render_audio_submit
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.styles import inject_global_styles
@@ -127,32 +126,31 @@ def main():
         
         # Interview interface
         if session.current_round > 0:
+            turns = get_session_turns(db, session_id)
+            # 最后一条面试官消息，用于 TTS（仅在新消息时朗读，避免重复）
+            last_interviewer = next((t for t in reversed(turns) if t["role"] == "interviewer"), None)
+            text_to_speak = ""
+            if last_interviewer:
+                last_spoken = st.session_state.get("_avatar_last_spoken_id")
+                if last_spoken != last_interviewer.get("id"):
+                    text_to_speak = last_interviewer["content"]
+                    st.session_state["_avatar_last_spoken_id"] = last_interviewer.get("id")
+
             col1, col2 = st.columns([1, 2])
             
             with col1:
                 st.markdown("#### 👤 面试官")
-                # Enhanced avatar with better realism
-                render_avatar(st.session_state.avatar_state)
+                render_avatar(st.session_state.avatar_state, text_to_speak=text_to_speak)
             
             with col2:
                 st.markdown("#### 💬 对话区")
                 
-                # Display conversation history
-                turns = get_session_turns(db, session_id)
-                
                 chat_container = st.container()
                 with chat_container:
-                    for idx, turn in enumerate(turns):
+                    for turn in turns:
                         if turn["role"] == "interviewer":
                             with st.chat_message("assistant"):
                                 st.markdown(turn["content"])
-                                # Auto-speak for new interviewer messages
-                                if idx == len(turns) - 1 and len(turns) > 0:
-                                    try:
-                                        speak_text(turn["content"])
-                                        st.session_state.avatar_state = "speaking"
-                                    except:
-                                        pass
                         else:
                             with st.chat_message("user"):
                                 st.markdown(turn["content"])

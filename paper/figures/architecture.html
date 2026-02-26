@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Architecture: Problems → Solutions → Results</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #f8f8f8; }
+    h1 { font-size: 1rem; color: #333; }
+    .mermaid { background: white; padding: 2rem; border-radius: 8px; }
+    .note { font-size: 0.75rem; color: #888; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Problems → Our Solutions (Modules) → Results</h1>
+  <div class="mermaid">
+flowchart LR
+    subgraph Problems
+        P1[P1: Inconsistent Difficulty]
+        P2[P2: Ineffective Selection]
+        P3[P3: Reliability-Nuance Trade-off]
+    end
+
+    subgraph Solutions
+        RQ1[RQ1: Adaptive Engine]
+        RQ2[RQ2: Question Selector]
+        RQ3[RQ3: Evaluation Engine]
+    end
+
+    subgraph Results
+        R1[87.3% Calibration]
+        R2[73.8% Gap / 85.2% Coverage]
+        R3[84.7% Agreement / 99.2% Uptime]
+    end
+
+    P1 --> RQ1
+    P2 --> RQ2
+    P3 --> RQ3
+    RQ1 --> R1
+    RQ2 --> R2
+    RQ3 --> R3
+  </div>
+  <p class="note">Open in browser. Right-click → Save image as PNG for paper inclusion.</p>
+</body>
+<script>mermaid.initialize({ startOnLoad: true });</script>
+</html>

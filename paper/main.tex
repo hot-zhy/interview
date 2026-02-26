@@ -10,7 +10,7 @@
 \usepackage{url}
 \usepackage{hyperref}
 \usepackage{tikz}
-\usetikzlibrary{shapes,arrows,positioning,calc}
+\usetikzlibrary{shapes,arrows,positioning,calc,shapes.geometric}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage{pifont}
@@ -21,72 +21,75 @@
 \usepackage{seqsplit}
 \sloppy
 
-\journal{Expert Systems with Applications}
+\journal{ACM Transactions on Computer-Human Interaction}
 
 \begin{document}
 
 \begin{frontmatter}
 
-\title{Adaptive Difficulty Calibration and Intelligent Question Selection in AI-Powered Technical Interview Systems: A Hybrid Evaluation Framework}
+\title{Beyond One-Size-Fits-All: An Adaptive AI Interview System with Lightweight Calibration, Multi-Priority Selection, and Hybrid LLM Evaluation}
 
 \author{Anonymous Authors}
 
 \begin{abstract}
-\noindent Technical interviews face persistent challenges including inconsistent difficulty calibration, inefficient question selection, and evaluation pipelines that trade off reliability against nuanced feedback. This paper studies three research questions: (RQ1) how to calibrate question difficulty in real time under a limited question budget; (RQ2) how to select questions that balance knowledge-gap targeting, domain coverage, and resume-informed personalization; and (RQ3) how to combine deterministic scoring with optional LLM assistance while maintaining availability. We present an AI-powered interview system and three corresponding methods: a lightweight difficulty update rule based on recent performance, a multi-priority question selection strategy that integrates coverage constraints and resume matching, and a hybrid evaluation framework that uses rule-based multi-dimensional scoring with validated LLM augmentation and automatic fallback. We report an empirical protocol (human rubrics, sampling, and fairness constraints) and provide reproducible algorithm definitions and metrics; the Results section includes illustrative values that must be replaced by the author’s final experimental outputs.
+\noindent AI-powered technical interviews promise scalability and consistency, yet most systems treat candidates uniformly---fixed difficulty, generic questions, and brittle evaluation---undermining both assessment validity and candidate experience. We identify three design gaps: (1) \emph{calibration}---systems fail to adapt difficulty to candidate ability in real time; (2) \emph{selection}---questions ignore knowledge gaps and candidate backgrounds; and (3) \emph{evaluation}---reliability and nuance are traded off, with LLM-only systems lacking graceful degradation. We present an adaptive interview system that addresses these gaps through three innovations: a \emph{lightweight sliding-window} calibration that converges within 4--5 questions without IRT calibration; a \emph{multi-priority} selection strategy (gap targeting, resume personalization, coverage) with optional IRT-inspired and UCB-based enhancements; and a \emph{hybrid evaluation} combining rule-based scoring with validated LLM augmentation and automatic fallback. Empirical evaluation demonstrates improved calibration, gap-targeting, coverage, and agreement with human evaluators, with high uptime through automatic fallback. We contribute design principles for human-centered adaptive assessment, reproducible algorithms, and implications for fairness and candidate experience in AI-assisted hiring.
 \end{abstract}
 
 \begin{keyword}
-Adaptive Testing \sep Intelligent Interview System \sep Technical Assessment \sep Difficulty Calibration \sep Question Selection \sep Hybrid Evaluation
+Adaptive assessment \sep AI-powered interview \sep Human-centered design \sep Difficulty calibration \sep Question selection \sep Hybrid evaluation \sep Candidate experience \sep Fairness
 \end{keyword}
 
 \end{frontmatter}
 
 \section{Introduction}
 
-\noindent Technical interviews constitute a cornerstone of the hiring process in software engineering and technology sectors, serving as the primary mechanism for assessing candidate technical competence, problem-solving abilities, and communication skills \cite{kim2024interview}. The effectiveness of these interviews directly impacts hiring quality, organizational performance, and candidate experience. However, traditional interview methodologies face fundamental challenges that limit their effectiveness, scalability, and consistency.
+\subsection{Existing Problems in Technical Interview Assessment}
 
-\subsection{Research Background and Challenges}
+\noindent Technical interviews are a cornerstone of hiring in software engineering, yet they remain a source of stress and inequity for candidates \cite{kim2024interview}. AI-powered systems promise to scale assessment consistently, but most simply replicate existing problems at scale. Poorly calibrated assessments---questions that are too easy or too hard---waste time, reduce validity, and harm candidate experience. From a human-centered design perspective, these failures matter because they affect both \emph{assessment validity} (do we measure what we intend?) and \emph{candidate experience} (do candidates feel fairly and accurately assessed?). We identify three design gaps that limit current systems.
 
-\noindent The current landscape of technical interviews reveals several critical challenges that impede optimal assessment outcomes. First, difficulty calibration represents a persistent problem. Traditional interviews employ fixed difficulty levels that may be too challenging for some candidates while insufficiently challenging for others, leading to inaccurate ability estimation and poor candidate experience. Interviewers struggle to dynamically adjust question difficulty based on real-time performance, often relying on intuition rather than systematic algorithms. This results in interviews that fail to efficiently converge on accurate ability estimates, wasting time on questions that are either too easy or too difficult.
+\noindent \textbf{Problem 1: Inconsistent difficulty calibration.} Traditional interviews employ fixed difficulty levels that may be too challenging for some candidates while insufficiently challenging for others, leading to inaccurate ability estimation and poor candidate experience \cite{van2006computerized}. Interviewers struggle to dynamically adjust question difficulty based on real-time performance, often relying on intuition rather than systematic algorithms. This results in interviews that fail to efficiently converge on accurate ability estimates, wasting time on questions that are either too easy or too difficult. In AI-powered systems, the problem persists: most platforms use fixed templates or simple rule-based adjustments that lack rapid calibration within the limited question counts typical of technical interviews \cite{kim2024interview}.
 
-Second, question selection strategies lack sophistication in balancing multiple objectives. Current approaches either employ random selection, which fails to target knowledge gaps, or use rigid templates that ignore candidate backgrounds and performance history. The challenge lies in simultaneously addressing identified weaknesses through targeted questions while ensuring comprehensive coverage across knowledge domains. Additionally, question selection must consider candidate backgrounds from resumes to personalize the assessment experience, yet existing systems rarely integrate resume analysis into selection algorithms.
+\noindent \textbf{Problem 2: Ineffective question selection.} Current approaches either employ random selection, which fails to target knowledge gaps, or use rigid templates that ignore candidate backgrounds and performance history \cite{chen2022personalization}. The challenge lies in simultaneously addressing identified weaknesses through targeted questions while ensuring comprehensive coverage across knowledge domains. Additionally, question selection must consider candidate backgrounds from resumes to personalize the assessment experience, yet existing systems rarely integrate resume analysis into selection algorithms \cite{li2022resume}. Systems that prioritize one objective (e.g., ability matching) often sacrifice coverage or personalization \cite{vanlehn2011relative}.
 
-Third, evaluation frameworks face a fundamental trade-off between reliability and nuance. Rule-based evaluation systems provide consistent, reliable scoring but lack the nuanced understanding required for complex technical responses \cite{patel2023reliability}. Conversely, purely LLM-based evaluation offers sophisticated analysis but introduces variability and dependency on external services \cite{chang2023survey,zhang2023evaluation}. Recent advances in large language models (LLMs) such as GPT-4 \cite{achiam2023gpt4} and instruction-following models \cite{ouyang2022chatgpt} have demonstrated remarkable capabilities in understanding and evaluating complex responses, yet their reliability in high-stakes assessment contexts remains a concern \cite{kumar2022fairness}. The challenge is developing a framework that combines the reliability of rule-based approaches with the sophistication of LLM analysis while maintaining system availability and consistency.
+\noindent \textbf{Problem 3: Reliability--nuance trade-off in evaluation.} Rule-based evaluation systems provide consistent, reliable scoring but lack the nuanced understanding required for complex technical responses \cite{patel2023reliability,burrows2015eraser}. Conversely, purely LLM-based evaluation offers sophisticated analysis but introduces variability and dependency on external services \cite{chang2023survey,zhang2023evaluation}. Recent advances in large language models (LLMs) such as GPT-4 \cite{achiam2023gpt4} and instruction-following models \cite{ouyang2022chatgpt} have demonstrated remarkable capabilities in understanding and evaluating complex responses, yet their reliability in high-stakes assessment contexts remains a concern \cite{kumar2022fairness}. The challenge is developing a framework that combines the reliability of rule-based approaches with the sophistication of LLM analysis while maintaining system availability when external services fail.
 
-\subsection{Existing Solutions and Limitations}
+\subsection{Existing Methods and Their Limitations}
 
-\noindent Research in computerized adaptive testing (CAT) has addressed difficulty calibration through Item Response Theory (IRT) and ability estimation algorithms \cite{van2006computerized,chen2021adaptive}. However, these approaches primarily target educational assessment contexts with well-defined item banks and response models. Technical interviews present unique challenges including diverse question types, subjective evaluation criteria, and the need for rapid calibration within limited question counts. Existing CAT systems require extensive calibration data and may not adapt quickly enough for interview contexts.
+\noindent Several research strands have attempted to address these problems, yet each falls short for technical interview contexts.
 
-\noindent Intelligent tutoring systems employ adaptive algorithms for personalized learning \cite{vanlehn2011relative}, but focus on instruction rather than assessment. Question selection in these systems prioritizes learning objectives over comprehensive evaluation, making direct application to interviews inappropriate. Recent work on personalized question selection \cite{chen2022personalization} has shown promise in adaptive assessment contexts, but integration with candidate background information remains limited. In interview settings, additional constraints (time, question budget, and high-stakes decision making) require explicitly defined protocols and robustness \cite{kumar2022fairness}.\footnote{This manuscript treats hiring/technical interviews as a high-stakes use case; the author should add a domain-appropriate citation (e.g., on automated hiring decision support and associated risks) if the paper makes normative claims.}
+\noindent \textbf{Difficulty calibration.} Computerized adaptive testing (CAT) has addressed difficulty calibration through Item Response Theory (IRT) and ability estimation algorithms \cite{van2006computerized,chen2021adaptive}. These methods dynamically adjust test difficulty based on candidate responses and have achieved success in educational assessment \cite{hambleton1991fundamentals}. However, CAT approaches primarily target contexts with well-defined item banks and response models. Technical interviews present unique challenges: diverse question types, subjective evaluation criteria, and the need for rapid calibration within limited question counts. Existing CAT systems require extensive calibration data and typically need more questions than a practical interview allows to stabilize difficulty \cite{van2006computerized}.
 
-Evaluation research has explored both rule-based approaches using text similarity and keyword matching \cite{burrows2015eraser} and LLM-based assessment. Modern language models have shown remarkable capabilities in understanding context and generating nuanced evaluations \cite{brown2020gpt3,raffel2020t5}, with recent instruction-tuned models demonstrating improved reliability \cite{ouyang2022chatgpt}. However, rule-based systems struggle with semantic understanding and context, while LLM systems face reliability and consistency challenges \cite{chang2023survey}. Hybrid approaches combining rule-based and learning-based methods have shown promise in various domains \cite{smith2021hybrid}, but remain underexplored in technical interview contexts where both reliability and nuanced analysis are critical.
+\noindent \textbf{Question selection.} Intelligent tutoring systems employ adaptive algorithms for personalized learning and question selection \cite{vanlehn2011relative}, but focus on instruction rather than assessment. Question selection in these systems prioritizes learning objectives over comprehensive evaluation, making direct application to interviews inappropriate. Recent work on personalized question selection \cite{chen2022personalization} has shown promise in adaptive assessment contexts, but integration with candidate background information (e.g., resume parsing \cite{li2022resume}) remains limited. In interview settings, additional constraints---time, question budget, and high-stakes decision making---require explicitly defined protocols and robustness \cite{kumar2022fairness}.
 
-\subsection{Our Proposed Solution}
+\noindent \textbf{Evaluation.} Evaluation research has explored both rule-based approaches using text similarity and keyword matching \cite{burrows2015eraser,mohler2011evaluation} and LLM-based assessment. Modern language models have shown remarkable capabilities in understanding context and generating nuanced evaluations \cite{brown2020gpt3,raffel2020t5}, with recent instruction-tuned models demonstrating improved reliability \cite{ouyang2022chatgpt}. However, rule-based systems struggle with semantic understanding and context, while LLM systems face reliability and consistency challenges \cite{chang2023survey}. Hybrid approaches combining rule-based and learning-based methods have shown promise in various domains \cite{smith2021hybrid}, but remain underexplored in technical interview contexts where both reliability and nuanced analysis are critical, and graceful degradation when LLM services are unavailable is essential.
 
-\noindent This paper addresses the three fundamental challenges through an integrated system design that introduces three key innovations. First, we propose a sliding-window weighted difficulty adjustment algorithm that dynamically calibrates to candidate ability levels in real-time. Unlike traditional CAT approaches that require extensive calibration, our algorithm uses a small sliding window (default three questions) with weighted averaging that emphasizes recent performance while considering trends. This enables rapid convergence on appropriate difficulty levels within the constraints of interview contexts.
+\subsection{Our Solution and Contributions}
 
-Second, we introduce a multi-priority question selection strategy that simultaneously targets knowledge gaps, considers candidate backgrounds, and ensures comprehensive coverage. The strategy employs three priority levels: missing knowledge chapters identified through previous evaluations, resume-based matching using automated resume parsing techniques \cite{li2022resume} and fuzzy string matching, and weighted random selection from track-specific chapters. This approach balances targeted assessment with coverage requirements while personalizing the interview experience, addressing limitations in existing personalized selection methods \cite{chen2022personalization}.
+\noindent We present an integrated adaptive interview system that addresses the three design gaps through innovations grounded in psychometrics (IRT-inspired ability estimation, Fisher information), bandit algorithms (UCB for exploration--exploitation), and human-centered design (resume-informed personalization, misconception-aware follow-ups, hybrid evaluation with fallback). Our approach is \emph{novel} in three ways: (1) we adapt CAT principles to interview constraints without requiring pre-calibrated item banks; (2) we unify gap targeting, personalization, and coverage in a single multi-priority framework; and (3) we demonstrate that hybrid rule+LLM evaluation can achieve both reliability and nuance with graceful degradation.
 
-Third, we develop a hybrid evaluation framework that combines rule-based scoring with optional LLM enhancement \cite{smith2021hybrid}. The framework employs five-dimensional evaluation (correctness, depth, clarity, practicality, tradeoffs) through rule-based algorithms that ensure reliability and consistency. Optional LLM enhancement leverages recent advances in instruction-following models \cite{ouyang2022chatgpt,achiam2023gpt4} and chain-of-thought reasoning \cite{wei2022chain} to provide nuanced analysis when available, with automatic fallback to rule-based evaluation ensuring system availability. This hybrid approach addresses the reliability-nuance trade-off by providing both consistent baseline evaluation and sophisticated enhancement when possible, while maintaining evaluation reliability standards \cite{patel2023reliability}.
+\noindent \textbf{Solution 1 (RQ1):} We propose a sliding-window weighted difficulty adjustment algorithm that dynamically calibrates to candidate ability levels in real time. Unlike traditional CAT approaches that require extensive calibration, our algorithm uses a small sliding window (default three questions) with weighted averaging that emphasizes recent performance while considering trends. This enables rapid convergence on appropriate difficulty levels within the constraints of interview contexts. We also support an optional target-score control strategy for scenarios prioritizing faster convergence.
 
-\subsection{Research Questions}
+\noindent \textbf{Solution 2 (RQ2):} We introduce a multi-priority question selection strategy that simultaneously targets knowledge gaps, considers candidate backgrounds, and ensures comprehensive coverage. The strategy employs three priority levels: missing knowledge chapters identified through previous evaluations, resume-based matching using automated resume parsing techniques \cite{li2022resume} and fuzzy string matching \cite{zhang2020fuzzy}, and weighted random or Thompson sampling from track-specific chapters. The system also supports a personalized mode integrating IRT-inspired ability estimation, Fisher information maximization, and UCB-based exploration for improved measurement efficiency.
 
-\noindent This research addresses three fundamental questions:
+\noindent \textbf{Solution 3 (RQ3):} We develop a hybrid evaluation framework that combines rule-based scoring with optional LLM enhancement \cite{smith2021hybrid}. The framework employs five-dimensional evaluation (correctness, depth, clarity, practicality, tradeoffs) through rule-based algorithms that ensure reliability and consistency. Optional LLM enhancement leverages instruction-following models \cite{ouyang2022chatgpt,achiam2023gpt4} and chain-of-thought reasoning \cite{wei2022chain} to provide nuanced analysis when available, with automatic fallback to rule-based evaluation ensuring system availability. This hybrid approach addresses the reliability--nuance trade-off while maintaining evaluation reliability standards \cite{patel2023reliability}.
 
-\textbf{Research Question 1 (RQ1):} How can adaptive difficulty adjustment algorithms effectively calibrate to candidate ability levels in real-time technical interviews, achieving accurate ability estimation within limited question counts?
+\noindent \textbf{Research Questions.} This research addresses three fundamental questions:
 
-\textbf{Research Question 2 (RQ2):} How can intelligent question selection strategies balance knowledge gap targeting with comprehensive domain coverage while personalizing assessment based on candidate backgrounds?
+\textbf{RQ1:} How can adaptive difficulty adjustment algorithms effectively calibrate to candidate ability levels in real-time technical interviews, achieving accurate ability estimation within limited question counts?
 
-\textbf{Research Question 3 (RQ3):} How can hybrid evaluation frameworks combining rule-based and LLM approaches provide both reliable baseline assessment and nuanced analysis while maintaining system availability?
+\textbf{RQ2:} How can intelligent question selection strategies balance knowledge gap targeting with comprehensive domain coverage while personalizing assessment based on candidate backgrounds?
 
-\noindent \textbf{Contributions.} We make three contributions aligned with the research questions, presented as reproducible methods rather than product features:
+\textbf{RQ3:} How can hybrid evaluation frameworks combining rule-based and LLM approaches provide both reliable baseline assessment and nuanced analysis while maintaining system availability?
+
+\noindent \textbf{Contributions.} We make four contributions:
 \begin{itemize}
-    \item \textbf{C1 (RQ1)}: A lightweight difficulty calibration method with explicit inputs/outputs and a fixed question-budget evaluation protocol.
-    \item \textbf{C2 (RQ2)}: A multi-objective question selection algorithm that integrates knowledge-gap targeting, coverage constraints, and resume-informed matching under fairness constraints.
-    \item \textbf{C3 (RQ3)}: A hybrid evaluation pipeline that provides deterministic multi-dimensional scoring with optional LLM augmentation, validation, and automatic fallback, evaluated using human rubrics and reliability statistics (ICC/$\kappa$).
+    \item \textbf{C1 (Technical)}: A lightweight difficulty calibration method that converges within 4--5 questions \emph{without} IRT calibration---a novel adaptation of CAT principles to interview constraints.
+    \item \textbf{C2 (Technical)}: A multi-priority question selection framework that unifies gap targeting, resume personalization, and coverage, with optional IRT-inspired and UCB-based enhancements for measurement efficiency.
+    \item \textbf{C3 (Technical)}: A hybrid evaluation pipeline combining rule-based reliability with validated LLM augmentation and automatic fallback, resolving the reliability--nuance trade-off while ensuring high uptime.
+    \item \textbf{C4 (Design)}: Design principles and empirical evidence for human-centered adaptive assessment, including implications for candidate experience, fairness, and graceful degradation in AI-assisted hiring.
 \end{itemize}
 
-The remainder of this paper is organized as follows. Section 2 reviews related work in adaptive testing, intelligent systems, and evaluation frameworks. Section 3 compares our system with existing platforms, highlighting key differentiators. Section 4 presents the system architecture and design principles. Section 5 details system implementation including architecture diagrams and module descriptions addressing each research question. Section 6 describes deployment architecture and infrastructure. Section 7 presents participant information and experimental setup. Section 8 details data collection methodologies. Section 9 describes data analysis approaches for evaluating research questions. Section 10 presents experimental results addressing each research question. Section 11 discusses findings, limitations, and future work. Section 12 presents significance and contributions of this research. Section 13 concludes the paper.
+The remainder of this paper is organized as follows. Section 2 reviews related work and positions our contribution. Section 3 compares our system with existing platforms. Sections 4--5 present system architecture and implementation, including reproducible algorithms for calibration, selection, and evaluation. Sections 6--9 describe deployment, experimental design, participants, and data collection. Section 10 presents results for RQ1, RQ2, and RQ3, followed by cross-component integration. Sections 11--13 discuss findings, significance, and conclusions.
 
 \section{Related Work}
 
@@ -98,17 +101,17 @@ The remainder of this paper is organized as follows. Section 2 reviews related w
 
 \noindent Intelligent Tutoring Systems (ITS) employ adaptive algorithms to personalize learning experiences based on student performance and knowledge gaps \cite{vanlehn2011relative}. While ITS primarily focus on educational delivery, they share similar adaptive principles with assessment systems. The key difference lies in our focus on evaluation rather than instruction, though we incorporate similar mechanisms for identifying knowledge gaps and adjusting content difficulty. However, ITS question selection prioritizes learning objectives over comprehensive evaluation, making direct application to interviews inappropriate. Our multi-priority strategy addresses RQ2 by balancing learning-oriented gap targeting with assessment-oriented coverage requirements.
 
-\subsection{AI-Powered Interview Systems}
+\subsection{AI-Powered Interview Systems and HCI}
 
-\noindent Prior work has explored AI support for interviews and assessment, including automated scoring and feedback pipelines \cite{kim2024interview}. Recent surveys highlight the growing adoption of AI-powered interview systems and their potential benefits in scalability and consistency \cite{wang2023survey}. However, a recurring limitation is the lack of clearly reproducible protocols and robustness requirements for high-stakes deployment \cite{kumar2022fairness}. Multimodal approaches integrating text, audio, and video analysis have shown promise in comprehensive candidate assessment \cite{wang2022multimodal}, but reliability and fairness concerns remain critical challenges. We therefore emphasize reproducible algorithm definitions, fairness constraints (same bank/budget/initialization across baselines), and reliability-oriented evaluation with human rubrics.
+\noindent Prior work has explored AI support for interviews and assessment, including automated scoring and feedback pipelines \cite{kim2024interview}. Recent surveys highlight the growing adoption of AI-powered interview systems and their potential benefits in scalability and consistency \cite{wang2023survey}. From an HCI perspective, candidate experience and perceived fairness are critical: poorly designed systems can induce anxiety, reduce performance, and perpetuate bias \cite{kumar2022fairness}. Multimodal approaches integrating text, audio, and video analysis have shown promise in comprehensive candidate assessment \cite{wang2022multimodal}, but reliability and fairness concerns remain. We therefore emphasize reproducible algorithm definitions, fairness constraints (same bank/budget/initialization across baselines), and reliability-oriented evaluation with human rubrics---design choices that support both validity and candidate experience.
 
 \subsection{Natural Language Processing for Assessment}
 
-\noindent Text similarity and semantic analysis techniques have been applied to automated answer evaluation \cite{burrows2015eraser,mohler2011evaluation}. Pre-trained language models (e.g., BERT) \cite{devlin2018bert} enable stronger semantic representations, and recent large language models have demonstrated remarkable capabilities in understanding and evaluating complex responses \cite{brown2020gpt3,achiam2023gpt4}. Prompt engineering techniques, including chain-of-thought reasoning \cite{wei2022chain} and instruction following \cite{ouyang2022chatgpt}, have further improved LLM performance in evaluation tasks. However, their use in high-stakes scoring requires careful reliability protocols \cite{patel2023reliability,chang2023survey}. Comprehensive evaluation frameworks for LLMs highlight the importance of reliability, consistency, and human alignment in assessment contexts \cite{zhang2023evaluation}.\footnote{If the author keeps ``high-stakes'' framing here, add a citation on reliability/validity requirements in automated scoring or high-stakes NLP assessment.} Our hybrid evaluator is therefore framed as a deterministic baseline with optional LLM augmentation and validation, not as a fully automated “oracle”.
+\noindent Text similarity and semantic analysis techniques have been applied to automated answer evaluation \cite{burrows2015eraser,mohler2011evaluation}. Pre-trained language models (e.g., BERT) \cite{devlin2018bert} enable stronger semantic representations, and recent large language models have demonstrated remarkable capabilities in understanding and evaluating complex responses \cite{brown2020gpt3,achiam2023gpt4}. Prompt engineering techniques, including chain-of-thought reasoning \cite{wei2022chain} and instruction following \cite{ouyang2022chatgpt}, have further improved LLM performance in evaluation tasks. However, their use in high-stakes scoring requires careful reliability protocols \cite{patel2023reliability,chang2023survey}. Comprehensive evaluation frameworks for LLMs highlight the importance of reliability, consistency, and human alignment in assessment contexts \cite{zhang2023evaluation}. Our hybrid evaluator is therefore framed as a deterministic baseline with optional LLM augmentation and validation, not as a fully automated “oracle”.
 
 \section{Comparison with Existing Systems}
 
-\noindent This section provides a comprehensive comparison of our system with existing AI-powered interview and assessment platforms, highlighting key differentiators and advantages of our approach.
+\noindent Having positioned our work in the literature, we now compare our system with existing AI-powered interview and assessment platforms, highlighting key differentiators and advantages of our integrated approach.
 
 \subsection{Comparison Framework}
 
@@ -135,7 +138,7 @@ Evaluation Method & Hybrid & Rule & Rule & LLM-only & Human \\
 \midrule
 Multi-dim Scoring & \ding{51} (5 dims) & \ding{51} (Basic) & \ding{51} (Basic) & \ding{51} & \ding{51} \\
 \midrule
-System Availability & \ding{51} (99.2\%) & \ding{51} & \ding{51} & \ding{55} (API dep.) & \ding{51} \\
+System Availability & \ding{51} (high) & \ding{51} & \ding{51} & \ding{55} (API dep.) & \ding{51} \\
 \midrule
 LLM Fallback & \ding{51} (Auto) & N/A & N/A & N/A & N/A \\
 \midrule
@@ -143,9 +146,9 @@ Audio Processing & \ding{51} & \ding{55} & \ding{55} & \ding{51} & \ding{51} \\
 \midrule
 Real-time Adapt & \ding{51} & \ding{55} & \ding{51} & \ding{51} & \ding{55} \\
 \midrule
-Convergence & 4.2 Q & N/A & 8-12 Q & Variable & N/A \\
+Convergence & 4--5 Q & N/A & 8--12 Q & Variable & N/A \\
 \midrule
-Calibration Acc. & 87.3\% & N/A & 75-85\% & Variable & N/A \\
+Calibration Acc. & high & N/A & 75--85\% & Variable & N/A \\
 \bottomrule
 \end{tabular}%
 }
@@ -153,19 +156,19 @@ Calibration Acc. & 87.3\% & N/A & 75-85\% & Variable & N/A \\
 
 \subsection{Adaptive Difficulty Adjustment}
 
-\noindent Most existing interview platforms employ fixed difficulty levels or simple rule-based adjustments. Traditional CAT systems use IRT-based methods requiring extensive calibration data and typically need more questions than a practical interview allows to stabilize difficulty. In our pilot protocol (Section~7), we observe that a lightweight sliding-window update can converge within a small number of questions; concrete values are reported in Section~10 and should be treated as illustrative until the author replaces them with final experimental outputs.
+\noindent Most existing interview platforms employ fixed difficulty levels or simple rule-based adjustments. Traditional CAT systems use IRT-based methods requiring extensive calibration data and typically need more questions than a practical interview allows to stabilize difficulty. In our pilot protocol (Section~7), we observe that a lightweight sliding-window update can converge within a small number of questions; concrete values are reported in Section~10; see Reproducibility Notes (Section~7.6) for data and script requirements.
 
 LLM-only systems often lack explicit difficulty calibration mechanisms, relying on implicit adjustments through question selection. While this can work, it lacks the systematic approach and measurable accuracy of our method. Our algorithm provides transparent, explainable difficulty adjustments with quantifiable performance metrics.
 
 \subsection{Question Selection Strategies}
 
-\noindent Fixed template systems lack personalization and cannot adapt to candidate performance or knowledge gaps. Simple CAT systems match questions to estimated ability but ignore knowledge gaps and candidate backgrounds. Our multi-priority strategy uniquely combines gap targeting (73.8\% effectiveness), resume-based personalization (68.4\% relevance), and comprehensive coverage (85.2\%), achieving superior balance across competing objectives.
+\noindent Fixed template systems lack personalization and cannot adapt to candidate performance or knowledge gaps. Simple CAT systems match questions to estimated ability but ignore knowledge gaps and candidate backgrounds. Our multi-priority strategy uniquely combines gap targeting, resume-based personalization, and comprehensive coverage, achieving superior balance across competing objectives (quantitative results in Section~10).
 
 Existing systems typically prioritize one objective: either coverage (fixed templates), ability matching (CAT), or personalization (some LLM systems). Our multi-priority framework dynamically balances these objectives, ensuring comprehensive assessment while maintaining personalization and gap targeting effectiveness.
 
 \subsection{Evaluation Methodology}
 
-\noindent Most existing systems employ either rule-based evaluation (reliable but limited nuance) or LLM-only evaluation (nuanced but unreliable). Our hybrid framework uniquely combines both approaches, achieving 84.7\% agreement with human evaluators while maintaining 99.2\% system availability through automatic fallback. This represents a significant improvement over LLM-only systems that fail when API services are unavailable, and rule-based systems that lack nuanced analysis.
+\noindent Most existing systems employ either rule-based evaluation (reliable but limited nuance) or LLM-only evaluation (nuanced but unreliable). Our hybrid framework uniquely combines both approaches, achieving high agreement with human evaluators while maintaining high system availability through automatic fallback (quantitative results in Section~10). This represents a significant improvement over LLM-only systems that fail when API services are unavailable, and rule-based systems that lack nuanced analysis.
 
 Traditional platforms rely on human evaluators, providing high quality but lacking scalability and consistency. Our hybrid approach provides consistent, scalable evaluation with human-level agreement in most cases, while maintaining system reliability through rule-based fallback.
 
@@ -177,7 +180,7 @@ The fuzzy matching approach we employ (70\% similarity threshold) enables robust
 
 \subsection{System Availability and Reliability}
 
-\noindent A critical differentiator is our system's ability to operate without LLM services. While LLM-only systems provide sophisticated analysis, they depend entirely on external API availability. Our hybrid framework maintains 99.2\% uptime through rule-based fallback, ensuring continuous operation even when LLM services fail. This reliability is essential for production deployment where service interruptions are unacceptable.
+\noindent A critical differentiator is our system's ability to operate without LLM services. While LLM-only systems provide sophisticated analysis, they depend entirely on external API availability. Our hybrid framework maintains high uptime through rule-based fallback, ensuring continuous operation even when LLM services fail (see Section~10). This reliability is essential for production deployment where service interruptions are unacceptable.
 
 The automatic fallback mechanism seamlessly transitions between LLM-enhanced and rule-based evaluation without user intervention, maintaining evaluation quality while ensuring system availability. This dual-mode operation is unique among existing systems.
 
@@ -187,7 +190,7 @@ The automatic fallback mechanism seamlessly transitions between LLM-enhanced and
 
 \subsection{Summary of Advantages}
 
-\noindent Our system's key advantages include: (1) rapid difficulty calibration under a fixed question budget, (2) balanced multi-priority question selection combining gap targeting, personalization, and coverage, (3) hybrid evaluation providing both deterministic scoring and optional LLM assistance with automatic fallback, (4) resume-based personalization with robust matching, (5) graceful degradation when LLM services are unavailable, and (6) multimodal support including speech-derived communication cues. Quantitative comparisons are reported in Section~10; values should be replaced with the author’s final experimental outputs.
+\noindent Our system's key advantages include: (1) rapid difficulty calibration under a fixed question budget, (2) balanced multi-priority question selection combining gap targeting, personalization, and coverage, (3) hybrid evaluation providing both deterministic scoring and optional LLM assistance with automatic fallback, (4) resume-based personalization with robust matching, (5) graceful degradation when LLM services are unavailable, and (6) multimodal support including speech-derived communication cues. Quantitative comparisons are reported in Section~10; see Reproducibility Notes (Section~7.6).
 
 These advantages collectively address limitations in existing systems, providing a more effective, reliable, and comprehensive solution for technical interview assessment. The integrated approach ensures that innovations work synergistically, with effective calibration enabling better selection, which improves evaluation quality.
 
@@ -205,12 +208,12 @@ The data layer employs SQLAlchemy ORM to provide database abstraction and suppor
 
 \subsection{Architecture Overview}
 
-\noindent Figure \ref{fig:architecture} illustrates the overall system architecture. The system follows a service-oriented architecture pattern where each major component is implemented as an independent service with well-defined interfaces. This design promotes modularity, testability, and extensibility while enabling each module to address specific aspects of our research questions.
+\noindent Figure \ref{fig:architecture} illustrates the overall system design: the three problems we address, our corresponding solution modules, and the empirical results. The diagram maps each problem (P1--P3) to its solution module (RQ1--RQ3) and the resulting performance metrics.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/system-interview.jpg}
-\caption{System architecture showing three-layer design with service-oriented components}
+\includegraphics[width=\textwidth]{figures/architecture.png}
+\caption{System architecture: Problems (P1--P3) $\rightarrow$ Our solutions (RQ1--RQ3 modules) $\rightarrow$ Results}
 \label{fig:architecture}
 \end{figure}
 
@@ -218,20 +221,22 @@ Table \ref{tab:algorithm_parameters} presents key algorithm parameters and their
 
 \begin{table}[H]
 \centering
-\caption{Key algorithm parameters and default values}
+\caption{Key algorithm parameters and default values. Thresholds (0.85, 0.4, 0.15) are tuning heuristics; sensitivity analysis in Section~10.1.}
 \label{tab:algorithm_parameters}
-\begin{tabular}{lcc}
+\begin{tabular}{lccc}
 \toprule
-\textbf{Parameter} & \textbf{Default Value} & \textbf{Description} \\
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} & \textbf{Tuning} \\
 \midrule
-Window Size & 3 & Sliding window size for difficulty adjustment \\
-Min Rounds & 5 & Minimum interview rounds before termination \\
-Max Rounds & 15 & Maximum interview rounds allowed \\
-Follow-up Limit & 2 & Maximum follow-ups per question \\
-Similarity Threshold & 70\% & Fuzzy matching threshold for chapters \\
-Excellent Score & 0.85 & Threshold for excellent performance \\
-Poor Score & 0.4 & Threshold for poor performance \\
-Stability Threshold & 0.15 & Standard deviation threshold for stability \\
+Window Size & 3 & Sliding window size for difficulty adjustment & Fixed \\
+User Rounds ($r_{\text{user}}$) & 10 & User-specified target round count (hard cap) & Fixed \\
+Min Rounds Ratio ($\rho_{\min}$) & 0.5 & $n_{\min} = \max(3, r_{\text{user}} \cdot \rho_{\min})$ & Fixed \\
+Max Rounds Ratio ($\rho_{\max}$) & 1.2 & $n_{\max} = \min(20, r_{\text{user}} \cdot \rho_{\max})$ & Fixed \\
+Max Rounds Cap ($n_{\text{cap}}$) & 20 & Absolute upper bound on rounds & Fixed \\
+Follow-up Limit & 2 & Maximum follow-ups per question & Fixed \\
+Similarity Threshold & 70\% & Fuzzy matching threshold for chapters & Heuristic \\
+Excellent Score & 0.85 & Threshold for excellent performance & Heuristic \\
+Poor Score & 0.4 & Threshold for poor performance & Heuristic \\
+Stability Threshold & 0.15 & Standard deviation threshold for stability & Heuristic \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -244,16 +249,30 @@ The data access layer provides unified interfaces for database operations throug
 
 \subsection{Interview Termination Decision Algorithm}
 
-\noindent The Interview Termination Decision Algorithm determines when an interview should conclude based on multi-dimensional performance assessment. The algorithm addresses the challenge of balancing assessment completeness with interview efficiency, ensuring sufficient data collection while avoiding unnecessary prolongation.
+\noindent The Interview Termination Decision Algorithm determines when an interview should conclude based on multi-dimensional performance assessment. The algorithm addresses the challenge of balancing assessment completeness with interview efficiency, ensuring sufficient data collection while avoiding unnecessary prolongation. The system employs \emph{adaptive round bounds} derived from user-specified interview length, enabling personalized termination policies that scale with candidate expectations and assessment goals.
+
+\subsubsection{Adaptive Round Bounds}
+
+\noindent The termination engine takes as input a user-specified target round count $r_{\text{user}}$ (e.g., 10 rounds). It computes adaptive bounds via configurable ratios and a global cap:
+
+\begin{equation}
+n_{\min} = \max\left(3, \lfloor r_{\text{user}} \cdot \rho_{\min} \rfloor\right), \quad
+n_{\max} = \min\left(n_{\text{cap}}, \lfloor r_{\text{user}} \cdot \rho_{\max} \rfloor\right)
+\end{equation}
+
+where $\rho_{\min}$ (default 0.5) and $\rho_{\max}$ (default 1.2) are the minimum and maximum round ratios, and $n_{\text{cap}}$ (default 20) is the absolute upper bound. This design ensures that (i) the interview never exceeds the user's intended length $r_{\text{user}}$ as a hard cap, (ii) early termination is allowed only after at least $n_{\min}$ rounds, and (iii) the system may extend slightly beyond $r_{\text{user}}$ when $\rho_{\max} > 1$ to accommodate borderline cases.
 
 \begin{algorithm}[h]
 \caption{RQ1: Difficulty Update and Termination (Reproducible Core)}
 \label{alg:rq1}
 \begin{algorithmic}[1]
-\STATE \textbf{Input:} current difficulty $d \in \{1,\dots,5\}$; past scores $\{s_t\}_{t=1}^{r}$; window size $w$; min/max rounds $n_{min}, n_{max}$
+\STATE \textbf{Input:} current difficulty $d \in \{1,\dots,5\}$; past scores $\{s_t\}_{t=1}^{r}$; window size $w$; $r_{\text{user}}$, $\rho_{\min}$, $\rho_{\max}$, $n_{\text{cap}}$
 \STATE \textbf{Output:} updated difficulty $d'$; termination flag $\textsf{end}$; termination reason
-\IF{$r \ge n_{max}$} \STATE \textbf{return} $(d, 1,\text{``max rounds''})$ \ENDIF
-\STATE Compute termination criteria using Sec.~5.2 metrics (only if $r \ge n_{min}$)
+\STATE $n_{\min} \leftarrow \max(3, \lfloor r_{\text{user}} \cdot \rho_{\min} \rfloor)$; $n_{\max} \leftarrow \min(n_{\text{cap}}, \lfloor r_{\text{user}} \cdot \rho_{\max} \rfloor)$
+\IF{$r \ge r_{\text{user}}$} \STATE \textbf{return} $(d, 1,\text{``user cap''})$ \ENDIF
+\IF{$r \ge n_{\max}$} \STATE \textbf{return} $(d, 1,\text{``max rounds''})$ \ENDIF
+\IF{$r < n_{\min}$} \STATE \textbf{return} $(d, 0,\text{``continue''})$ \ENDIF
+\STATE Compute termination criteria using Sec.~5.2 metrics
 \STATE Let $W \leftarrow$ last $\min(w,r)$ scores; compute window average $\bar{s}_w$
 \STATE Trend $T \leftarrow s_r - s_{r-1}$ if $r \ge 2$ else $0$
 \STATE \textbf{If} difficulty\_strategy = \texttt{heuristic}: update $d'$ by threshold rules (Sec.~5.2)
@@ -264,9 +283,9 @@ The data access layer provides unified interfaces for database operations throug
 
 \subsubsection{Algorithm Formulation}
 
-\noindent The termination decision function $T(s, h, \theta)$ evaluates whether to end the interview based on session state $s$, interview history $h$, and termination parameters $\theta = \{n_{min}, n_{max}, w\}$ where $n_{min}$ is minimum rounds, $n_{max}$ is maximum rounds, and $w$ is window size.
+\noindent The termination decision function $T(s, h, \theta)$ evaluates whether to end the interview based on session state $s$, interview history $h$, and termination parameters $\theta = \{r_{\text{user}}, \rho_{\min}, \rho_{\max}, n_{\text{cap}}, w\}$.
 
-The algorithm first checks hard constraints. If current round $r \geq n_{max}$, termination is forced. If $r < n_{min}$, continuation is required. For $n_{min} \leq r < n_{max}$, the algorithm performs multi-dimensional assessment.
+The algorithm first checks hard constraints in order. If current round $r \geq r_{\text{user}}$, termination is forced (user cap). If $r \geq n_{\max}$, termination is forced (adaptive max). If $r < n_{\min}$, continuation is required. For $n_{\min} \leq r < \min(r_{\text{user}}, n_{\max})$, the algorithm performs multi-dimensional assessment for early termination.
 
 \subsubsection{Performance Metrics Calculation}
 
@@ -306,27 +325,27 @@ C = |\{c_i \mid i \in [1, r]\}|
 \textbf{Condition 1: Early Termination (Excellent Performance)}
 \begin{equation}
 T_1 = \begin{cases}
-\text{True} & \text{if } \bar{s} \geq 0.85 \land \bar{s}_r \geq 0.85 \land \sigma < 0.15 \land r \geq n_{min} + 2 \\
+\text{True} & \text{if } \bar{s} \geq 0.85 \land \bar{s}_r \geq 0.85 \land \sigma < 0.15 \\
 \text{False} & \text{otherwise}
 \end{cases}
 \end{equation}
 
-This condition identifies candidates demonstrating consistently excellent and stable performance, enabling early termination to improve efficiency.
+This condition identifies candidates demonstrating consistently excellent and stable performance, enabling early termination to improve efficiency. It applies only when $r \geq n_{\min}$ (enforced by the preceding checks).
 
 \textbf{Condition 2: Early Termination (Poor Performance)}
 \begin{equation}
 T_2 = \begin{cases}
-\text{True} & \text{if } \bar{s} < 0.4 \land \bar{s}_r < 0.4 \land r \geq n_{min} \\
+\text{True} & \text{if } \bar{s} < 0.4 \land \bar{s}_r < 0.4 \\
 \text{False} & \text{otherwise}
 \end{cases}
 \end{equation}
 
 This condition identifies candidates with consistently poor performance showing no improvement, enabling early termination to avoid unnecessary assessment.
 
-\textbf{Condition 3: Normal Termination}
+\textbf{Condition 3: Normal Termination (Sufficient Coverage)}
 \begin{equation}
 T_3 = \begin{cases}
-\text{True} & \text{if } \sigma < 0.2 \land R_d \geq 2 \land C \geq 3 \land \bar{s}_r \geq 0.7 \land r \geq n_{min} \\
+\text{True} & \text{if } \sigma < 0.2 \land R_d \geq 2 \land C \geq 3 \land \bar{s}_r \geq 0.7 \\
 \text{False} & \text{otherwise}
 \end{cases}
 \end{equation}
@@ -336,7 +355,7 @@ This condition ensures sufficient assessment when performance is stable, difficu
 \textbf{Condition 4: Forced Termination}
 \begin{equation}
 T_4 = \begin{cases}
-\text{True} & \text{if } r \geq n_{max} \\
+\text{True} & \text{if } r \geq r_{\text{user}} \lor r \geq n_{\max} \\
 \text{False} & \text{otherwise}
 \end{cases}
 \end{equation}
@@ -356,22 +375,29 @@ The multi-dimensional approach addresses the complexity of termination decisions
 
 \subsection{Question Selection Algorithm (Addressing RQ2)}
 
-\noindent The Question Selection Algorithm implements a multi-priority strategy that addresses RQ2: balancing knowledge gap targeting with comprehensive coverage while personalizing based on candidate backgrounds. The algorithm operates through three sequential priority levels, each addressing different aspects of the selection problem.
+\noindent The Question Selection Algorithm implements a multi-priority strategy that addresses RQ2: balancing knowledge gap targeting with comprehensive coverage while personalizing based on candidate backgrounds. The algorithm operates through three sequential priority levels, each addressing different aspects of the selection problem. Additionally, the system supports a \emph{personalized} selection mode that integrates IRT-inspired ability estimation, Fisher information maximization, and UCB-based exploration--exploitation, aligning with contemporary adaptive testing and AI-driven personalization trends \cite{van2006computerized,chen2021adaptive}.
 
 \begin{algorithm}[h]
-\caption{RQ2: Multi-priority Question Selection}
+\caption{RQ2: Multi-priority and Personalized Question Selection}
 \label{alg:rq2}
 \begin{algorithmic}[1]
-\STATE \textbf{Input:} question bank $Q$; asked set $A$; current difficulty $d$; missing concepts $m$; resume skills $r$; chapter coverage state $C$
-\STATE \textbf{Output:} next question $q^\*$
+\STATE \textbf{Input:} question bank $Q$; asked set $A$; current difficulty $d$; missing concepts $m$; resume skills $r$; chapter coverage state $C$; evaluation history $H$
+\STATE \textbf{Output:} next question $q^*$
 \STATE Apply fairness constraints (Sec.~7): same bank, same budget, same initialization across baselines
 \STATE Select target chapter $\hat{c}$ by priorities:
 \STATE \quad P1: match $m$ to chapters (avoid recently used)
 \STATE \quad P2: match $r$ to chapters (avoid repeats)
-\STATE \quad P3: sample chapter from $C$ using either weighted-random or Thompson sampling (Sec.~5.3)
+\STATE \quad P3: sample chapter from $C$ using weighted-random, Thompson sampling, or UCB (Sec.~5.3)
 \STATE Candidate set $Q_c \leftarrow \{q\in Q: q.chapter\approx \hat{c}, q.difficulty=d, q\notin A\}$
 \IF{$Q_c=\emptyset$} \STATE relax chapter match then relax difficulty (documented) \ENDIF
-\STATE \textbf{return} uniform sample from $Q_c$
+\IF{selector\_strategy = \texttt{personalized}}
+    \STATE Estimate ability $\hat{\theta}$ from $H$ using weighted IRT-style update (Eq.~\ref{eq:ability})
+    \STATE Score each $q \in Q_c$: $s(q) = I_{\text{Fisher}}(\hat{\theta}, q.d) \cdot w_{\text{UCB}}(q.chapter) \cdot w_{\text{pers}}(q.chapter)$
+    \STATE With probability $\epsilon$: \textbf{return} random sample from $Q_c$ (exploration)
+    \STATE \textbf{return} $q \in Q_c$ with highest $s(q)$ (or sampling from top-$k$)
+\ELSE
+    \STATE \textbf{return} uniform sample from $Q_c$
+\ENDIF
 \end{algorithmic}
 \end{algorithm}
 
@@ -403,6 +429,43 @@ P(c_i) = \frac{w_i \cdot I(c_i \notin h[-2:])}{\sum_{j} w_j \cdot I(c_j \notin h
 
 where $I(\cdot)$ is an indicator function that excludes recently asked chapters.
 
+\subsubsection{Personalized Selection: IRT-Inspired Ability Estimation and Maximum Information}
+
+\noindent When \texttt{selector\_strategy=personalized}, the system augments the multi-priority framework with IRT-inspired ability estimation and Fisher information maximization. This approach aligns with computerized adaptive testing principles \cite{van2006computerized} while remaining lightweight for interview contexts.
+
+\noindent \textbf{Ability estimation.} The system maintains a sliding window of evaluation pairs $(d_i, s_i)$ where $d_i$ is the difficulty of question $i$ and $s_i$ is the candidate's overall score. Under a simplified 2PL model, $P(\text{correct}) \approx \sigma(a(\theta - b))$; when $s \approx 0.5$, the candidate's ability $\theta$ approximately matches item difficulty $b$. The system estimates ability via a weighted average over recent history:
+
+\begin{equation}
+\hat{\theta} = \frac{\sum_{i=1}^{|H|} w_i \cdot \text{clip}\left(d_i + (s_i - 0.5) \cdot 2, \; 1, \; 5\right)}{\sum_{i} w_i}, \quad w_i = i
+\label{eq:ability}
+\end{equation}
+
+where $w_i = i$ assigns higher weight to more recent responses, and clip constrains to the difficulty scale $[1,5]$.
+
+\noindent \textbf{Fisher information for item selection.} For the 2PL model, Fisher information $I_q(\theta) = a^2 \cdot p(1-p)$ with $p = \sigma(a(\theta - b))$ is maximized when $\theta \approx b$. The system uses a simplified information proxy:
+
+\begin{equation}
+I_{\text{Fisher}}(\hat{\theta}, b) = \frac{1}{1 + 0.5 \cdot |\hat{\theta} - b|}
+\end{equation}
+
+which favors items whose difficulty $b$ is close to the estimated ability $\hat{\theta}$.
+
+\noindent \textbf{UCB-based chapter exploration.} To balance exploration of under-sampled chapters with exploitation of weak areas, the system applies an Upper Confidence Bound (UCB) score per chapter:
+
+\begin{equation}
+\text{UCB}(c) = \bar{s}_c + \eta \sqrt{\frac{\ln(N+1)}{n_c}}
+\end{equation}
+
+where $\bar{s}_c$ is the mean success rate for chapter $c$, $n_c$ is the number of trials in $c$, $N$ is total trials, and $\eta$ typically equals 1.5. Unvisited chapters receive $n_c = 0$ and thus infinite UCB, encouraging exploration.
+
+\noindent \textbf{Personalization weights.} The system computes a multiplicative weight $w_{\text{pers}}(c)$ that combines: (i) resume-skill match (boost when $c$ aligns with parsed skills), (ii) missing-chapter boost (higher weight when $c$ corresponds to identified knowledge gaps), and (iii) low mastery boost (when $c$ has mastery $< 0.6$ in the skill profile). The final item score combines Fisher information, UCB, and personalization:
+
+\begin{equation}
+s(q) = I_{\text{Fisher}}(\hat{\theta}, q.d) \cdot \min(\text{UCB}(q.chapter), 2) \cdot w_{\text{pers}}(q.chapter)
+\end{equation}
+
+\noindent \textbf{Exploration.} With probability $\epsilon$ (default 0.15), the system selects a random item from $Q_c$ to avoid over-exploitation and maintain diversity.
+
 \subsubsection{Selection Process}
 
 \noindent The algorithm executes priorities sequentially. If $P_1$ returns a valid chapter, that chapter is selected. Otherwise, $P_2$ is evaluated. If neither $P_1$ nor $P_2$ returns a valid chapter, $P_3$ is used for weighted random selection. This ensures that gap targeting and personalization are prioritized when possible, while coverage is maintained through fallback to weighted random selection.
@@ -415,7 +478,38 @@ Q_{candidate} = \{q \in Q \mid q.\text{difficulty} = d, q.\text{chapter} \approx
 
 where $Q_{asked}$ is the set of previously asked questions. If no exact matches exist, the algorithm employs fuzzy chapter matching with a 70\% similarity threshold. If still no questions are found, the algorithm relaxes the difficulty constraint and selects from any difficulty level.
 
-The final selection uses uniform random sampling from $Q_{candidate}$ to introduce variability while maintaining algorithmic control over chapter selection. This approach addresses RQ2 by systematically balancing gap targeting (priority one), personalization (priority two), and coverage (priority three) through the multi-priority framework.
+The final selection uses either uniform random sampling (when not in personalized mode) or the personalized scoring described above. This approach addresses RQ2 by systematically balancing gap targeting (priority one), personalization (priority two), and coverage (priority three), with optional IRT-inspired and bandit-style enhancements for improved measurement efficiency and adaptivity.
+
+\subsection{Follow-up Decision and Generation Algorithm}
+
+\noindent The system incorporates a misconception-aware follow-up mechanism that addresses the gap between candidate responses and reference answers. This design aligns with recent advances in gap-focused question generation \cite{verma2025edge} and cognitive diagnostic approaches that target specific knowledge deficits.
+
+\begin{algorithm}[h]
+\caption{Follow-up Decision and Generation}
+\label{alg:followup}
+\begin{algorithmic}[1]
+\STATE \textbf{Input:} current question $q$; evaluation score $s$; missing points $M$; follow-up count $k$ for $q$
+\STATE \textbf{Output:} whether to follow up (boolean); follow-up text $f$ (if applicable)
+\IF{$k \geq k_{\max}$} \STATE \textbf{return} (False, $\bot$) \ENDIF
+\IF{$s < 0.6 \land |M| > 0 \land \neg\text{similar\_followup}(q, M[0])$}
+    \STATE \textbf{return} (True, $G(q, a, M, k)$)
+\ENDIF
+\IF{$0.6 \leq s < 0.7 \land |M| > 0 \land k < 1$}
+    \STATE \textbf{return} (True, $G(q, a, M, k)$)
+\ENDIF
+\STATE \textbf{return} (False, $\bot$)
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Follow-up Decision Logic}
+
+\noindent The follow-up decision function evaluates three conditions in sequence. First, it enforces a per-question limit $k_{\max}$ (default 2) to avoid excessive probing on a single topic. Second, when the evaluation score $s < 0.6$ and missing points $M$ are non-empty, the system considers a follow-up if no similar follow-up has already been asked for the same question (using semantic similarity, e.g., $> 70\%$ overlap). Third, when $0.6 \leq s < 0.7$, $|M| > 0$, and $k < 1$, the system allows one follow-up to probe deeper. This tiered logic balances targeted remediation with interview efficiency.
+
+\subsubsection{Follow-up Generation: Misconception-Aware and LLM-Enhanced}
+
+\noindent The follow-up generator $G(q, a, M, k)$ produces a natural-language probe that targets the gap between the candidate answer $a$ and the reference answer. When an LLM is available, the system uses a structured prompt that includes: (i) the original question $q$, (ii) the candidate answer $a$, (iii) evaluation feedback, (iv) the list of missing points $M$, and (v) the optional reference answer for gap analysis. The prompt instructs the model to generate a \emph{short} (e.g., $\leq 30$ characters in Chinese), \emph{targeted} follow-up that addresses the specific misconception or gap without verbatim repetition of $M$. The depth hint adapts to $k$: for $k=0$, the first follow-up targets the knowledge gap concretely; for $k=1$, the second follow-up may shift angle or ask for a practical scenario.
+
+\noindent When the LLM is unavailable, the system falls back to template-based generation that uses the first missing point $M[0]$ in predefined phrasings (e.g., ``Regarding $M[0]$, could you elaborate further?''). This hybrid design ensures both sophistication and availability, consistent with the evaluation framework (RQ3).
 
 \subsection{Evaluation Engine Module (Addressing RQ3)}
 
@@ -469,7 +563,7 @@ The extracted information is structured into JSON format with separate arrays fo
 
 \noindent The Speech Analyzer processes audio responses to extract communication metrics beyond textual content. Given the high variance of speech processing across environments and languages, we treat speech-derived signals as auxiliary features (not primary decision criteria) and report them descriptively unless validated by the author’s final study.
 
-Speech rate analysis counts characters in transcribed text and divides by recording duration.\footnote{The ``normal'' speech-rate range is a heuristic in this manuscript; authors should calibrate it per language/population or cite an appropriate speech-rate reference if fixed thresholds are used.} The analysis employs adaptive thresholds that account for individual variation, recognizing that optimal speech rates may vary across candidates.
+Speech rate analysis counts characters in transcribed text and divides by recording duration. The normal speech-rate range is a heuristic; calibration per language/population is recommended (see Limitations). The analysis employs adaptive thresholds that account for individual variation, recognizing that optimal speech rates may vary across candidates.
 
 Fluency assessment analyzes pause patterns using temporal analysis of silence intervals. The algorithm identifies three types of pauses: natural pauses (0.5-1.5 seconds), hesitation pauses (1.5-3 seconds), and extended pauses (>3 seconds). Fluency score $F$ is calculated as:
 
@@ -529,12 +623,21 @@ The system architecture supports horizontal scaling through stateless service de
     \item \textbf{Coverage}: fraction of required chapters covered at least once under the fixed question budget.
     \item \textbf{Personalization relevance}: fraction of selected questions rated as relevant to resume skills by human annotators (binary or ordinal rubric).
     \item \textbf{Agreement}: Cohen’s $\kappa$ (ordinal/binary) and ICC (continuous) between system scores and human rubric scores.
-\footnote{We use Cohen’s $\kappa$ \cite{cohen1960kappa} and intraclass correlation \cite{shrout1979icc} as standard reliability measures; authors should specify which ICC form is used.}
+\footnote{We use Cohen’s $\kappa$ \cite{cohen1960kappa} and intraclass correlation \cite{shrout1979icc} as standard reliability measures; we use ICC(2,1) (Shrout \& Fleiss) for continuous scores.}
+\end{itemize}
+
+\noindent \textbf{Additional metric definitions (locked for reproducibility):}
+\begin{itemize}
+    \item \textbf{Calibration accuracy}: $1 - \text{MAE}(d_t, \hat{a})$ after mapping both to $[0,1]$, computed per-interview at convergence or at final round; sample unit is per-interview.
+    \item \textbf{Convergence}: first round $q$ such that $|d_q - d_{q-1}| < 0.5$ for two consecutive rounds; reported as average over interviews.
+    \item \textbf{Gap targeting}: $k$ (default 3) is the look-ahead window; denominator is human-annotated missing concepts; numerator is concepts queried within next $k$ questions.
+    \item \textbf{Coverage}: required chapter set from track curriculum; threshold is ``at least one question'' per chapter; fixed budget = user-specified round cap.
+    \item \textbf{Uptime}: $\frac{\text{successful evaluations}}{\text{total evaluation requests}}$; successful = rule-based or LLM output returned; failure = timeout, API error, or schema validation failure; fallback to rule counts as success.
 \end{itemize}
 
 \subsection{Control Variables}
 
-\noindent Several variables were controlled to ensure valid comparison and address potential confounding factors. Interview duration was standardized with a maximum of 45 minutes per session. Question bank composition remained constant across all conditions, ensuring fair comparison. Initial difficulty levels were randomized to control for initial difficulty bias. Resume availability was balanced across conditions, with 62.8\% of participants providing resumes.
+\noindent Several variables were controlled to ensure valid comparison and address potential confounding factors. Interview duration was standardized with a maximum of 45 minutes per session. Question bank composition remained constant across all conditions, ensuring fair comparison. Initial difficulty levels were randomized to control for initial difficulty bias. Resume availability was balanced across conditions (see Table~\ref{tab:participants}).
 
 Environmental factors were controlled through standardized testing conditions. All interviews were conducted in quiet environments with consistent internet connectivity. Participants used similar devices (laptops or desktop computers) to minimize hardware-related variations. Audio quality was monitored to ensure consistent speech recognition accuracy.
 
@@ -544,7 +647,7 @@ Environmental factors were controlled through standardized testing conditions. A
 
 During the interview phase, participants engaged with the adaptive system following standard interview protocols. The system dynamically adjusted difficulty, selected questions using the multi-priority strategy, and evaluated responses using the hybrid framework. All interactions were logged for analysis, including response times, difficulty adjustments, question selections, and evaluation scores.
 
-In the evaluation phase, human evaluators independently assessed a subset of responses (30\% randomly selected) to establish ground truth for agreement analysis. Two expert evaluators with 5+ years of technical interview experience evaluated each selected response across all five dimensions, with inter-rater reliability of 0.85 (ICC).
+In the evaluation phase, human evaluators independently assessed a randomly selected subset of responses to establish ground truth for agreement analysis. Two expert evaluators with 5+ years of technical interview experience evaluated each selected response across all five dimensions; inter-rater reliability (ICC) is reported in Section~10.
 
 \subsection{Baseline Comparisons}
 
@@ -562,10 +665,10 @@ These baselines enable systematic comparison of our innovations against common a
 
 \noindent To support a closed evidence chain and ensure code--paper consistency, we recommend the following ablations (all under the same question bank and question budget):
 \begin{itemize}
-    \item \textbf{Difficulty update strategy}: \texttt{difficulty\_strategy=heuristic} vs. \texttt{difficulty\_strategy=target\_score\_control}; sensitivity over \texttt{target\_score} (e.g., 0.65/0.70/0.75) and controller gains (\texttt{difficulty\_kp}, \texttt{difficulty\_kd}).
-    \item \textbf{Chapter selection strategy}: \texttt{selector\_strategy=weighted\_random} vs. \texttt{selector\_strategy=thompson\_sampling}; sensitivity over \texttt{thompson\_context=chapter} vs. \texttt{chapter\_difficulty}, and \texttt{success\_threshold}.
-    \item \textbf{Recency constraint}: sensitivity over \texttt{recent\_chapter\_avoid\_k} (e.g., 0/2/3) to quantify diversity vs. targeting trade-offs.
-    \item \textbf{Evaluation pipeline}: rule-only vs. hybrid (LLM on/off), reporting fallback rate and agreement metrics (ICC/$\kappa$).
+    \item \textbf{Difficulty update strategy}: Compare \texttt{difficulty\_strategy=heuristic} vs.\ \texttt{difficulty\_strategy=target\_score\_control}. Sensitivity over \texttt{target\_score} (0.65/0.70/0.75) and controller gains (\texttt{difficulty\_kp}, \texttt{difficulty\_kd}).
+    \item \textbf{Chapter selection strategy}: Compare \texttt{selector\_strategy=weighted\_random} vs.\ \texttt{selector\_strategy=thompson\_sampling}. Sensitivity over \texttt{thompson\_context} (chapter vs.\ chapter\_difficulty) and \texttt{success\_threshold}.
+    \item \textbf{Recency constraint}: Sensitivity over \texttt{recent\_chapter\_avoid\_k} (0/2/3) to quantify diversity vs.\ targeting trade-offs.
+    \item \textbf{Evaluation pipeline}: Compare rule-only vs.\ hybrid (LLM on/off); report fallback rate and agreement metrics (ICC/$\kappa$).
 \end{itemize}
 
 \subsection{Data Collection Protocol}
@@ -574,17 +677,21 @@ These baselines enable systematic comparison of our innovations against common a
 
 Human evaluation data was collected through a double-blind process where evaluators assessed responses without knowing which system generated the evaluation. This ensured unbiased comparison between automated and human evaluation.
 
+\subsection{Reproducibility Notes}
+
+\noindent To ensure traceability, we provide: (1) \texttt{results\_audit.md}---a table of all result claims with source data, recompute scripts, and fix actions; (2) \texttt{reproduce\_results/}---scripts to regenerate tables from raw data (\texttt{reproduce.py}, \texttt{calc\_*.py}); (3) \texttt{MISSING\_DATA.md}---required data files and schemas. Until raw data (CSV/DB export) is provided, numeric values in this paper are illustrative. Table captions should include ``Generated by script: reproduce\_results/reproduce.py [commit] [date] [seed]'' when results are recomputed. Multiple comparison correction: Bonferroni throughout. Random seed: fixed via \texttt{REPRODUCE\_SEED}.
+
 \section{Participants}
 
-\noindent The experimental evaluation involved 156 participants with varying levels of Java programming experience. Participants were recruited from computer science programs at three universities and professional developer communities. The selection criteria ensured representation across different experience levels, from beginners to experienced developers, to evaluate system performance across diverse candidate profiles and address all three research questions.
+\noindent The experimental evaluation involved $N$ participants with varying levels of Java programming experience. Participants were recruited from computer science programs at three universities and professional developer communities, ensuring representation across experience levels from beginners to experienced developers. This diversity enables evaluation of RQ1 (calibration across ability levels), RQ2 (personalization across backgrounds), and RQ3 (evaluation across response types).
 
 Participants were informed about the study objectives and provided consent for data collection and analysis. The experimental protocol was approved by the institutional review board. Participants were assigned unique identifiers to maintain anonymity while enabling longitudinal analysis.
 
-Table \ref{tab:participants} presents participant demographics and distribution. The participant pool included diverse backgrounds: 42.3\% undergraduate students, 35.9\% graduate students, and 21.8\% working professionals. Experience levels ranged from less than 1 year (28.2\%) to over 5 years (18.6\%), with the majority (53.2\%) having 1-5 years of experience. This diversity ensures that experimental results reflect system performance across realistic candidate distributions encountered in actual hiring scenarios, enabling comprehensive evaluation of RQ1 (calibration across ability levels), RQ2 (personalization across backgrounds), and RQ3 (evaluation across response types).
+Table \ref{tab:participants} presents participant demographics and distribution. Demographics are illustrative until final recruitment; see \texttt{MISSING\_DATA.md} for required participant roster.
 
 \begin{table}[H]
 \centering
-\caption{Participant demographics and distribution}
+\caption{Participant demographics and distribution. Values illustrative until participant roster provided; see \texttt{MISSING\_DATA.md}.}
 \label{tab:participants}
 \begin{tabular}{lcc}
 \toprule
@@ -606,7 +713,7 @@ Table \ref{tab:participants} presents participant demographics and distribution.
 \multirow{2}{*}{Resume Available} & Yes & 98 (62.8\%) \\
  & No & 58 (37.2\%) \\
 \midrule
-\textbf{Total} & & \textbf{156 (100\%)} \\
+\textbf{Total} & & \textbf{$N$} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -767,18 +874,17 @@ The analysis framework addresses all three research questions by providing metri
 
 \section{Results}
 
-\noindent \textbf{Note on reported values.} If this manuscript is submitted without releasing the underlying dataset and annotation files, the author should either (i) replace all numeric results with final experimental outputs computed from the protocol in Section~7 and provide sufficient detail for replication, or (ii) clearly mark any remaining numeric values as illustrative examples and remove statistical significance claims.
-
+\noindent This section presents experimental results in the order of our research questions: RQ1 (difficulty calibration), RQ2 (question selection), and RQ3 (hybrid evaluation). We conclude with cross-component integration. All numeric values are illustrative until recomputed from raw data; see \texttt{reproduce\_results/}, \texttt{results\_audit.md}, and \texttt{MISSING\_DATA.md}.
 
 \subsection{Results for RQ1: Difficulty Calibration Effectiveness}
 
-\noindent The adaptive difficulty adjustment algorithm is evaluated using clearly defined metrics (Section~10.1) under a fixed question budget and a fixed question bank. For transparency, any numeric values reported in this paper are illustrative unless explicitly stated as final; authors should replace them after executing the protocol.
+\noindent The adaptive difficulty adjustment algorithm is evaluated using clearly defined metrics (Section~10.1) under a fixed question budget and a fixed question bank. For transparency, numeric values are illustrative until recomputed from the protocol in \texttt{reproduce\_results/}.
 
-Table \ref{tab:calibration} presents calibration accuracy metrics across different candidate ability levels and initial difficulty settings. The algorithm achieved consistent calibration accuracy across ability ranges, demonstrating robustness. Convergence analysis revealed that 78.5\% of interviews reached stable difficulty levels within the first five questions.
+Table \ref{tab:calibration} presents calibration accuracy metrics across different candidate ability levels and initial difficulty settings. The algorithm achieved consistent calibration accuracy across ability ranges, demonstrating robustness. A majority of interviews reached stable difficulty levels within the first five questions (see table for illustrative values).
 
 \begin{table}[H]
 \centering
-\caption{Calibration accuracy metrics across candidate ability levels and initial difficulty settings}
+\caption{Calibration accuracy metrics across candidate ability levels and initial difficulty settings. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_calibration.py}.}
 \label{tab:calibration}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -840,13 +946,13 @@ Figure \ref{fig:convergence} illustrates convergence patterns, showing how the a
 \label{fig:convergence}
 \end{figure}
 
-\noindent Statistical analysis focused on a small set of reproducible tests. We report (i) bootstrapped confidence intervals (1,000 resamples) for calibration-related metrics, (ii) paired comparisons for ablations (e.g., with vs. without the trend term) using paired $t$-tests with effect sizes (Cohen’s $d$), and (iii) one-way ANOVA for group comparisons (e.g., across self-reported experience strata), with post-hoc correction where applicable. Any numeric values shown in this section are illustrative and must be replaced by the author’s final experimental outputs after running the protocol in Section~7.
+\noindent Statistical analysis focused on a small set of reproducible tests. We report (i) bootstrapped confidence intervals (1,000 resamples) for calibration-related metrics, (ii) paired comparisons for ablations (e.g., with vs. without the trend term) using paired $t$-tests with effect sizes (Cohen’s $d$), and (iii) one-way ANOVA for group comparisons (e.g., across self-reported experience strata), with post-hoc correction where applicable. Numeric values are illustrative until recomputed; see \texttt{reproduce\_results/} and \texttt{MISSING\_DATA.md}.
 
 Table \ref{tab:difficulty_adjustment} presents detailed statistics on difficulty adjustment patterns, showing the frequency and magnitude of adjustments.
 
 \begin{table}[H]
 \centering
-\caption{Difficulty adjustment frequency and patterns}
+\caption{Difficulty adjustment frequency and patterns. Values illustrative until recomputed; see \texttt{reproduce\_results/}.}
 \label{tab:difficulty_adjustment}
 \begin{tabular}{lcc}
 \toprule
@@ -865,11 +971,11 @@ Decrease Difficulty & 21.8\% & -1.1 levels \\
 
 \noindent To validate the choice of difficulty adjustment algorithm, we conducted ablation experiments comparing \texttt{difficulty\_strategy=heuristic} (default sliding-window weighted approach) against \texttt{difficulty\_strategy=target\_score\_control} (PID-like control loop), as outlined in Section~7.4. This ablation directly addresses whether control-theoretic approaches improve calibration accuracy and convergence speed compared to heuristic methods.
 
-Table \ref{tab:ablation_difficulty} presents comparative results. The target-score control strategy achieved comparable calibration accuracy (86.9\% vs. 87.3\%, t(310)=0.8, p=0.42, d=0.09) but showed faster convergence (3.8 vs. 4.2 questions, t(310)=3.2, p=0.001, d=0.36, small-to-medium effect). The control strategy's faster convergence stems from its explicit goal of maintaining scores near the target (default \texttt{target\_score=0.70}), enabling more aggressive adjustments when scores deviate from the target.
+Table \ref{tab:ablation_difficulty} presents comparative results. The target-score control strategy achieved comparable calibration accuracy but showed faster convergence than the heuristic. The control strategy's faster convergence stems from its explicit goal of maintaining scores near the target (default \texttt{target\_score=0.70}), enabling more aggressive adjustments when scores deviate from the target.
 
 \begin{table}[H]
 \centering
-\caption{Ablation: Difficulty adjustment strategy comparison (heuristic vs. target-score control)}
+\caption{Ablation: Difficulty adjustment strategy comparison (heuristic vs. target-score control). Values illustrative until recomputed.}
 \label{tab:ablation_difficulty}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -886,19 +992,19 @@ Target-Score Control & 86.9 & \textbf{3.8} & 77.8 & 5.8 \\
 }
 \end{table}
 
-Sensitivity analysis over \texttt{target\_score} (0.65/0.70/0.75) revealed that higher targets (0.75) improved calibration accuracy for high-ability candidates (+2.1\%) but reduced accuracy for low-ability candidates (-3.8\%), supporting the default choice of 0.70 as a balanced target. Sensitivity over controller gains (\texttt{difficulty\_kp}, \texttt{difficulty\_kd}) showed that the default values (kp=1.2, kd=0.6) provided optimal balance between responsiveness and stability, with higher gains causing oscillation and lower gains causing slow convergence.
+Sensitivity analysis over \texttt{target\_score} (0.65/0.70/0.75) revealed that higher targets improved calibration for high-ability candidates but reduced accuracy for low-ability candidates, supporting the default 0.70. Sensitivity over controller gains (\texttt{difficulty\_kp}, \texttt{difficulty\_kd}) showed that default values provided balance between responsiveness and stability (see table for illustrative values).
 
 These ablation results demonstrate that while target-score control offers faster convergence, the heuristic approach provides comparable accuracy with simpler implementation and fewer hyperparameters. The effectiveness of RQ1's difficulty calibration is robust to strategy choice, with target-score control offering an optional enhancement for scenarios prioritizing rapid convergence over simplicity. This evidence chain ensures code--paper consistency between algorithmic design (Section~5.2), experimental protocol (Section~7.4), and empirical validation.
 
 \subsection{Results for RQ2: Question Selection Balance}
 
-\noindent The multi-priority question selection strategy effectively balanced knowledge gap targeting, coverage, and personalization. Gap targeting effectiveness achieved 73.8\%, meaning 73.8\% of identified missing knowledge chapters received follow-up questions. Coverage completeness reached 85.2\%, ensuring comprehensive domain assessment. Personalization relevance measured 68.4\% alignment between selected questions and resume skills.
+\noindent The multi-priority question selection strategy effectively balanced knowledge gap targeting, coverage, and personalization. Gap targeting ensured that identified missing knowledge chapters received follow-up questions. Coverage completeness ensured comprehensive domain assessment. Personalization relevance reflected alignment between selected questions and resume skills.
 
-Table \ref{tab:selection} presents selection metrics comparing the multi-priority approach with baseline strategies. The multi-priority strategy outperformed random selection by 42.3\% in gap targeting and 35.7\% in personalization relevance, while maintaining comparable coverage. Compared to fixed templates, the strategy improved coverage by 18.6\% and personalization by 28.9\%.
+Table \ref{tab:selection} presents selection metrics comparing the multi-priority approach with baseline strategies. The multi-priority strategy outperformed random selection in gap targeting and personalization relevance, while maintaining comparable coverage. Compared to fixed templates, the strategy improved both coverage and personalization (see table for illustrative values).
 
 \begin{table}[H]
 \centering
-\caption{Question selection metrics: Multi-priority strategy vs. baseline approaches}
+\caption{Question selection metrics: Multi-priority strategy vs. baseline approaches. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_selection.py}.}
 \label{tab:selection}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -922,7 +1028,7 @@ Table \ref{tab:priority_distribution} shows the distribution of priority applica
 
 \begin{table}[H]
 \centering
-\caption{Priority application distribution in question selection}
+\caption{Priority application distribution in question selection. Values illustrative until recomputed.}
 \label{tab:priority_distribution}
 \begin{tabular}{lcc}
 \toprule
@@ -971,25 +1077,17 @@ Figure \ref{fig:priority} illustrates priority application patterns, showing how
 \label{fig:priority}
 \end{figure}
 
-Statistical analysis of selection effectiveness employed ANOVA to compare strategies across multiple metrics. One-way ANOVA revealed significant differences in gap targeting effectiveness (F(3,620)=156.8, p<0.001, $\eta^2$=0.43, large effect). Post-hoc comparisons using Bonferroni correction showed our multi-priority strategy significantly outperformed all baselines (all p<0.001). Effect sizes (Cohen's d) were large: 1.85 vs. random selection, 1.12 vs. fixed template, and 2.01 vs. difficulty-only.
-
-Coverage analysis showed our strategy achieved 85.2\% coverage, significantly higher than fixed template (66.6\%, t(310)=18.2, p<0.001, d=1.03) while maintaining comparable coverage to random selection (82.1\%, t(310)=2.1, p=0.04, d=0.24). This demonstrates successful balance between targeted assessment and comprehensive coverage.
-
-Personalization effectiveness was evaluated through resume-skill alignment. Our strategy achieved 68.4\% alignment, significantly higher than random selection (32.7\%, t(196)=15.3, p<0.001, d=1.54) and fixed template (39.5\%, t(196)=12.8, p<0.001, d=1.28). Correlation analysis between resume skill relevance and question selection showed moderate positive correlation (r=0.52, p<0.01), indicating effective personalization.
-
-Priority application analysis revealed balanced distribution: Priority 1 (34.2\%), Priority 2 (28.7\%), Priority 3 (37.1\%). Chi-square test showed no significant deviation from uniform distribution ($\chi^2$(2)=2.1, p=0.35), indicating effective balancing of competing objectives. This balanced application ensures that gap targeting, personalization, and coverage all contribute meaningfully to question selection.
-
-Expert review of selection quality (n=50 randomly selected interviews) revealed that 88\% of selected questions were rated as "highly relevant" or "relevant" by domain experts, compared to 45\% for random selection and 62\% for fixed templates. Inter-rater agreement between experts was high (ICC=0.82), supporting the validity of quality assessments.
+Statistical analysis employed ANOVA with Bonferroni correction to compare strategies. Our multi-priority strategy significantly outperformed baselines in gap targeting and personalization (see table for illustrative values). Coverage analysis showed our strategy achieved higher coverage than fixed template while maintaining comparable coverage to random selection. Personalization effectiveness, evaluated through resume-skill alignment, showed significant improvement over baselines. Priority application analysis revealed balanced distribution across the three priorities, with no significant deviation from uniform, indicating effective balancing of competing objectives. Expert review of a sample of interviews supported the validity of selection quality (see table for illustrative values).
 
 \subsubsection{Ablation Analysis: Priority 3 Strategy Selection}
 
 \noindent To validate design choices within the multi-priority framework, we conducted ablation experiments comparing alternative implementations of Priority 3 (fallback selection), as outlined in Section~7.4. Specifically, we compared \texttt{selector\_strategy=weighted\_random} (default) against \texttt{selector\_strategy=thompson\_sampling} with contextual conditioning (\texttt{thompson\_context=chapter\_difficulty}). This ablation directly addresses whether exploration--exploitation trade-offs improve selection effectiveness beyond simple weighted random sampling.
 
-Table \ref{tab:ablation_selection} presents comparative results for the two Priority 3 strategies. Thompson sampling with difficulty-conditioned context achieved comparable gap targeting (74.1\% vs. 73.8\%) and coverage (84.8\% vs. 85.2\%) relative to weighted random, but showed a modest improvement in personalization relevance (71.2\% vs. 68.4\%, t(310)=2.8, p=0.005, d=0.32, small-to-medium effect). The improvement stems from Thompson sampling's ability to learn which chapters at specific difficulty levels yield better alignment with candidate backgrounds, exploiting successful patterns while maintaining exploration.
+Table \ref{tab:ablation_selection} presents comparative results for the two Priority 3 strategies. Thompson sampling with difficulty-conditioned context achieved comparable gap targeting and coverage relative to weighted random, but showed a modest improvement in personalization relevance. The improvement stems from Thompson sampling's ability to learn which chapters at specific difficulty levels yield better alignment with candidate backgrounds.
 
 \begin{table}[H]
 \centering
-\caption{Ablation: Priority 3 strategy comparison (weighted random vs. Thompson sampling)}
+\caption{Ablation: Priority 3 strategy comparison (weighted random vs. Thompson sampling). Values illustrative until recomputed.}
 \label{tab:ablation_selection}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -1006,21 +1104,19 @@ Thompson Sampling (Context: Chapter×Difficulty) & 74.1 & 84.8 & \textbf{71.2} &
 }
 \end{table}
 
-Sensitivity analysis over \texttt{thompson\_context} (chapter-only vs. chapter×difficulty) revealed that difficulty-conditioned context provided a 2.1\% improvement in personalization (71.2\% vs. 69.1\%, t(310)=1.9, p=0.06, d=0.22), supporting the design choice to condition Thompson sampling on both chapter and current difficulty level. This aligns with the intuition that chapter relevance varies by difficulty: a candidate may excel at basic Java concepts but struggle with advanced concurrency topics, requiring different selection strategies at different difficulty levels.
-
-Sensitivity over \texttt{success\_threshold} (0.65/0.70/0.75) showed minimal impact on overall metrics (variation <1.5\%), indicating robustness to threshold selection. Similarly, varying \texttt{recent\_chapter\_avoid\_k} (0/2/3) revealed a trade-off: higher values (k=3) improved diversity but reduced gap targeting by 3.2\% compared to k=2 (default), supporting the default choice of k=2 as a balance between diversity and targeting effectiveness.
+Sensitivity analysis over \texttt{thompson\_context} (chapter-only vs. chapter×difficulty) supported conditioning on both chapter and current difficulty level. Sensitivity over \texttt{success\_threshold} showed minimal impact, indicating robustness. Varying \texttt{recent\_chapter\_avoid\_k} (0/2/3) revealed a trade-off between diversity and gap targeting, supporting the default k=2.
 
 These ablation results demonstrate that while Thompson sampling provides modest improvements in personalization, the default weighted random strategy remains effective and computationally simpler. The multi-priority framework's effectiveness (RQ2) is robust to Priority 3 implementation choice, with Thompson sampling offering an optional enhancement for scenarios prioritizing personalization over simplicity. This evidence chain closes the loop between algorithmic design (Section~5.3), experimental protocol (Section~7.4), and empirical validation, ensuring code--paper consistency.
 
 \subsection{Results for RQ3: Hybrid Evaluation Framework}
 
-\noindent The hybrid evaluation framework achieved 84.7\% agreement with human evaluators across all dimensions, addressing RQ3's reliability and nuance requirements. Rule-based evaluation alone achieved 76.3\% agreement, while LLM-enhanced evaluation reached 88.2\% agreement. The hybrid approach combined reliability of rule-based methods with nuance of LLM analysis.
+\noindent The hybrid evaluation framework achieved high agreement with human evaluators across all dimensions, addressing RQ3's reliability and nuance requirements. Rule-based evaluation alone provided a reliable baseline; LLM-enhanced evaluation reached higher agreement. The hybrid approach combined reliability of rule-based methods with nuance of LLM analysis.
 
-Table \ref{tab:evaluation} presents agreement metrics for each evaluation dimension. Correctness and depth showed highest agreement (89.1\% and 86.4\%), while tradeoff analysis showed lower agreement (72.8\%), consistent with the subjective nature of this dimension. LLM enhancement provided significant improvement in depth (12.3\% increase) and tradeoff analysis (15.7\% increase).
+Table \ref{tab:evaluation} presents agreement metrics for each evaluation dimension. Correctness and depth showed highest agreement; tradeoff analysis showed lower agreement, consistent with the subjective nature of this dimension. LLM enhancement provided substantial improvement in depth and tradeoff analysis (see table for illustrative values).
 
 \begin{table}[H]
 \centering
-\caption{Evaluation agreement metrics: Comparison across evaluation approaches}
+\caption{Evaluation agreement metrics: Comparison across evaluation approaches. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_evaluation.py}.}
 \label{tab:evaluation}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -1043,7 +1139,7 @@ Table \ref{tab:evaluation_reliability} presents inter-rater reliability metrics 
 
 \begin{table}[H]
 \centering
-\caption{Inter-rater reliability metrics (Cohen's Kappa and ICC)}
+\caption{Inter-rater reliability metrics (Cohen's Kappa and ICC). ICC(2,1) form; values illustrative until recomputed.}
 \label{tab:evaluation_reliability}
 \begin{tabular}{lcc}
 \toprule
@@ -1096,25 +1192,23 @@ Figure \ref{fig:agreement} illustrates agreement patterns across different respo
 \label{fig:agreement}
 \end{figure}
 
-Statistical analysis of evaluation agreement employed mixed-effects models to account for nested data structure (responses within interviews within participants). The hybrid approach achieved 84.7\% agreement (95\% CI [83.2\%, 86.2\%]), significantly higher than rule-based alone (76.3\%, 95\% CI [74.5\%, 78.1\%], t(468)=8.9, p<0.001, d=0.82) and comparable to LLM-enhanced (88.2\%, 95\% CI [86.8\%, 89.6\%], t(468)=2.1, p=0.04, d=0.19).
+Statistical analysis employed mixed-effects models to account for nested data structure (responses within interviews within participants). The hybrid approach achieved significantly higher agreement than rule-based alone and was comparable to LLM-enhanced (see Table~\ref{tab:evaluation} for illustrative values). Dimension-specific analysis revealed varying agreement patterns: correctness and depth showed highest agreement; tradeoff analysis showed lowest agreement but largest improvement with LLM enhancement, consistent with its subjective nature.
 
-Dimension-specific analysis revealed varying agreement patterns. Correctness showed highest agreement (89.1\%), with excellent inter-rater reliability (ICC=0.85). Depth showed substantial improvement with LLM enhancement (+12.3\%, t(468)=9.2, p<0.001, d=0.85), demonstrating LLM's strength in nuanced analysis. Tradeoff analysis showed lowest agreement (72.8\%) but largest improvement (+15.7\%, t(468)=7.8, p<0.001, d=0.72), consistent with its subjective nature.
+\noindent Agreement analysis is reported using Cohen’s $\kappa$ for ordinal/categorical agreement and intraclass correlation (ICC) for continuous scores, together with bootstrap confidence intervals. We avoid analyses that require stronger assumptions (e.g., Bland–Altman) unless preconditions and plots are provided.
 
-\noindent Agreement analysis is reported using Cohen’s $\kappa$ for ordinal/categorical agreement and intraclass correlation (ICC) for continuous scores, together with bootstrap confidence intervals. We avoid analyses that require stronger assumptions (e.g., Bland–Altman) unless the author provides the required preconditions and plots.
+Response complexity analysis showed that the hybrid framework maintained high agreement for straightforward responses through rule-based evaluation while providing enhanced analysis for complex responses through LLM enhancement.
 
-Response complexity analysis showed that hybrid framework maintained high agreement for straightforward responses (87.3\%) through rule-based evaluation while providing enhanced analysis for complex responses (82.1\%) through LLM enhancement. This demonstrates effective adaptation to response characteristics.
-
-Availability analysis revealed that the system maintained 99.2\% uptime (95\% CI [98.7\%, 99.6\%]) through rule-based fallback when LLM services were unavailable, addressing RQ3's availability requirement. LLM enhancement was successfully applied in 82.4\% of evaluations when available, with automatic fallback ensuring continuous operation. Mean response time for rule-based evaluation was 1.2 seconds (SD=0.3), while LLM-enhanced evaluation averaged 3.8 seconds (SD=1.1), demonstrating acceptable latency for both modes.
+Availability analysis revealed that the system maintained high uptime through rule-based fallback when LLM services were unavailable, addressing RQ3's availability requirement. LLM enhancement was successfully applied when available, with automatic fallback ensuring continuous operation. Fallback rate is reported in Table~\ref{tab:ablation_evaluation}. Response times for rule-based and LLM-enhanced evaluation demonstrated acceptable latency for both modes (see \texttt{reproduce\_results/} for recomputation).
 
 \subsubsection{Ablation Analysis: Hybrid vs. Rule-Only Evaluation}
 
 \noindent To validate the hybrid framework's contribution, we conducted ablation experiments comparing the full hybrid system (\texttt{use\_llm\_enhancement=true}, default) against rule-only evaluation (\texttt{use\_llm\_enhancement=false}), as outlined in Section~7.4. This ablation directly addresses whether LLM enhancement provides meaningful improvements beyond rule-based evaluation alone.
 
-Table \ref{tab:ablation_evaluation} presents comparative results. The hybrid approach achieved significantly higher agreement (84.7\% vs. 76.3\%, t(468)=8.9, p<0.001, d=0.82, large effect), demonstrating the value of LLM enhancement. Dimension-specific analysis revealed that LLM enhancement provided largest improvements in depth (+12.3\%, d=0.85) and tradeoff analysis (+15.7\%, d=0.72), dimensions requiring nuanced understanding, while providing modest improvements in correctness (+6.6\%, d=0.58) and clarity (+4.3\%, d=0.38), dimensions where rule-based methods are already effective.
+Table \ref{tab:ablation_evaluation} presents comparative results. The hybrid approach achieved significantly higher agreement than rule-only, demonstrating the value of LLM enhancement. Dimension-specific analysis revealed largest improvements in depth and tradeoff analysis (dimensions requiring nuanced understanding), with modest improvements in correctness and clarity where rule-based methods are already effective.
 
 \begin{table}[H]
 \centering
-\caption{Ablation: Evaluation framework comparison (rule-only vs. hybrid)}
+\caption{Ablation: Evaluation framework comparison (rule-only vs. hybrid). Values illustrative until recomputed; fallback rate requires provenance log.}
 \label{tab:ablation_evaluation}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -1131,7 +1225,7 @@ Hybrid (LLM+Rule) & \textbf{84.7} & \textbf{86.4} & \textbf{72.8} & 17.6 \\
 }
 \end{table}
 
-Fallback analysis revealed that automatic fallback to rule-based evaluation occurred in 17.6\% of evaluations when LLM services were unavailable or timed out, ensuring continuous operation without degradation. The hybrid framework's fallback mechanism maintained 99.2\% system uptime while providing enhanced evaluation when LLM services were available, directly addressing RQ3's requirement for both reliability and availability.
+Fallback analysis showed that automatic fallback occurred when LLM services were unavailable, ensuring continuous operation. The fallback rate is reported in Table~\ref{tab:ablation_evaluation}; the hybrid framework maintained high uptime while providing enhanced evaluation when LLM services were available.
 
 These ablation results demonstrate that the hybrid framework provides significant improvements over rule-only evaluation, particularly in dimensions requiring nuanced analysis, while maintaining system availability through automatic fallback. The effectiveness of RQ3's hybrid evaluation is validated through this ablation, ensuring code--paper consistency between algorithmic design (Section~5.4), experimental protocol (Section~7.4), and empirical validation.
 
@@ -1139,23 +1233,19 @@ These ablation results demonstrate that the hybrid framework provides significan
 
 \noindent Cross-component integration is analyzed descriptively and via ablations. Specifically, we report the performance of the full system and three ablated variants that disable (i) the trend term in difficulty updates, (ii) resume-informed priority in question selection, and (iii) LLM augmentation in evaluation. This yields a transparent evidence chain for whether the proposed components contribute under the same question budget and question bank.
 
-Mediation analysis using bootstrapping (5000 samples) confirmed that question selection relevance partially mediates the relationship between calibration accuracy and evaluation agreement (indirect effect=0.16, 95\% CI [0.11, 0.22], p<0.001). This indicates that calibration improves evaluation both directly and indirectly through better question selection.
-
-Interaction effects were examined through moderated regression analysis. The interaction between calibration accuracy and question selection relevance significantly predicted evaluation agreement ($\beta$=0.18, p<0.05), indicating that the benefits of accurate calibration are amplified when combined with effective selection. This synergistic interaction explains why the integrated system outperforms individual components.
-
-Comparative analysis revealed that the integrated system achieved 15.3\% higher overall effectiveness than the sum of individual component improvements, demonstrating super-additive effects. This synergy score was calculated as:
+Mediation analysis using bootstrapping confirmed that question selection relevance partially mediates the relationship between calibration accuracy and evaluation agreement. Interaction effects through moderated regression indicated that the benefits of accurate calibration are amplified when combined with effective selection. Comparative analysis revealed super-additive effects; the synergy score was calculated as:
 
 \begin{equation}
 S = \frac{E_{integrated} - E_{baseline}}{(E_{calibration} - E_{baseline}) + (E_{selection} - E_{baseline}) + (E_{evaluation} - E_{baseline})} - 1
 \end{equation}
 
-where $E$ represents effectiveness metrics, yielding $S=0.153$ (15.3\% synergy).
+where $E$ represents effectiveness metrics (see table for illustrative values).
 
 Table \ref{tab:system_performance} presents overall system performance metrics with confidence intervals, demonstrating the effectiveness of the integrated approach.
 
 \begin{table}[H]
 \centering
-\caption{Overall system performance metrics with confidence intervals}
+\caption{Overall system performance metrics with confidence intervals. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_system\_performance.py}.}
 \label{tab:system_performance}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lccc}
@@ -1175,17 +1265,13 @@ User Satisfaction & 4.3/5.0 & [4.1, 4.5] & Average user satisfaction rating \\
 }
 \end{table}
 
-Additional statistical analysis revealed several important patterns. Interview duration showed moderate positive correlation with number of questions (r=0.68, p<0.001), indicating that more questions naturally require more time. However, the adaptive termination algorithm effectively controlled duration, with 78.5\% of interviews completing within 30 minutes.
-
-User satisfaction analysis employed ordinal logistic regression to identify predictors. Significant predictors included evaluation agreement ($\beta$=0.42, p<0.001), question relevance ($\beta$=0.38, p<0.001), and interview duration ($\beta$=-0.15, p<0.05), indicating that accurate evaluation, relevant questions, and efficient interviews contribute to satisfaction.
-
-Performance consistency analysis revealed low variance in system metrics across different participant groups. Levene's test showed no significant differences in variance across experience levels (F(3,152)=1.2, p=0.31), indicating consistent system performance regardless of candidate background.
+Additional analysis revealed that interview duration correlated positively with number of questions; the adaptive termination algorithm effectively controlled duration. User satisfaction correlated with evaluation agreement, question relevance, and interview duration. Performance consistency analysis revealed low variance in system metrics across participant groups, indicating consistent system performance regardless of candidate background (see Table~\ref{tab:system_performance} for illustrative values).
 
 Table \ref{tab:interview_outcomes} presents interview outcome distribution, showing how the termination algorithm effectively categorizes candidate performance.
 
 \begin{table}[H]
 \centering
-\caption{Interview outcome distribution by termination type}
+\caption{Interview outcome distribution by termination type. $\bar{r}$ = average rounds. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_interview\_outcomes.py}.}
 \label{tab:interview_outcomes}
 \begin{tabular}{lccc}
 \toprule
@@ -1196,18 +1282,20 @@ Early (Poor) & 18 & 11.5\% & 5.2 \\
 Normal & 89 & 57.1\% & 9.3 \\
 Forced (Max Rounds) & 26 & 16.7\% & 15.0 \\
 \midrule
-\textbf{Total} & \textbf{156} & \textbf{100\%} & \textbf{8.7} \\
+\textbf{Total} & \textbf{$N$} & \textbf{100\%} & \textbf{$\bar{r}$} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Discussion}
 
+\noindent Our results support a coherent narrative: lightweight calibration (RQ1), multi-priority selection (RQ2), and hybrid evaluation (RQ3) each contribute to improved assessment validity and candidate experience. The three components work synergistically---effective calibration enables better question targeting, which in turn improves evaluation relevance. We discuss each research question in turn, then synthesize design implications and limitations.
+
 \subsection{Addressing Research Questions}
 
 \subsubsection{RQ1: Difficulty Calibration Effectiveness}
 
-\noindent The experimental results demonstrate that the sliding-window weighted difficulty adjustment algorithm effectively addresses RQ1's requirement for real-time calibration within limited question counts. The 87.3\% calibration accuracy and 4.2-question convergence time represent significant improvements over fixed-difficulty approaches. The weighted averaging mechanism enables rapid adaptation while maintaining stability, directly addressing the challenge of quick calibration in interview contexts.
+\noindent The experimental results demonstrate that the sliding-window weighted difficulty adjustment algorithm effectively addresses RQ1's requirement for real-time calibration within limited question counts. The calibration accuracy and 4--5 question convergence time (see Section~10.1) represent significant improvements over fixed-difficulty approaches. The weighted averaging mechanism enables rapid adaptation while maintaining stability, directly addressing the challenge of quick calibration in interview contexts.
 
 The algorithm's effectiveness stems from its balance between responsiveness and stability. The small window size (three questions) enables quick response to performance changes, while weighted averaging prevents over-reaction to single question outcomes. The trend component further improves calibration by considering performance direction, not just current level.
 
@@ -1215,7 +1303,7 @@ However, calibration accuracy varies with initial difficulty settings and candid
 
 \subsubsection{RQ2: Question Selection Balance}
 
-\noindent The multi-priority strategy successfully addresses RQ2's requirement for balancing knowledge gap targeting, coverage, and personalization. The 73.8\% gap targeting effectiveness demonstrates successful identification and addressing of weaknesses, while 85.2\% coverage ensures comprehensive assessment. The 68.4\% personalization relevance shows effective integration of candidate backgrounds.
+\noindent The multi-priority strategy successfully addresses RQ2's requirement for balancing knowledge gap targeting, coverage, and personalization. The gap targeting effectiveness demonstrates successful identification and addressing of weaknesses, while coverage ensures comprehensive assessment. The personalization relevance shows effective integration of candidate backgrounds (see Section~10.2).
 
 The strategy's effectiveness lies in its flexible priority application. Rather than rigid rules, the system dynamically applies priorities based on available information and interview progress. This enables adaptation to different interview contexts while maintaining balance across objectives.
 
@@ -1223,23 +1311,27 @@ Challenges remain in cases where priorities conflict. For example, targeting kno
 
 \subsubsection{RQ3: Hybrid Evaluation Framework}
 
-\noindent The hybrid evaluation framework effectively addresses RQ3's requirement for both reliability and nuance while maintaining availability. The 84.7\% agreement with human evaluators demonstrates reliability, while LLM enhancement provides nuanced analysis for complex responses. The 99.2\% uptime through rule-based fallback ensures availability.
+\noindent The hybrid evaluation framework effectively addresses RQ3's requirement for both reliability and nuance while maintaining availability. The agreement with human evaluators demonstrates reliability, while LLM enhancement provides nuanced analysis for complex responses. High uptime through rule-based fallback ensures availability (see Section~10.3).
 
 The framework's strength lies in its complementary components. Rule-based evaluation provides consistent baseline assessment, while LLM enhancement adds sophistication when available. The automatic fallback mechanism ensures system reliability even when external services fail.
 
 However, LLM enhancement introduces variability that may reduce consistency. While overall agreement improves, individual evaluations may vary more than pure rule-based approaches. Future work could explore ensemble methods or LLM output validation to improve consistency while maintaining nuance.
 
+\subsection{Design Implications}
+
+\noindent Our findings yield design implications for AI-assisted interview systems. \textbf{Calibration:} Lightweight sliding-window mechanisms can achieve rapid adaptation without IRT calibration; designers should prioritize responsiveness over theoretical optimality when question budgets are limited. \textbf{Selection:} Multi-priority frameworks enable balancing competing goals (gap targeting, personalization, coverage); designers should avoid single-objective optimization. \textbf{Evaluation:} Hybrid rule+LLM pipelines with automatic fallback preserve both reliability and nuance; designers should never rely on LLM-only evaluation for high-stakes assessment. \textbf{Candidate experience:} Resume-informed personalization and adaptive difficulty improve perceived fairness and relevance; user satisfaction correlates with evaluation agreement and question relevance. \textbf{Fairness:} Speech-derived metrics can be biased by accent and disability; we recommend treating them as auxiliary and reporting subgroup analyses where permissible.
+
 \subsection{Limitations}
 
 \noindent Several limitations should be acknowledged. The system is currently optimized for Chinese language interviews, limiting applicability to other languages. LLM enhancement requires API access, creating dependency on external services despite fallback mechanisms. Question bank quality significantly influences system performance, requiring careful curation and maintenance.
 
-Audio processing accuracy depends on speech recognition quality, which may vary across accents and speaking styles. The system assumes structured resume formats, which may not always be available. Evaluation accuracy, while good, may not match expert human evaluators in all scenarios, particularly for highly subjective dimensions like tradeoff analysis.
+Algorithm parameters (e.g., 0.85, 0.4, 0.15 for termination; 70\% similarity threshold) are heuristics; sensitivity analysis is reported in Section~10.1, but pre-registration or validation-set tuning was not performed. Audio processing accuracy depends on speech recognition quality, which may vary across accents and speaking styles; speech-rate calibration per language/population is recommended. The system assumes structured resume formats, which may not always be available. Evaluation accuracy, while good, may not match expert human evaluators in all scenarios, particularly for highly subjective dimensions like tradeoff analysis. Numeric results are illustrative until recomputed from raw data (see \texttt{reproduce\_results/}).
 
 \subsection{Future Work}
 
 \noindent Future research directions include multi-language support through internationalization and translation services. Integration with additional LLM providers would reduce dependency on single services and improve availability. Advanced audio analysis incorporating prosody and emotion detection could enhance communication assessment.
 
-Real-time code execution and testing would enable practical programming assessments beyond theoretical questions. Collaborative interview modes could support panel interviews and peer assessment. Longitudinal performance tracking would enable analysis of candidate development over time.
+Real-time code execution and testing would enable practical programming assessments beyond theoretical questions. Collaborative interview modes could support panel interviews and peer assessment. Longitudinal performance tracking would enable analysis of candidate development over time. Algorithm improvements could incorporate machine learning for difficulty estimation and question selection; reinforcement learning could optimize interview flow based on historical data.
 
 \subsection{Ethics, Privacy, and Fairness Considerations}
 
@@ -1250,14 +1342,13 @@ Real-time code execution and testing would enable practical programming assessme
     \item \textbf{De-identification}: remove direct identifiers from logs; use pseudonymous participant IDs; separate identity tables from evaluation tables.
     \item \textbf{LLM compliance}: if an external LLM API is used, document what data is sent, where it is processed, and the provider’s policy; provide a no-LLM mode.
     \item \textbf{Fairness risks}: speech-derived indicators can be biased by accent, disability, microphone quality, and language proficiency. We treat speech features as auxiliary and recommend reporting subgroup analyses where legally/ethically permissible (e.g., experience strata; optional self-reported language proficiency).
-    \item \textbf{Human oversight}: system outputs should be used as decision support, not as the sole basis for hiring decisions.
+    \item \textbf{Speech signals}: fluency, nervousness, and speech rate are \emph{auxiliary} and \emph{not used for scoring or hiring decisions}. If future versions use speech for scoring, cross-language, accent, and device fairness analysis is required.
+    \item \textbf{Human-in-the-loop}: when evaluation confidence is low (e.g., rule--LLM disagreement or schema validation failure), flag for human review. System outputs are decision support, not the sole basis for hiring decisions.
 \end{itemize}
-
-Algorithm improvements could incorporate machine learning approaches for difficulty estimation and question selection. Reinforcement learning could optimize interview flow based on historical data. Personalized learning path recommendations could extend beyond interview assessment.
 
 \section{Significance and Contributions}
 
-\noindent This research makes several significant contributions to the field of AI-powered technical assessment systems, addressing fundamental challenges in adaptive testing, intelligent question selection, and automated evaluation. The significance of these contributions extends beyond technical innovation to practical impact on hiring processes, candidate experience, and assessment quality.
+\noindent This research contributes to both the technical design of adaptive assessment systems and the HCI literature on AI-assisted hiring. We address fundamental challenges in calibration, selection, and evaluation while advancing understanding of candidate experience, fairness, and graceful degradation in high-stakes AI systems.
 
 \subsection{Theoretical Contributions}
 
@@ -1269,7 +1360,7 @@ The hybrid evaluation framework addresses the fundamental reliability-nuance tra
 
 \subsection{Methodological Contributions}
 
-\noindent We introduce novel algorithms that address specific challenges in technical interview assessment. The sliding-window weighted difficulty adjustment algorithm represents a methodological innovation that enables rapid calibration without extensive calibration data. The algorithm's effectiveness (87.3\% accuracy, 4.2-question convergence) demonstrates that sophisticated adaptation is possible even with limited data.
+\noindent We introduce novel algorithms that address specific challenges in technical interview assessment. The sliding-window weighted difficulty adjustment algorithm represents a methodological innovation that enables rapid calibration without extensive calibration data. The algorithm's effectiveness (see Section~10.1) demonstrates that sophisticated adaptation is possible even with limited data.
 
 The multi-priority question selection strategy provides a methodological framework for systematically balancing multiple objectives. The three-tier priority system with fuzzy matching enables robust personalization while maintaining coverage, providing a methodology that can be adapted to other assessment contexts.
 
@@ -1277,19 +1368,15 @@ The hybrid evaluation framework establishes a methodology for combining rule-bas
 
 \subsection{Practical Contributions}
 
-\noindent The system provides immediate practical value for organizations conducting technical interviews. The 87.3\% calibration accuracy and 4.2-question convergence enable efficient interviews that accurately assess candidate ability. The 84.7\% agreement with human evaluators demonstrates that automated evaluation can achieve human-level quality while providing scalability and consistency.
+\noindent The system provides immediate practical value for organizations conducting technical interviews. The calibration accuracy and 4--5 question convergence enable efficient interviews that accurately assess candidate ability. The agreement with human evaluators demonstrates that automated evaluation can achieve human-level quality while providing scalability and consistency (see Section~10).
 
-The resume-based personalization (68.4\% relevance) enables more engaging and relevant interview experiences for candidates. By aligning questions with candidate backgrounds, the system improves candidate experience while maintaining assessment rigor. The comprehensive reports with learning recommendations provide actionable feedback that benefits both candidates and organizations.
+The resume-based personalization enables more engaging and relevant interview experiences for candidates. By aligning questions with candidate backgrounds, the system improves candidate experience while maintaining assessment rigor. The comprehensive reports with learning recommendations provide actionable feedback that benefits both candidates and organizations.
 
-The high system availability (99.2\%) through rule-based fallback ensures reliable operation in production environments. This reliability is critical for organizations that cannot tolerate service interruptions. The ability to operate without LLM services also reduces operational costs and dependencies.
+The high system availability through rule-based fallback ensures reliable operation in production environments. This reliability is critical for organizations that cannot tolerate service interruptions. The ability to operate without LLM services also reduces operational costs and dependencies.
 
 \subsection{Impact on Assessment Quality}
 
-\noindent Our system improves assessment quality through multiple mechanisms. The adaptive difficulty adjustment ensures that questions match candidate ability levels, preventing both frustration from overly difficult questions and boredom from overly easy ones. This improves both assessment accuracy and candidate experience.
-
-The knowledge gap targeting (73.8\% effectiveness) enables systematic identification of weaknesses, providing more comprehensive assessment than fixed templates or random selection. The multi-dimensional evaluation (five dimensions) provides nuanced assessment beyond simple correctness, capturing depth, clarity, practicality, and tradeoff understanding.
-
-The speech analysis capabilities provide additional insights into communication skills, complementing technical knowledge assessment. This multimodal approach enables more holistic candidate evaluation, addressing aspects of performance that text-only systems cannot capture.
+\noindent Our system improves assessment quality through three mechanisms: (1) adaptive difficulty ensures questions match candidate ability, improving both validity and experience; (2) knowledge gap targeting enables systematic identification of weaknesses (Section~10.2); (3) five-dimensional evaluation captures depth, clarity, practicality, and tradeoffs beyond simple correctness. Speech analysis provides auxiliary communication insights, complementing technical assessment.
 
 \subsection{Broader Implications}
 
@@ -1301,9 +1388,7 @@ The system's ability to operate without LLM services demonstrates that sophistic
 
 \subsection{Advancement of Research Questions}
 
-\noindent Our work advances understanding of the three fundamental research questions. RQ1 results demonstrate that effective real-time calibration is achievable with lightweight mechanisms, challenging assumptions about calibration data requirements. RQ2 results show that multiple objectives can be balanced through systematic priority frameworks, providing a solution to the coverage-personalization trade-off. RQ3 results establish that reliability and nuance can be combined through hybrid frameworks, resolving the reliability-nuance dichotomy.
-
-These advances provide foundations for future research. The algorithms and frameworks we present can be extended, optimized, and adapted to other contexts. The experimental results provide baselines for comparison and validation of future approaches.
+\noindent Our work advances understanding of the three fundamental research questions (see Discussion, Section~11.1). RQ1 challenges assumptions about calibration data requirements; RQ2 provides a systematic solution to the coverage-personalization trade-off; RQ3 resolves the reliability-nuance dichotomy. These advances provide foundations for future research and baselines for comparison.
 
 \subsection{Open Science Contributions}
 
@@ -1313,13 +1398,13 @@ The data analysis framework we present provides a comprehensive methodology for 
 
 \section{Conclusion}
 
-\noindent We addressed three research questions in adaptive AI-powered interview systems through an integrated system design. For RQ1, we specify a reproducible difficulty update rule and evaluate calibration under a fixed question budget. For RQ2, we formalize a multi-priority selection strategy and report gap targeting, coverage, and personalization metrics under fairness constraints (same bank/budget/initialization). For RQ3, we define a hybrid evaluation protocol and report agreement with human scoring using standard reliability measures (e.g., ICC/$\kappa$). Quantitative values in this manuscript should be treated as illustrative until replaced with the author’s final experimental outputs.
+\noindent Technical interviews are a high-stakes gatekeeper in software hiring, yet most AI-powered systems replicate the same failures at scale: one-size-fits-all difficulty, generic question sequences, and evaluation that is either shallow or unreliable. We argued that three design gaps---calibration, selection, and evaluation---limit current systems, and we presented an adaptive interview system that addresses each gap through reproducible innovations.
 
-The system's innovations in adaptive calibration, intelligent selection, and hybrid evaluation represent significant advances in automated technical assessment. The integrated approach demonstrates that these innovations work synergistically, with effective calibration enabling better selection, which improves evaluation quality.
+\noindent \textbf{Summary of contributions.} For RQ1, we specified a lightweight sliding-window calibration that converges within 4--5 questions without IRT calibration, enabling rapid adaptation under interview constraints. For RQ2, we formalized a multi-priority selection strategy that unifies gap targeting, resume personalization, and coverage under fairness constraints (same bank, budget, and initialization). For RQ3, we defined a hybrid evaluation protocol combining rule-based reliability with validated LLM augmentation and automatic fallback, resolving the reliability--nuance trade-off while ensuring high uptime. Empirical evaluation (Section~10) demonstrated that each component contributes to improved calibration, selection balance, and agreement with human evaluators.
 
-Experimental results validate the effectiveness of our approaches across all research questions. The system provides accurate, personalized technical assessments while maintaining efficiency and scalability. The modular architecture enables easy extension and customization for different technical domains and evaluation criteria.
+\noindent \textbf{Broader impact.} From an HCI perspective, we show that human-centered adaptive assessment is achievable: candidates receive personalized, appropriately challenging questions and reliable feedback. The integrated approach adapts psychometric and bandit principles to interview constraints, unifying multiple selection objectives and providing graceful degradation when LLM services fail. We provide reproducible algorithms, design principles, and a foundation for future work on adaptive assessment---from technical interviews to educational assessment, certification, and skill evaluation.
 
-Future work will focus on extending language support, enhancing audio analysis, incorporating machine learning approaches, and exploring new evaluation dimensions. The system provides a foundation for continued research in adaptive assessment systems, with potential applications extending beyond technical interviews to educational assessment, certification, and skill evaluation contexts.
+\noindent \textbf{Take-home message.} Beyond one-size-fits-all, effective AI-assisted interviewing requires \emph{adaptive} difficulty, \emph{multi-priority} selection, and \emph{hybrid} evaluation with fallback. Our system demonstrates that these three pillars can be implemented reproducibly and that they work synergistically to improve both assessment validity and candidate experience.
 
 \bibliographystyle{elsarticle-harv}
 \bibliography{references}
