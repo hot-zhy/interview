@@ -1,4 +1,8 @@
 """Admin page."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import streamlit as st
 from sqlalchemy.orm import Session
 from backend.db.base import get_db
@@ -9,8 +13,10 @@ from sqlalchemy import func
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
 from app.components.styles import inject_global_styles
+from app.components.sidebar import render_sidebar
+from app.i18n import t
 
-st.set_page_config(page_title="管理后台", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="Admin", page_icon="⚙️", layout="wide")
 
 # Inject global styles
 inject_global_styles()
@@ -22,12 +28,14 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    render_sidebar()
     check_auth()
     
-    db = next(get_db())
+    with st.spinner(t("common.loading")):
+        db = next(get_db())
     
-    st.title("⚙️ 管理后台")
-    st.caption("系统统计、面试记录与题库概览")
+    st.title(f"⚙️ {t('app.admin')}")
+    st.caption("System stats, interview records, question bank overview")
     st.markdown("---")
     
     # Statistics

@@ -26,6 +26,13 @@ rapidfuzz>=3.5.0
 # LLM (optional)
 zhipuai>=2.0.0
 
+# Facial expression recognition (optional)
+deepface>=0.0.93
+
+# Real-time video streaming for expression analysis
+streamlit-webrtc>=0.64.0
+av>=10.0.0
+
 # Configuration
 pydantic>=2.5.0
 pydantic-settings>=2.1.0

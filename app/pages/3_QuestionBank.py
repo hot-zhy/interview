@@ -1,4 +1,8 @@
 """Question bank management page."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import streamlit as st
 import os
 import tempfile
@@ -10,8 +14,10 @@ from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
 from app.components.styles import inject_global_styles
+from app.components.sidebar import render_sidebar
+from app.i18n import t
 
-st.set_page_config(page_title="题库管理", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Question Bank", page_icon="📚", layout="wide")
 
 # Inject global styles
 inject_global_styles()
@@ -23,13 +29,15 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    render_sidebar()
     check_auth()
     
-    st.title("📚 题库管理")
-    st.caption("从 data/question.xlsx 导入题目，支持按章节、难度筛选浏览")
+    st.title(f"📚 {t('question_bank.title')}")
+    st.caption(t("question_bank.subtitle"))
     st.markdown("---")
     
-    db = next(get_db())
+    with st.spinner(t("common.loading")):
+        db = next(get_db())
     
     # Load from fixed file path
     st.subheader("📥 题库加载")

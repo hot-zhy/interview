@@ -1,4 +1,8 @@
 """Resume management page."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import streamlit as st
 import os
 import tempfile
@@ -10,9 +14,11 @@ from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
 from app.components.styles import inject_global_styles
+from app.components.sidebar import render_sidebar
+from app.i18n import t
 import json
 
-st.set_page_config(page_title="简历管理", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Resume", page_icon="📄", layout="wide")
 
 # Inject global styles
 inject_global_styles()
@@ -24,41 +30,37 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    render_sidebar()
     check_auth()
     
-    st.title("📄 简历管理")
-    st.caption("上传 PDF 或 DOCX 简历，系统将自动解析教育背景、工作经历、技能等信息")
+    st.title(f"📄 {t('resume.title')}")
+    st.caption(t("resume.subtitle"))
     st.markdown("---")
     
     user_id = st.session_state.user_id
     db = next(get_db())
     
-    # Get user's resumes
     resumes = db.query(Resume).filter(Resume.user_id == user_id).order_by(Resume.created_at.desc()).all()
     
-    # Upload section
-    st.subheader("📤 上传简历")
+    st.subheader(f"📤 {t('resume.upload')}")
     uploaded_file = st.file_uploader(
-        "选择 PDF 或 DOCX 文件",
+        t("resume.select_file"),
         type=["pdf", "docx", "doc"],
-        help="支持 PDF 和 DOCX 格式，最大 200MB"
+        help=t("resume.file_help")
     )
     
     if uploaded_file is not None:
         size_kb = getattr(uploaded_file, 'size', 0) / 1024
-        st.info(f"已选择文件：**{uploaded_file.name}** ({size_kb:.1f} KB)")
-        if st.button("解析并保存", use_container_width=True, type="primary"):
+        st.info(f"{t('resume.file_selected')}: **{uploaded_file.name}** ({size_kb:.1f} KB)")
+        if st.button(t("resume.parse_save"), use_container_width=True, type="primary"):
             try:
-                # Save uploaded file temporarily
                 with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
                     tmp_file.write(uploaded_file.getvalue())
                     tmp_path = tmp_file.name
                 
-                # Parse resume
-                with st.spinner("正在解析简历..."):
+                with st.spinner(t("resume.parsing")):
                     parsed_data = parse_resume(tmp_path, uploaded_file.name)
                 
-                # Save to database
                 resume = Resume(
                     user_id=user_id,
                     filename=uploaded_file.name,
@@ -69,15 +71,14 @@ def main():
                 db.commit()
                 db.refresh(resume)
                 
-                # Clean up temp file
                 os.unlink(tmp_path)
                 
-                st.success("简历上传并解析成功！")
+                st.success(t("resume.success"))
                 st.rerun()
                 
             except Exception as e:
                 logger.error(f"Resume parsing error: {e}")
-                st.error(f"解析失败：{str(e)}")
+                st.error(f"{t('resume.parse_failed')}: {str(e)}")
                 if 'tmp_path' in locals():
                     try:
                         os.unlink(tmp_path)

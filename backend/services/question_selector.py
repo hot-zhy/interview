@@ -37,7 +37,8 @@ def select_question(
     session: InterviewSession,
     current_difficulty: int,
     resume_skills: Optional[List[str]] = None,
-    missing_chapters: Optional[List[str]] = None
+    missing_chapters: Optional[List[str]] = None,
+    next_direction_hints: Optional[List[str]] = None
 ) -> Optional[QuestionBank]:
     """
     Select next question based on adaptive strategy.
@@ -48,6 +49,7 @@ def select_question(
         current_difficulty: Current difficulty level
         resume_skills: Skills from resume (optional)
         missing_chapters: Chapters with missing knowledge (optional)
+        next_direction_hints: LLM 评估的下一题方向建议（可选）
     
     Returns:
         Selected question or None
@@ -56,6 +58,19 @@ def select_question(
     track_chapters = settings.track_chapters.get(session.track, {})
     
     asked_chapters = _get_asked_chapters(db, session.id)
+
+    # 将 next_direction 匹配到的章节加入 missing_chapters 作为选题提示
+    if next_direction_hints:
+        hint_chapters = []
+        for hint in next_direction_hints:
+            if not hint or not hint.strip():
+                continue
+            for ch in track_chapters.keys():
+                if _partial_ratio(hint.strip(), ch) > 60:
+                    hint_chapters.append(ch)
+                    break
+        if hint_chapters:
+            missing_chapters = list(missing_chapters or []) + hint_chapters
 
     # Determine target chapter
     # If selector_strategy == thompson_sampling, use Thompson sampling for the "track-based" fallback,

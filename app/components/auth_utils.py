@@ -29,8 +29,9 @@ def check_auth():
     """Check if user is authenticated."""
     init_session_state()
     if not st.session_state.authenticated:
-        st.warning("🔒 请先登录以使用此功能")
-        st.page_link("pages/1_Auth.py", label="前往登录 / 注册", icon="🔐")
+        from app.i18n import t
+        st.warning(f"🔒 {t('common.login_required')}")
+        st.page_link("pages/1_Auth.py", label=t("common.go_login"), icon="🔐")
         st.stop()
 
 

@@ -93,6 +93,68 @@ def init_db():
         except Exception as fix_e:
             # 不影响主流程，只打印提示
             print(f"⚠️ 检查/修复 evaluations.speech_analysis_json 字段时出错: {fix_e}")
+
+        # Ensure expression_analysis_json column exists
+        try:
+            if "mysql" in settings.database_url:
+                eval_columns = [col["name"] for col in inspector.get_columns("evaluations")]
+                if "expression_analysis_json" not in eval_columns:
+                    print()
+                    print("检测到 evaluations 表缺少字段 'expression_analysis_json'，正在自动修复...")
+                    with engine.connect() as conn:
+                        try:
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE evaluations "
+                                    "ADD COLUMN expression_analysis_json JSON NULL"
+                                )
+                            )
+                            conn.commit()
+                            print("✅ 已添加字段 'expression_analysis_json' (JSON)")
+                        except Exception as inner_e:
+                            print(f"⚠️ 使用 JSON 类型添加字段失败，尝试使用 TEXT 类型: {inner_e}")
+                            conn.rollback()
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE evaluations "
+                                    "ADD COLUMN expression_analysis_json TEXT NULL"
+                                )
+                            )
+                            conn.commit()
+                            print("✅ 已添加字段 'expression_analysis_json' (TEXT)")
+        except Exception as fix_e2:
+            print(f"⚠️ 检查/修复 evaluations.expression_analysis_json 字段时出错: {fix_e2}")
+
+        # Ensure expression_history_json column in interview_sessions
+        try:
+            if "mysql" in settings.database_url and "interview_sessions" in inspector.get_table_names():
+                sess_columns = [col["name"] for col in inspector.get_columns("interview_sessions")]
+                if "expression_history_json" not in sess_columns:
+                        print()
+                        print("检测到 interview_sessions 表缺少字段 'expression_history_json'，正在自动修复...")
+                        with engine.connect() as conn:
+                            try:
+                                conn.execute(
+                                    text(
+                                        "ALTER TABLE interview_sessions "
+                                        "ADD COLUMN expression_history_json JSON NULL"
+                                    )
+                                )
+                                conn.commit()
+                                print("✅ 已添加字段 'expression_history_json' (JSON)")
+                            except Exception as inner_e:
+                                print(f"⚠️ 使用 JSON 类型添加字段失败，尝试使用 TEXT 类型: {inner_e}")
+                                conn.rollback()
+                                conn.execute(
+                                    text(
+                                        "ALTER TABLE interview_sessions "
+                                        "ADD COLUMN expression_history_json TEXT NULL"
+                                    )
+                                )
+                                conn.commit()
+                                print("✅ 已添加字段 'expression_history_json' (TEXT)")
+        except Exception as fix_e3:
+            print(f"⚠️ 检查/修复 interview_sessions.expression_history_json 字段时出错: {fix_e3}")
         
         print()
         print(f"数据库初始化完成: {settings.database_url}")

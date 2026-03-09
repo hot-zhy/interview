@@ -110,6 +110,15 @@ def inject_global_styles():
         padding: 24px;
         background: #ffffff;
     }
+    
+    /* 加载动画增强 - 让 spinner 更醒目 */
+    [data-testid="stSpinner"] {
+        margin: 1rem 0 !important;
+    }
+    [data-testid="stSpinner"] > div {
+        border-color: #6366f1 !important;
+        border-right-color: transparent !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 

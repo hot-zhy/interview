@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     
     # LLM (Optional)
     zhipuai_api_key: Optional[str] = None
-    zhipuai_model: str = "glm-4-flash"
+    zhipuai_model: str = "glm-4.7-flash"
+    llm_use_cot: bool = False  # whether to enable CoT-style reasoning in evaluator prompt
+    llm_multi_judge_count: int = 1  # 1 means single judge; >1 enables multi-judge aggregation
     
     # App Settings
     app_name: str = "AI Interview System"

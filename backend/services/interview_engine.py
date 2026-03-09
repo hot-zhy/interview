@@ -12,6 +12,7 @@ from backend.services.evaluator_rules import evaluate_answer
 from backend.services.llm_provider import evaluate_with_llm, generate_followup_with_llm
 from backend.services.adaptive_interview import AdaptiveInterviewEngine
 from backend.services.audio_processor import process_audio_answer
+from backend.services.expression_analyzer import analyze_expression
 from backend.services.interview_phrases import (
     get_first_question_phrase,
     get_next_question_phrase,
@@ -105,7 +106,8 @@ def submit_answer(
     session_id: int,
     answer_text: Optional[str] = None,
     answer_type: str = "text",
-    audio_data: Optional[Dict] = None
+    audio_data: Optional[Dict] = None,
+    expression_data: Optional[Dict] = None
 ) -> Dict:
     """Submit answer and get evaluation + next question.
     
@@ -115,6 +117,9 @@ def submit_answer(
         answer_text: Text answer (for text mode, required)
         answer_type: "text" or "audio"
         audio_data: Audio data dict with base64 audio and metadata (for audio mode)
+        expression_data: Optional. Supports:
+            - {"imageData": base64_str}: legacy single-photo mode
+            - {"analyses": [...]}: real-time video mode, pre-computed analyses from video stream
     """
     session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
     if not session or session.status != "active":
@@ -122,6 +127,25 @@ def submit_answer(
     
     # Process answer based on type
     audio_analysis = None
+    expression_analysis = None
+
+    # Optional: facial expression - real-time analyses or legacy single image
+    if expression_data:
+        if expression_data.get("analyses"):
+            # Real-time video mode: use most recent for this evaluation, append all to session history
+            analyses = expression_data["analyses"]
+            if analyses:
+                # Remove internal _timestamp for storage
+                latest = {k: v for k, v in analyses[-1].items() if not k.startswith("_")}
+                expression_analysis = latest
+            # Append to session-level expression history
+            existing_history = session.expression_history_json or []
+            for a in analyses:
+                clean = {k: v for k, v in a.items() if not k.startswith("_")}
+                existing_history.append(clean)
+            session.expression_history_json = existing_history[-100:]  # Cap at 100 samples
+        elif expression_data.get("imageData"):
+            expression_analysis = analyze_expression(expression_data["imageData"], enforce_detection=False)
     
     if answer_type == "audio":
         if not audio_data:
@@ -188,6 +212,7 @@ def submit_answer(
         existing_evaluation.missing_points_json = evaluation_result["missing_points"]
         existing_evaluation.next_direction = evaluation_result["next_direction"]
         existing_evaluation.speech_analysis_json = audio_analysis
+        existing_evaluation.expression_analysis_json = expression_analysis
         evaluation = existing_evaluation
     else:
         # Try to create new evaluation
@@ -201,7 +226,8 @@ def submit_answer(
                 feedback_text=evaluation_result["feedback"],
                 missing_points_json=evaluation_result["missing_points"],
                 next_direction=evaluation_result["next_direction"],
-                speech_analysis_json=audio_analysis
+                speech_analysis_json=audio_analysis,
+                expression_analysis_json=expression_analysis
             )
             db.add(evaluation)
             db.flush()
@@ -219,6 +245,8 @@ def submit_answer(
                 existing_evaluation.feedback_text = evaluation_result["feedback"]
                 existing_evaluation.missing_points_json = evaluation_result["missing_points"]
                 existing_evaluation.next_direction = evaluation_result["next_direction"]
+                existing_evaluation.speech_analysis_json = audio_analysis
+                existing_evaluation.expression_analysis_json = expression_analysis
                 evaluation = existing_evaluation
             else:
                 raise  # Re-raise if still can't find it
@@ -291,13 +319,17 @@ def submit_answer(
         # Collect missing chapters from evaluations
         evaluations = db.query(Evaluation).join(AskedQuestion).filter(
             AskedQuestion.session_id == session_id
-        ).all()
+        ).order_by(Evaluation.created_at.desc()).all()
         for eval_obj in evaluations:
             if eval_obj.missing_points_json:
-                # Extract chapter from asked question
                 aq = db.query(AskedQuestion).filter(AskedQuestion.id == eval_obj.asked_question_id).first()
                 if aq and aq.topic:
                     missing_chapters.append(aq.topic)
+        
+        # 使用最近一次评估的 next_direction 作为选题提示（LLM 输出）
+        next_direction_hints = []
+        if evaluations and evaluations[0].next_direction:
+            next_direction_hints = [evaluations[0].next_direction]
         
         # Select next question
         next_question = select_question(
@@ -305,7 +337,8 @@ def submit_answer(
             session=session,
             current_difficulty=new_difficulty,
             resume_skills=resume_skills,
-            missing_chapters=list(set(missing_chapters))
+            missing_chapters=list(set(missing_chapters)),
+            next_direction_hints=next_direction_hints
         )
         
         if not next_question:

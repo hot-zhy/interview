@@ -16,10 +16,12 @@
 \usepackage{pifont}
 \usepackage{float}
 \usepackage{tabularx}
+\usepackage{array}
 \usepackage{adjustbox}
 \usepackage{xurl}
 \usepackage{seqsplit}
 \sloppy
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
 \journal{ACM Transactions on Computer-Human Interaction}
 
@@ -32,7 +34,7 @@
 \author{Anonymous Authors}
 
 \begin{abstract}
-\noindent AI-powered technical interviews promise scalability and consistency, yet most systems treat candidates uniformly---fixed difficulty, generic questions, and brittle evaluation---undermining both assessment validity and candidate experience. We identify three design gaps: (1) \emph{calibration}---systems fail to adapt difficulty to candidate ability in real time; (2) \emph{selection}---questions ignore knowledge gaps and candidate backgrounds; and (3) \emph{evaluation}---reliability and nuance are traded off, with LLM-only systems lacking graceful degradation. We present an adaptive interview system that addresses these gaps through three innovations: a \emph{lightweight sliding-window} calibration that converges within 4--5 questions without IRT calibration; a \emph{multi-priority} selection strategy (gap targeting, resume personalization, coverage) with optional IRT-inspired and UCB-based enhancements; and a \emph{hybrid evaluation} combining rule-based scoring with validated LLM augmentation and automatic fallback. Empirical evaluation demonstrates improved calibration, gap-targeting, coverage, and agreement with human evaluators, with high uptime through automatic fallback. We contribute design principles for human-centered adaptive assessment, reproducible algorithms, and implications for fairness and candidate experience in AI-assisted hiring.
+\noindent AI-powered technical interviews promise scalability and consistency, yet most systems treat candidates uniformly---fixed difficulty, generic questions, and brittle evaluation---undermining both assessment validity and candidate experience. We identify three design gaps. First, \emph{calibration}: systems fail to adapt difficulty to candidate ability in real time. Second, \emph{selection}: questions ignore knowledge gaps and candidate backgrounds. Third, \emph{evaluation}: reliability and nuance are traded off, and LLM-only systems lack graceful degradation. We present an adaptive interview system that addresses these gaps through four innovations. We use a \emph{lightweight sliding-window} calibration that converges within 4--5 questions without IRT calibration. We employ a \emph{multi-priority} selection strategy (gap targeting, resume personalization, \emph{LLM next-direction feedback}, coverage) with optional IRT-inspired and UCB-based enhancements. We combine rule-based scoring with validated LLM augmentation and automatic fallback in a \emph{hybrid evaluation}. We add an \emph{LLM-enhanced report generator} that produces personalized summaries, strengths/weaknesses, learning plans, speech recommendations, and question rationales, all with rule-based fallback. Empirical evaluation demonstrates improved calibration, gap-targeting, coverage, and agreement with human evaluators, with high uptime through automatic fallback. We contribute design principles for human-centered adaptive assessment, reproducible algorithms, and implications for fairness and candidate experience in AI-assisted hiring.
 \end{abstract}
 
 \begin{keyword}
@@ -65,11 +67,11 @@ Adaptive assessment \sep AI-powered interview \sep Human-centered design \sep Di
 
 \subsection{Our Solution and Contributions}
 
-\noindent We present an integrated adaptive interview system that addresses the three design gaps through innovations grounded in psychometrics (IRT-inspired ability estimation, Fisher information), bandit algorithms (UCB for exploration--exploitation), and human-centered design (resume-informed personalization, misconception-aware follow-ups, hybrid evaluation with fallback). Our approach is \emph{novel} in three ways: (1) we adapt CAT principles to interview constraints without requiring pre-calibrated item banks; (2) we unify gap targeting, personalization, and coverage in a single multi-priority framework; and (3) we demonstrate that hybrid rule+LLM evaluation can achieve both reliability and nuance with graceful degradation.
+\noindent We present an integrated adaptive interview system that addresses the three design gaps through innovations grounded in psychometrics (IRT-inspired ability estimation, Fisher information), bandit algorithms (UCB for exploration--exploitation), and human-centered design (resume-informed personalization, misconception-aware follow-ups, hybrid evaluation with fallback). Our approach is \emph{novel} in four ways. First, we adapt CAT principles to interview constraints without requiring pre-calibrated item banks. Second, we unify gap targeting, \emph{LLM next-direction feedback}, personalization, and coverage in a single multi-priority framework. Third, we demonstrate that hybrid rule+LLM evaluation can achieve both reliability and nuance with graceful degradation. Fourth, we extend the hybrid principle to report generation, producing personalized summaries and recommendations with rule-based fallback.
 
 \noindent \textbf{Solution 1 (RQ1):} We propose a sliding-window weighted difficulty adjustment algorithm that dynamically calibrates to candidate ability levels in real time. Unlike traditional CAT approaches that require extensive calibration, our algorithm uses a small sliding window (default three questions) with weighted averaging that emphasizes recent performance while considering trends. This enables rapid convergence on appropriate difficulty levels within the constraints of interview contexts. We also support an optional target-score control strategy for scenarios prioritizing faster convergence.
 
-\noindent \textbf{Solution 2 (RQ2):} We introduce a multi-priority question selection strategy that simultaneously targets knowledge gaps, considers candidate backgrounds, and ensures comprehensive coverage. The strategy employs three priority levels: missing knowledge chapters identified through previous evaluations, resume-based matching using automated resume parsing techniques \cite{li2022resume} and fuzzy string matching \cite{zhang2020fuzzy}, and weighted random or Thompson sampling from track-specific chapters. The system also supports a personalized mode integrating IRT-inspired ability estimation, Fisher information maximization, and UCB-based exploration for improved measurement efficiency.
+\noindent \textbf{Solution 2 (RQ2):} We introduce a multi-priority question selection strategy that simultaneously targets knowledge gaps, considers candidate backgrounds, and ensures comprehensive coverage. The strategy employs three priority levels: missing knowledge chapters identified through previous evaluations (augmented by \emph{LLM next-direction hints} when the evaluator suggests follow-up topics), resume-based matching using automated resume parsing techniques \cite{li2022resume} and fuzzy string matching \cite{zhang2020fuzzy}, and weighted random or Thompson sampling from track-specific chapters. The system also supports a personalized mode integrating IRT-inspired ability estimation, Fisher information maximization, and UCB-based exploration for improved measurement efficiency.
 
 \noindent \textbf{Solution 3 (RQ3):} We develop a hybrid evaluation framework that combines rule-based scoring with optional LLM enhancement \cite{smith2021hybrid}. The framework employs five-dimensional evaluation (correctness, depth, clarity, practicality, tradeoffs) through rule-based algorithms that ensure reliability and consistency. Optional LLM enhancement leverages instruction-following models \cite{ouyang2022chatgpt,achiam2023gpt4} and chain-of-thought reasoning \cite{wei2022chain} to provide nuanced analysis when available, with automatic fallback to rule-based evaluation ensuring system availability. This hybrid approach addresses the reliability--nuance trade-off while maintaining evaluation reliability standards \cite{patel2023reliability}.
 
@@ -81,12 +83,13 @@ Adaptive assessment \sep AI-powered interview \sep Human-centered design \sep Di
 
 \textbf{RQ3:} How can hybrid evaluation frameworks combining rule-based and LLM approaches provide both reliable baseline assessment and nuanced analysis while maintaining system availability?
 
-\noindent \textbf{Contributions.} We make four contributions:
+\noindent \textbf{Contributions.} We make five contributions (C1--C5):
 \begin{itemize}
     \item \textbf{C1 (Technical)}: A lightweight difficulty calibration method that converges within 4--5 questions \emph{without} IRT calibration---a novel adaptation of CAT principles to interview constraints.
-    \item \textbf{C2 (Technical)}: A multi-priority question selection framework that unifies gap targeting, resume personalization, and coverage, with optional IRT-inspired and UCB-based enhancements for measurement efficiency.
+    \item \textbf{C2 (Technical)}: A multi-priority question selection framework that unifies gap targeting, \emph{LLM next-direction feedback} (evaluation-to-selection loop), resume personalization, and coverage, with optional IRT-inspired and UCB-based enhancements for measurement efficiency.
     \item \textbf{C3 (Technical)}: A hybrid evaluation pipeline combining rule-based reliability with validated LLM augmentation and automatic fallback, resolving the reliability--nuance trade-off while ensuring high uptime.
-    \item \textbf{C4 (Design)}: Design principles and empirical evidence for human-centered adaptive assessment, including implications for candidate experience, fairness, and graceful degradation in AI-assisted hiring.
+    \item \textbf{C4 (Technical)}: An LLM-enhanced report generator that produces personalized overall summaries, strengths/weaknesses descriptions, learning plans, speech improvement recommendations, and question rationales---all with rule-based fallback for availability.
+    \item \textbf{C5 (Design)}: Design principles and empirical evidence for human-centered adaptive assessment, including implications for candidate experience, fairness, and graceful degradation in AI-assisted hiring.
 \end{itemize}
 
 The remainder of this paper is organized as follows. Section 2 reviews related work and positions our contribution. Section 3 compares our system with existing platforms. Sections 4--5 present system architecture and implementation, including reproducible algorithms for calibration, selection, and evaluation. Sections 6--9 describe deployment, experimental design, participants, and data collection. Section 10 presents results for RQ1, RQ2, and RQ3, followed by cross-component integration. Sections 11--13 discuss findings, significance, and conclusions.
@@ -95,7 +98,7 @@ The remainder of this paper is organized as follows. Section 2 reviews related w
 
 \subsection{Computerized Adaptive Testing}
 
-\noindent Computerized Adaptive Testing (CAT) has been extensively studied in educational assessment contexts \cite{van2006computerized}. The fundamental principle involves dynamically adjusting test difficulty based on candidate responses, grounded in Item Response Theory (IRT) \cite{hambleton1991fundamentals}. Recent advances in adaptive testing have explored lightweight calibration methods and rapid convergence strategies \cite{chen2021adaptive}, addressing some limitations of traditional IRT-based approaches. However, many CAT variants rely on calibrated item parameters and response models, and their assumptions do not directly carry over to technical interviews where items are heterogeneous and scoring can be multi-dimensional. Our work targets the interview setting by proposing a lightweight, reproducible update rule that does not assume pre-calibrated IRT parameters; we report results under a fixed question budget and with transparent metric definitions.
+\noindent Researchers have extensively studied Computerized Adaptive Testing (CAT) in educational assessment contexts \cite{van2006computerized}. The fundamental principle involves dynamically adjusting test difficulty based on candidate responses, grounded in Item Response Theory (IRT) \cite{hambleton1991fundamentals}. Recent advances in adaptive testing have explored lightweight calibration methods and rapid convergence strategies \cite{chen2021adaptive}, addressing some limitations of traditional IRT-based approaches. However, many CAT variants rely on calibrated item parameters and response models, and their assumptions do not directly carry over to technical interviews where items are heterogeneous and scoring can be multi-dimensional. Our work targets the interview setting by proposing a lightweight, reproducible update rule that does not assume pre-calibrated IRT parameters. We report results under a fixed question budget and with transparent metric definitions.
 
 \subsection{Intelligent Tutoring Systems}
 
@@ -144,6 +147,10 @@ LLM Fallback & \ding{51} (Auto) & N/A & N/A & N/A & N/A \\
 \midrule
 Audio Processing & \ding{51} & \ding{55} & \ding{55} & \ding{51} & \ding{51} \\
 \midrule
+Expression Analysis & \ding{51} (Real-time video) & \ding{55} & \ding{55} & \ding{55} & \ding{55} \\
+\midrule
+LLM-Enhanced Report & \ding{51} (Hybrid) & \ding{55} & \ding{55} & \ding{51} (Full) & \ding{55} \\
+\midrule
 Real-time Adapt & \ding{51} & \ding{55} & \ding{51} & \ding{51} & \ding{55} \\
 \midrule
 Convergence & 4--5 Q & N/A & 8--12 Q & Variable & N/A \\
@@ -156,13 +163,13 @@ Calibration Acc. & high & N/A & 75--85\% & Variable & N/A \\
 
 \subsection{Adaptive Difficulty Adjustment}
 
-\noindent Most existing interview platforms employ fixed difficulty levels or simple rule-based adjustments. Traditional CAT systems use IRT-based methods requiring extensive calibration data and typically need more questions than a practical interview allows to stabilize difficulty. In our pilot protocol (Section~7), we observe that a lightweight sliding-window update can converge within a small number of questions; concrete values are reported in Section~10; see Reproducibility Notes (Section~7.6) for data and script requirements.
+\noindent Most existing interview platforms employ fixed difficulty levels or simple rule-based adjustments. Traditional CAT systems use IRT-based methods that require extensive calibration data and typically need more questions than a practical interview allows to stabilize difficulty. In our pilot protocol (Section~7), we observe that a lightweight sliding-window update can converge within a small number of questions. We report concrete values in Section~10 and provide data and script requirements in Reproducibility Notes (Section~7.6).
 
 LLM-only systems often lack explicit difficulty calibration mechanisms, relying on implicit adjustments through question selection. While this can work, it lacks the systematic approach and measurable accuracy of our method. Our algorithm provides transparent, explainable difficulty adjustments with quantifiable performance metrics.
 
 \subsection{Question Selection Strategies}
 
-\noindent Fixed template systems lack personalization and cannot adapt to candidate performance or knowledge gaps. Simple CAT systems match questions to estimated ability but ignore knowledge gaps and candidate backgrounds. Our multi-priority strategy uniquely combines gap targeting, resume-based personalization, and comprehensive coverage, achieving superior balance across competing objectives (quantitative results in Section~10).
+\noindent Fixed template systems lack personalization and cannot adapt to candidate performance or knowledge gaps. Simple CAT systems match questions to estimated ability but ignore knowledge gaps and candidate backgrounds. Our multi-priority strategy uniquely combines gap targeting, \emph{LLM next-direction feedback} (the evaluator's suggested follow-up topics are fuzzy-matched to chapters and fed into selection), resume-based personalization, and comprehensive coverage, achieving superior balance across competing objectives (quantitative results in Section~10).
 
 Existing systems typically prioritize one objective: either coverage (fixed templates), ability matching (CAT), or personalization (some LLM systems). Our multi-priority framework dynamically balances these objectives, ensuring comprehensive assessment while maintaining personalization and gap targeting effectiveness.
 
@@ -186,11 +193,11 @@ The automatic fallback mechanism seamlessly transitions between LLM-enhanced and
 
 \subsection{Multimodal Support}
 
-\noindent Our system supports both text and audio responses, with speech analysis providing additional communication metrics. While some platforms support audio input, few provide the comprehensive speech analysis (fluency, nervousness, speech rate) that our system offers. This multimodal capability enables more holistic candidate assessment beyond technical knowledge.
+\noindent Our system supports text, audio, and \emph{optional facial expression} inputs. Speech analysis provides communication metrics (fluency, nervousness, speech rate). Expression analysis provides facial-emotion-derived metrics (nervousness, confidence, engagement) through real-time video streaming. A live video preview appears in the corner during the interview, and the system samples frames in the background for analysis. While some platforms support audio input, few provide the combined speech and expression analysis that our system offers. This multimodal capability enables more holistic candidate assessment beyond technical knowledge. We treat both modalities as auxiliary signals and report them descriptively in the assessment report.
 
 \subsection{Summary of Advantages}
 
-\noindent Our system's key advantages include: (1) rapid difficulty calibration under a fixed question budget, (2) balanced multi-priority question selection combining gap targeting, personalization, and coverage, (3) hybrid evaluation providing both deterministic scoring and optional LLM assistance with automatic fallback, (4) resume-based personalization with robust matching, (5) graceful degradation when LLM services are unavailable, and (6) multimodal support including speech-derived communication cues. Quantitative comparisons are reported in Section~10; see Reproducibility Notes (Section~7.6).
+\noindent Our system offers several key advantages. It achieves rapid difficulty calibration under a fixed question budget. It balances multi-priority question selection that combines gap targeting, \emph{LLM next-direction feedback} (evaluation-to-selection loop), personalization, and coverage. It provides hybrid evaluation with both deterministic scoring and optional LLM assistance and automatic fallback. It includes \emph{LLM-enhanced report generation} (personalized summaries, strengths/weaknesses, learning plans, speech recommendations, question rationales) with rule-based fallback. It supports resume-based personalization with robust matching. It degrades gracefully when LLM services are unavailable. It offers multimodal support including speech-derived communication cues and optional facial expression analysis. We report quantitative comparisons in Section~10 and provide Reproducibility Notes in Section~7.6.
 
 These advantages collectively address limitations in existing systems, providing a more effective, reliable, and comprehensive solution for technical interview assessment. The integrated approach ensures that innovations work synergistically, with effective calibration enabling better selection, which improves evaluation quality.
 
@@ -198,9 +205,11 @@ These advantages collectively address limitations in existing systems, providing
 
 \noindent The system is built using a modular three-layer architecture that clearly separates presentation, business logic, and data persistence concerns. This design enables independent development, testing, and maintenance of each layer while maintaining clear interfaces between components.
 
-The presentation layer is implemented using Streamlit, a Python-based web framework that enables rapid development of interactive web applications.\footnote{\url{https://streamlit.io/}} This layer handles user authentication, resume upload and management, question bank administration, interactive interview sessions with real-time feedback, and comprehensive report generation. The Streamlit framework provides built-in support for file uploads, form inputs, and dynamic content updates, making it well-suited for the interview system's requirements.
+\noindent From an \emph{agentic} perspective, the system implements a Perceive--Decide--Act loop. The \textbf{Perceive} phase ingests evaluation results, missing knowledge points, interview history, and resume data. The \textbf{Decide} phase determines whether to follow up, select the next question (difficulty and chapter), or terminate the interview. The \textbf{Act} phase executes the chosen action: presenting a question, generating a misconception-aware follow-up, or producing feedback. This agentic orchestration enables the system to adapt dynamically to candidate performance while maintaining transparent, reproducible decision logic.
 
-The business logic layer consists of several specialized services that implement core system functionality addressing our three research questions. The Adaptive Interview Engine module addresses RQ1 by implementing the sliding-window weighted difficulty adjustment algorithm that calibrates to candidate ability levels. The Question Selector service addresses RQ2 by employing multi-priority strategies that balance knowledge gap targeting with coverage requirements. The Evaluation Engine addresses RQ3 by providing both rule-based and LLM-enhanced scoring mechanisms, ensuring reliable assessment even when external services are unavailable. Additional services include the Resume Parser for extracting structured information from PDF and DOCX documents, the Speech Analyzer for processing audio responses to extract communication metrics, and the Report Generator for synthesizing interview results into comprehensive assessment reports.
+We implement the presentation layer using Streamlit, a Python-based web framework that enables rapid development of interactive web applications.\footnote{\url{https://streamlit.io/}} This layer handles user authentication, resume upload and management, question bank administration, interactive interview sessions with real-time feedback, and comprehensive report generation. The Streamlit framework provides built-in support for file uploads, form inputs, and dynamic content updates, making it well-suited for the interview system's requirements.
+
+The business logic layer consists of several specialized services that implement core system functionality addressing our three research questions. The Adaptive Interview Engine module addresses RQ1 by implementing the sliding-window weighted difficulty adjustment algorithm that calibrates to candidate ability levels. The Question Selector service addresses RQ2 by employing multi-priority strategies that balance knowledge gap targeting, \emph{LLM next-direction feedback} (evaluation-to-selection loop), and coverage requirements. The Evaluation Engine addresses RQ3 by providing both rule-based and LLM-enhanced scoring mechanisms (with \texttt{next\_direction} output for selection), ensuring reliable assessment even when external services are unavailable. An \textbf{Interview Phrase} module generates context-aware transition phrases (e.g., score-adapted next-question intros, chapter-switch hints, follow-up acknowledgments) to improve conversational flow. Additional services include the Resume Parser for extracting structured information from PDF and DOCX documents, the Speech Analyzer for processing audio responses to extract communication metrics, the \textbf{Expression Analyzer} for optional facial expression analysis (nervousness, confidence, engagement) when candidates capture a face snapshot at submission, and the Report Generator for synthesizing interview results into comprehensive assessment reports---with optional LLM enhancement for personalized summaries, strengths/weaknesses, learning plans, speech recommendations, and question rationales (C4).
 
 The data layer employs SQLAlchemy ORM to provide database abstraction and support for multiple database backends including SQLite and MySQL.\footnote{\url{https://www.sqlalchemy.org/}} The data model includes entities for user management and authentication, interview sessions with metadata tracking, question bank with difficulty and chapter classifications, evaluation results with multi-dimensional scores, and resume data with structured skill and experience information. This design enables flexible data persistence while maintaining referential integrity and supporting complex queries required for adaptive algorithms.
 
@@ -221,9 +230,11 @@ Table \ref{tab:algorithm_parameters} presents key algorithm parameters and their
 
 \begin{table}[H]
 \centering
-\caption{Key algorithm parameters and default values. Thresholds (0.85, 0.4, 0.15) are tuning heuristics; sensitivity analysis in Section~10.1.}
+\caption{Key algorithm parameters and default values. Thresholds (0.85, 0.4, 0.15) are tuning heuristics. We provide sensitivity analysis in Section~10.1.}
 \label{tab:algorithm_parameters}
-\begin{tabular}{lccc}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{l c Y c}
 \toprule
 \textbf{Parameter} & \textbf{Default} & \textbf{Description} & \textbf{Tuning} \\
 \midrule
@@ -237,15 +248,53 @@ Similarity Threshold & 70\% & Fuzzy matching threshold for chapters & Heuristic 
 Excellent Score & 0.85 & Threshold for excellent performance & Heuristic \\
 Poor Score & 0.4 & Threshold for poor performance & Heuristic \\
 Stability Threshold & 0.15 & Standard deviation threshold for stability & Heuristic \\
+Selector Strategy & personalized & Question selection: \texttt{weighted\_random}, \texttt{thompson\_sampling}, or \texttt{personalized} & Configurable \\
+LLM CoT Toggle & false & Enable concise structured reasoning in evaluator output (\texttt{llm\_use\_cot}) & Configurable \\
+LLM Multi-Judge Count & 1 & Number of LLM judges for consensus aggregation (\texttt{llm\_multi\_judge\_count}) & Configurable \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-The frontend layer consists of Streamlit pages organized by functionality: authentication, resume management, question bank administration, interview sessions, report viewing, and administrative functions. Each page communicates with backend services through function calls, maintaining separation of concerns while enabling seamless user experience.
+The frontend layer consists of Streamlit pages organized by functionality: authentication, resume management, question bank administration, interview sessions, report viewing, and administrative functions. Each page communicates with backend services through function calls, maintaining separation of concerns while enabling seamless user experience. The system supports Chinese and English language switching via a sidebar control, enabling broader accessibility.
+
+Figure~\ref{fig:ui_home} shows the home page with navigation and language switcher. Figure~\ref{fig:ui_interview} illustrates the interview interface with the avatar, chat area, and real-time expression video preview. Figure~\ref{fig:ui_report} shows a sample assessment report with scores and recommendations.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/screenshots/ui_home.png}{%
+\includegraphics[width=0.9\textwidth]{figures/screenshots/ui_home.png}%
+}{%
+\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\small [Screenshot: Home page]\\ Run app, capture, save as \texttt{figures/screenshots/ui\_home.png}\vspace{2cm}}}%
+}
+\caption{Home page: navigation and Chinese/English language switcher.}
+\label{fig:ui_home}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/screenshots/ui_interview.png}{%
+\includegraphics[width=0.9\textwidth]{figures/screenshots/ui_interview.png}%
+}{%
+\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\small [Screenshot: Interview page]\\ Save as \texttt{figures/screenshots/ui\_interview.png}\vspace{2cm}}}%
+}
+\caption{Interview interface: avatar, chat area, and real-time expression video preview.}
+\label{fig:ui_interview}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/screenshots/ui_report.png}{%
+\includegraphics[width=0.9\textwidth]{figures/screenshots/ui_report.png}%
+}{%
+\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\small [Screenshot: Report page]\\ Save as \texttt{figures/screenshots/ui\_report.png}\vspace{2cm}}}%
+}
+\caption{Sample assessment report with scores, strengths, weaknesses, and learning plan.}
+\label{fig:ui_report}
+\end{figure}
 
 The backend services are organized into logical modules that directly correspond to our research questions. The core services include interview engine implementing RQ1's difficulty adjustment, question selection implementing RQ2's intelligent selection, and evaluation implementing RQ3's hybrid framework. Supporting services handle resume parsing, speech analysis, audio processing, and LLM integration. All services share common utilities for configuration management, security, and logging.
 
-The data access layer provides unified interfaces for database operations through SQLAlchemy models and session management. Database migrations are handled through Alembic.\footnote{\url{https://alembic.sqlalchemy.org/}} This enables version control and incremental schema updates.
+The data access layer provides unified interfaces for database operations through SQLAlchemy models and session management. We handle database migrations through Alembic.\footnote{\url{https://alembic.sqlalchemy.org/}} This enables version control and incremental schema updates.
 
 \subsection{Interview Termination Decision Algorithm}
 
@@ -371,7 +420,7 @@ The final termination decision is:
 
 The multi-dimensional approach addresses the complexity of termination decisions by considering multiple aspects simultaneously. Stability metrics ensure consistent performance, coverage metrics ensure comprehensive assessment, and performance metrics ensure adequate ability estimation. The combination of these metrics provides robust termination decisions that balance assessment quality with efficiency.
 
-\noindent \textbf{Difficulty update variants (code-aligned).} The current implementation supports two difficulty update strategies controlled by a configuration flag: (i) a heuristic threshold rule using a recent-score window and a simple trend term; and (ii) a target-score controller that adjusts difficulty based on proportional error $(\bar{s}_w-\tau)$ and a trend term. The second option improves stability under noisy scores and makes the intended operating point ($\tau$, e.g., 0.70) explicit; both strategies output an integer difficulty in $\{1,\dots,5\}$.
+\noindent \textbf{Difficulty update variants (code-aligned).} The current implementation supports two difficulty update strategies controlled by a configuration flag. The first uses a heuristic threshold rule with a recent-score window and a simple trend term. The second uses a target-score controller that adjusts difficulty based on proportional error $(\bar{s}_w-\tau)$ and a trend term. The second option improves stability under noisy scores and makes the intended operating point ($\tau$, e.g., 0.70) explicit. Both strategies output an integer difficulty in $\{1,\dots,5\}$.
 
 \subsection{Question Selection Algorithm (Addressing RQ2)}
 
@@ -381,9 +430,10 @@ The multi-dimensional approach addresses the complexity of termination decisions
 \caption{RQ2: Multi-priority and Personalized Question Selection}
 \label{alg:rq2}
 \begin{algorithmic}[1]
-\STATE \textbf{Input:} question bank $Q$; asked set $A$; current difficulty $d$; missing concepts $m$; resume skills $r$; chapter coverage state $C$; evaluation history $H$
+\STATE \textbf{Input:} question bank $Q$; asked set $A$; current difficulty $d$; missing concepts $m$; resume skills $r$; chapter coverage state $C$; evaluation history $H$; \textbf{next-direction hints} $\eta$ (from last LLM evaluation, optional)
 \STATE \textbf{Output:} next question $q^*$
 \STATE Apply fairness constraints (Sec.~7): same bank, same budget, same initialization across baselines
+\STATE If $\eta \neq \emptyset$: augment $m \leftarrow m \cup \{\text{chapters matched from } \eta \text{ (fuzzy, $>60\%$)}\}$
 \STATE Select target chapter $\hat{c}$ by priorities:
 \STATE \quad P1: match $m$ to chapters (avoid recently used)
 \STATE \quad P2: match $r$ to chapters (avoid repeats)
@@ -403,7 +453,7 @@ The multi-dimensional approach addresses the complexity of termination decisions
 
 \subsubsection{Algorithm Formulation}
 
-\noindent The selection algorithm $S(c, h, r, m)$ takes as input the current chapter preferences $c$, interview history $h$, resume skills $r$, and missing knowledge points $m$. The algorithm returns a selected question $q$ from the question bank $Q$ that satisfies the current difficulty level $d$ and has not been previously asked.
+\noindent The selection algorithm $S(c, h, r, m, \eta)$ takes as input the current chapter preferences $c$, interview history $h$, resume skills $r$, missing knowledge points $m$, and optional \emph{next-direction hints} $\eta$ from the most recent LLM evaluation. When the hybrid evaluator uses an LLM, it outputs a \texttt{next\_direction} field suggesting follow-up topics (e.g., ``深入考察并发''). The algorithm fuzzy-matches $\eta$ to track chapters (threshold 60\%) and augments $m$ before applying priorities, forming an \emph{evaluation-to-selection feedback loop} that closes the gap between assessment and selection. The algorithm returns a selected question $q$ from the question bank $Q$ that satisfies the current difficulty level $d$ and has not been previously asked.
 
 The algorithm employs a three-tier priority system. Priority one $P_1(m, h)$ targets missing knowledge chapters identified through previous evaluations. For each missing point $m_i \in m$, the algorithm attempts fuzzy matching with available chapters:
 
@@ -433,7 +483,7 @@ where $I(\cdot)$ is an indicator function that excludes recently asked chapters.
 
 \noindent When \texttt{selector\_strategy=personalized}, the system augments the multi-priority framework with IRT-inspired ability estimation and Fisher information maximization. This approach aligns with computerized adaptive testing principles \cite{van2006computerized} while remaining lightweight for interview contexts.
 
-\noindent \textbf{Ability estimation.} The system maintains a sliding window of evaluation pairs $(d_i, s_i)$ where $d_i$ is the difficulty of question $i$ and $s_i$ is the candidate's overall score. Under a simplified 2PL model, $P(\text{correct}) \approx \sigma(a(\theta - b))$; when $s \approx 0.5$, the candidate's ability $\theta$ approximately matches item difficulty $b$. The system estimates ability via a weighted average over recent history:
+\noindent \textbf{Ability estimation.} The system maintains a sliding window of evaluation pairs $(d_i, s_i)$ where $d_i$ is the difficulty of question $i$ and $s_i$ is the candidate's overall score. Under a simplified 2PL model, $P(\text{correct}) \approx \sigma(a(\theta - b))$. When $s \approx 0.5$, the candidate's ability $\theta$ approximately matches item difficulty $b$. The system estimates ability via a weighted average over recent history:
 
 \begin{equation}
 \hat{\theta} = \frac{\sum_{i=1}^{|H|} w_i \cdot \text{clip}\left(d_i + (s_i - 0.5) \cdot 2, \; 1, \; 5\right)}{\sum_{i} w_i}, \quad w_i = i
@@ -458,19 +508,21 @@ which favors items whose difficulty $b$ is close to the estimated ability $\hat{
 
 where $\bar{s}_c$ is the mean success rate for chapter $c$, $n_c$ is the number of trials in $c$, $N$ is total trials, and $\eta$ typically equals 1.5. Unvisited chapters receive $n_c = 0$ and thus infinite UCB, encouraging exploration.
 
-\noindent \textbf{Personalization weights.} The system computes a multiplicative weight $w_{\text{pers}}(c)$ that combines: (i) resume-skill match (boost when $c$ aligns with parsed skills), (ii) missing-chapter boost (higher weight when $c$ corresponds to identified knowledge gaps), and (iii) low mastery boost (when $c$ has mastery $< 0.6$ in the skill profile). The final item score combines Fisher information, UCB, and personalization:
+\noindent \textbf{Personalization weights.} The system computes a multiplicative weight $w_{\text{pers}}(c)$ that combines: (i) resume-skill match (boost when $c$ aligns with parsed skills), (ii) missing-chapter boost (higher weight when $c$ corresponds to identified knowledge gaps), and (iii) low mastery boost (when $c$ has mastery $< 0.6$ in the skill profile). The final item score combines Fisher information, a UCB-based factor (linear interpolation to avoid zero-weight for unexplored chapters), and personalization:
 
 \begin{equation}
-s(q) = I_{\text{Fisher}}(\hat{\theta}, q.d) \cdot \min(\text{UCB}(q.chapter), 2) \cdot w_{\text{pers}}(q.chapter)
+s(q) = I_{\text{Fisher}}(\hat{\theta}, q.d) \cdot \left(0.5 + 0.5 \cdot \min(\text{UCB}(q.chapter), 2)\right) \cdot w_{\text{pers}}(q.chapter)
 \end{equation}
+
+This formulation ensures that even chapters with low UCB receive non-zero weight, maintaining exploration while favoring high-information items.
 
 \noindent \textbf{Exploration.} With probability $\epsilon$ (default 0.15), the system selects a random item from $Q_c$ to avoid over-exploitation and maintain diversity.
 
 \subsubsection{Selection Process}
 
-\noindent The algorithm executes priorities sequentially. If $P_1$ returns a valid chapter, that chapter is selected. Otherwise, $P_2$ is evaluated. If neither $P_1$ nor $P_2$ returns a valid chapter, $P_3$ is used for weighted random selection. This ensures that gap targeting and personalization are prioritized when possible, while coverage is maintained through fallback to weighted random selection.
+\noindent The algorithm executes priorities sequentially. If $P_1$ returns a valid chapter, the algorithm selects that chapter. Otherwise, the algorithm evaluates $P_2$. If neither $P_1$ nor $P_2$ returns a valid chapter, the algorithm uses $P_3$ for weighted random selection. This ensures that gap targeting and personalization are prioritized when possible, and the system maintains coverage through fallback to weighted random selection.
 
-Once a target chapter $c^*$ is determined, the algorithm queries the question bank for questions matching the current difficulty $d$ and chapter $c^*$:
+Once the algorithm determines a target chapter $c^*$, it queries the question bank for questions matching the current difficulty $d$ and chapter $c^*$:
 
 \begin{equation}
 Q_{candidate} = \{q \in Q \mid q.\text{difficulty} = d, q.\text{chapter} \approx c^*, q \notin Q_{asked}\}
@@ -507,7 +559,7 @@ The final selection uses either uniform random sampling (when not in personalize
 
 \subsubsection{Follow-up Generation: Misconception-Aware and LLM-Enhanced}
 
-\noindent The follow-up generator $G(q, a, M, k)$ produces a natural-language probe that targets the gap between the candidate answer $a$ and the reference answer. When an LLM is available, the system uses a structured prompt that includes: (i) the original question $q$, (ii) the candidate answer $a$, (iii) evaluation feedback, (iv) the list of missing points $M$, and (v) the optional reference answer for gap analysis. The prompt instructs the model to generate a \emph{short} (e.g., $\leq 30$ characters in Chinese), \emph{targeted} follow-up that addresses the specific misconception or gap without verbatim repetition of $M$. The depth hint adapts to $k$: for $k=0$, the first follow-up targets the knowledge gap concretely; for $k=1$, the second follow-up may shift angle or ask for a practical scenario.
+\noindent The follow-up generator $G(q, a, M, k)$ produces a natural-language probe that targets the gap between the candidate answer $a$ and the reference answer. When an LLM is available, the system uses a structured prompt that includes: (i) the original question $q$, (ii) the candidate answer $a$, (iii) evaluation feedback, (iv) the list of missing points $M$, and (v) the optional reference answer for gap analysis. The prompt instructs the model to generate a \emph{short} (e.g., $\leq 30$ characters in Chinese), \emph{targeted} follow-up that addresses the specific misconception or gap without verbatim repetition of $M$. The depth hint adapts to $k$. For $k=0$, the first follow-up targets the knowledge gap concretely. For $k=1$, the second follow-up may shift angle or ask for a practical scenario.
 
 \noindent When the LLM is unavailable, the system falls back to template-based generation that uses the first missing point $M[0]$ in predefined phrasings (e.g., ``Regarding $M[0]$, could you elaborate further?''). This hybrid design ensures both sophistication and availability, consistent with the evaluation framework (RQ3).
 
@@ -533,21 +585,21 @@ The final selection uses either uniform random sampling (when not in personalize
 \end{algorithmic}
 \end{algorithm}
 
-The rule-based evaluator computes scores across five dimensions to provide comprehensive assessment, building on multi-dimensional evaluation frameworks \cite{burrows2015eraser,mohler2011evaluation}. Correctness combines keyword coverage analysis with text similarity metrics using a weighted fusion approach. The system extracts key points from reference answers and calculates coverage by identifying which points are addressed in candidate responses through exact and fuzzy matching. Text similarity employs RapidFuzz's token set ratio as a lightweight similarity function.\footnote{\url{https://github.com/rapidfuzz/RapidFuzz}} The correctness score $C$ uses adaptive weighting:
+The rule-based evaluator computes scores across five dimensions to provide comprehensive assessment, building on multi-dimensional evaluation frameworks \cite{burrows2015eraser,mohler2011evaluation}. Correctness combines keyword coverage analysis with text similarity metrics using a weighted fusion approach. The system extracts key points from reference answers and calculates coverage by identifying which points are addressed in candidate responses through exact and fuzzy matching. Text similarity employs RapidFuzz's token set ratio as a lightweight similarity function.\footnote{\url{https://github.com/rapidfuzz/RapidFuzz}} The correctness score $C$ uses fixed weights:
 
 \begin{equation}
-C = \omega_c \cdot C_{coverage} + (1-\omega_c) \cdot C_{similarity}
+C = 0.6 \cdot C_{coverage} + 0.4 \cdot C_{similarity}
 \end{equation}
 
-where $\omega_c = 0.6$ for standard cases, but adapts to $\omega_c = 0.7$ when response length is below threshold (emphasizing coverage) or $\omega_c = 0.5$ for longer responses (emphasizing similarity), reflecting the relative importance of each component based on response characteristics.
+where coverage and similarity are combined with fixed weights reflecting the relative importance of each component in technical assessment.
 
 Depth assessment measures how thoroughly key points are addressed. The system analyzes whether candidates provide surface-level or detailed explanations, considering elaboration, examples, and technical details. Clarity evaluation examines answer structure through pattern matching for enumeration markers, logical connectors, and explanatory phrases. Practicality assessment identifies presence of examples, code references, and real-world applications. Tradeoff analysis detects discussion of advantages, disadvantages, limitations, or comparisons between approaches.
 
 The overall score combines these dimensions with weights: correctness 30\%, depth 25\%, clarity 20\%, practicality 15\%, and tradeoffs 10\%. This weighting reflects the relative importance of each dimension in technical assessment contexts. The rule-based approach ensures consistent, reliable evaluation that addresses RQ3's reliability requirement.
 
-When LLM enhancement is available, the system uses GLM-4-Flash via the ZhipuAI API.\footnote{\url{https://open.bigmodel.cn/}} The LLM receives question, reference answer, and candidate response, then generates structured evaluation following the same five-dimension framework. The system validates LLM output and falls back to rule-based evaluation if LLM processing fails or is unavailable, ensuring system availability as required by RQ3.
+When LLM enhancement is available, the system uses GLM-4.7-Flash via the ZhipuAI API.\footnote{\url{https://open.bigmodel.cn/}} The LLM receives question, reference answer, and candidate response, then generates structured evaluation following the same five-dimension framework. The output includes a \texttt{next\_direction} field suggesting follow-up topics for the next question, which is passed to the Question Selector as $\eta$ (Algorithm~\ref{alg:rq2}). We additionally implement two configurable evaluation variants in code: (i) \texttt{llm\_use\_cot}, which requests concise reasoning in a structured JSON field for interpretability, and (ii) \texttt{llm\_multi\_judge\_count}, which runs multiple LLM judges and aggregates scores by mean with frequency-based merge of missing points. The system validates LLM output and falls back to rule-based evaluation if LLM processing fails or is unavailable, ensuring system availability as required by RQ3.
 
-The hybrid framework's effectiveness in addressing RQ3 is evaluated through agreement metrics with human evaluators, comparing rule-based, LLM-enhanced, and hybrid approaches. Analysis examines how well the framework balances reliability, nuance, and availability requirements.
+We evaluate the hybrid framework's effectiveness in addressing RQ3 through agreement metrics with human evaluators, comparing rule-based, LLM-enhanced, and hybrid approaches. Analysis examines how well the framework balances reliability, nuance, and availability requirements.
 
 \subsection{Resume Parser Module}
 
@@ -563,25 +615,25 @@ The extracted information is structured into JSON format with separate arrays fo
 
 \noindent The Speech Analyzer processes audio responses to extract communication metrics beyond textual content. Given the high variance of speech processing across environments and languages, we treat speech-derived signals as auxiliary features (not primary decision criteria) and report them descriptively unless validated by the author’s final study.
 
-Speech rate analysis counts characters in transcribed text and divides by recording duration. The normal speech-rate range is a heuristic; calibration per language/population is recommended (see Limitations). The analysis employs adaptive thresholds that account for individual variation, recognizing that optimal speech rates may vary across candidates.
+Speech rate analysis counts characters in transcribed text and divides by recording duration. The normal speech-rate range (150--250 characters per minute) is a heuristic. We recommend calibration per language and population (see Limitations). The analysis employs adaptive thresholds that account for individual variation, recognizing that optimal speech rates may vary across candidates.
 
-Fluency assessment analyzes pause patterns using temporal analysis of silence intervals. The algorithm identifies three types of pauses: natural pauses (0.5-1.5 seconds), hesitation pauses (1.5-3 seconds), and extended pauses (>3 seconds). Fluency score $F$ is calculated as:
-
-\begin{equation}
-F = 1 - \frac{N_{hesitation} \cdot w_h + N_{extended} \cdot w_e}{N_{total} \cdot w_{total}}
-\end{equation}
-
-where $N_{hesitation}$ and $N_{extended}$ are counts of hesitation and extended pauses, with weights $w_h = 1.5$ and $w_e = 2.0$ reflecting their relative impact on fluency.
-
-Nervousness estimation employs a composite metric considering multiple indicators: self-corrections, repetitions, filler words, and irregular pause patterns. The nervousness score $N$ combines these factors:
+Fluency assessment uses a weighted combination of four factors: (i) speech rate score (optimal when 150--250 chars/min), (ii) pause frequency score (lower frequency preferred), (iii) average pause duration score (shorter pauses preferred, e.g., $\leq 1.5$s for normal), and (iv) correction score (fewer self-corrections and filler words preferred). The implementation computes:
 
 \begin{equation}
-N = \alpha \cdot C_{correction} + \beta \cdot C_{repetition} + \gamma \cdot C_{filler} + \delta \cdot I_{irregular}
+F = 0.3 \cdot S_{\text{rate}} + 0.3 \cdot S_{\text{pause-freq}} + 0.2 \cdot S_{\text{pause-dur}} + 0.2 \cdot S_{\text{correction}}
 \end{equation}
 
-where $C_{correction}$, $C_{repetition}$, and $C_{filler}$ are normalized counts, $I_{irregular}$ is an irregularity index based on pause pattern variance, and weights $\alpha = 0.3$, $\beta = 0.25$, $\gamma = 0.2$, $\delta = 0.25$ balance the contributions.
+where each $S$ component is normalized to $[0,1]$. When speech timing data is unavailable, the module falls back to text-based heuristics (sentence structure, filler-word detection).
+
+Nervousness estimation employs a composite metric considering multiple indicators: speech rate anomalies (too fast or too slow), pause frequency and duration, self-correction count, and recognition confidence. The implementation adds penalties when speech rate exceeds 300 or falls below 100 chars/min, pause frequency exceeds 20/min, average pause duration exceeds 2.5s, corrections exceed 5, or confidence falls below 0.6. The nervousness score is clamped to $[0,1]$.
 
 The analysis produces quantitative metrics and qualitative assessments with recommendations. These metrics complement textual evaluation, providing comprehensive assessment of candidate communication skills alongside technical knowledge, enabling holistic evaluation that addresses both cognitive and communicative dimensions of performance.
+
+\subsection{Expression Analysis Module}
+
+\noindent The Expression Analyzer processes facial expressions through real-time video streaming. A live video preview appears in the corner of the interview interface so candidates can see themselves. The system samples video frames in the background (e.g., every few seconds) and analyzes them to infer interview-relevant states such as nervousness, confidence, and engagement. Candidates do not need to manually capture or select images. Like speech analysis, we treat expression-derived signals as \emph{auxiliary features} (not primary decision criteria) and report them descriptively in the assessment report.
+
+\noindent The module uses DeepFace \cite{serengil2020deepface} for emotion detection, which outputs a distribution over seven basic emotions: angry, disgust, fear, happy, sad, surprise, and neutral. We map these to interview-relevant metrics: \emph{nervousness} (weighted combination of fear, sad, disgust, angry, surprise), \emph{confidence level} (happy and neutral), and \emph{engagement} (focused vs.\ engaged based on neutral and fear scores). The module generates per-question recommendations (e.g., ``表情显示略有紧张，建议深呼吸、保持微笑有助于放松'') and aggregates metrics across the session for the report's expression summary. When DeepFace is unavailable or no face is detected, the module returns \texttt{None} and the evaluation proceeds without expression data---graceful degradation consistent with the hybrid design (RQ3).
 
 \subsection{Interview Data Analysis Module}
 
@@ -591,11 +643,11 @@ The module integrates with the Report Generator to provide both quantitative met
 
 \subsection{Report Generator Module}
 
-\noindent The Report Generator synthesizes interview results into comprehensive assessment reports using analysis results from the Interview Data Analysis Module. The module aggregates evaluation scores across all questions, identifies performance patterns, and generates actionable insights.
+\noindent The Report Generator synthesizes interview results into comprehensive assessment reports using analysis results from the Interview Data Analysis Module. The module employs a \emph{hybrid LLM-enhanced design} consistent with RQ3. When an LLM (GLM-4.7-Flash via ZhipuAI) is available, it augments rule-based outputs with personalized content. When unavailable, it falls back to deterministic rules, ensuring report availability.
 
-Performance analysis identifies strengths as chapters with average scores above 0.75 and weaknesses as chapters with average scores below 0.6. The analysis considers score distribution, consistency, and trends to provide nuanced assessment. Missing knowledge points are aggregated across all evaluations, identifying common gaps and specific areas requiring attention.
+\noindent \textbf{Rule-based baseline.} The module aggregates evaluation scores across all questions and computes dimension-wise averages (correctness, depth, clarity, practicality, tradeoffs). Strengths are identified as dimensions with average score $\geq 0.7$, weaknesses as dimensions with average score $< 0.6$. Missing knowledge points are aggregated and deduplicated. Learning recommendations use track-specific keyword matching (e.g., ``并发'' $\rightarrow$ JUC, ``JVM'' $\rightarrow$ memory model). Recommended questions are matched to weak chapters.
 
-The generator produces learning recommendations based on identified weaknesses and missing knowledge. Recommendations are prioritized by importance and feasibility, providing candidates with clear guidance for improvement. The module also generates personalized question lists targeting specific knowledge gaps, enabling focused practice and preparation.
+\noindent \textbf{LLM enhancement (with fallback).} When the LLM is available, the following components are augmented. (1) \emph{Overall summary}: a 2--3 sentence personalized summary of the interview. (2) \emph{Strengths and weaknesses}: JSON-structured, context-aware descriptions based on dimension scores and missing points. (3) \emph{Learning plan}: 4--6 actionable recommendations derived from missing knowledge and track. (4) \emph{Speech recommendations}: 1--3 improvement suggestions based on fluency, nervousness, and pause metrics. (5) \emph{Question rationales}: for each recommended question, a one-sentence rationale (e.g., ``针对薄弱知识点练习''). Each LLM call uses structured prompts and validates output. On failure or unavailability, the corresponding rule-based output is used. The report also aggregates \emph{expression analysis} when real-time video was used, including average nervousness, dominant emotions, and per-question recommendations. This design extends the hybrid evaluation principle (C3) to the report domain (C4), providing richer candidate feedback while maintaining availability.
 
 \section{Deployment}
 
@@ -603,17 +655,17 @@ The generator produces learning recommendations based on identified weaknesses a
 
 The development environment runs locally using Streamlit's built-in development server. Configuration is managed through environment variables and .env files, enabling easy customization without code changes. The system supports SQLite for development, providing zero-configuration database setup.
 
-Production deployment requires a web server capable of running Python applications. The system can be deployed on cloud platforms such as AWS, Azure, or Google Cloud Platform using containerization technologies like Docker. Database configuration supports MySQL for production environments, providing scalability and reliability for concurrent users.
+Production deployment requires a web server capable of running Python applications. Users can deploy the system on cloud platforms such as AWS, Azure, or Google Cloud Platform using containerization technologies like Docker. Database configuration supports MySQL for production environments, providing scalability and reliability for concurrent users.
 
 Security measures include password hashing using bcrypt, JWT token management for session handling, and input validation to prevent injection attacks. The system implements role-based access control with separate user and administrator roles. File uploads are validated for type and size, with secure storage and processing.
 
-The system architecture supports horizontal scaling through stateless service design. Session state is maintained in the database rather than application memory, enabling multiple server instances to handle requests. Load balancing can be implemented at the web server level to distribute traffic across multiple application instances.
+The system architecture supports horizontal scaling through stateless service design. The system maintains session state in the database rather than application memory, enabling multiple server instances to handle requests. Implementers can add load balancing at the web server level to distribute traffic across multiple application instances.
 
 \section{Experimental Design}
 
 \subsection{Experimental Setup}
 
-\noindent The experimental evaluation employed a within-subjects design where each participant completed interviews using our adaptive system. To ensure comprehensive evaluation, we also collected comparison data using baseline approaches (fixed template, random selection, rule-based only evaluation) through simulated interviews based on participant responses.
+\noindent The experimental evaluation employed a within-subjects design where each participant completed interviews using our adaptive system. Our full system uses \texttt{selector\_strategy=personalized} by default, which augments the multi-priority framework with IRT-inspired ability estimation, Fisher information maximization, and UCB-based exploration. To ensure comprehensive evaluation, we also collected comparison data using baseline approaches (fixed template, random selection, rule-based only evaluation) through simulated interviews based on participant responses.
 
 \noindent \textbf{Primary metrics (definitions).} To avoid circular definitions, we separate \emph{system-internal estimates} from \emph{external labels}:
 \begin{itemize}
@@ -623,31 +675,31 @@ The system architecture supports horizontal scaling through stateless service de
     \item \textbf{Coverage}: fraction of required chapters covered at least once under the fixed question budget.
     \item \textbf{Personalization relevance}: fraction of selected questions rated as relevant to resume skills by human annotators (binary or ordinal rubric).
     \item \textbf{Agreement}: Cohen’s $\kappa$ (ordinal/binary) and ICC (continuous) between system scores and human rubric scores.
-\footnote{We use Cohen’s $\kappa$ \cite{cohen1960kappa} and intraclass correlation \cite{shrout1979icc} as standard reliability measures; we use ICC(2,1) (Shrout \& Fleiss) for continuous scores.}
+\footnote{We use Cohen’s $\kappa$ \cite{cohen1960kappa} and intraclass correlation \cite{shrout1979icc} as standard reliability measures. For continuous scores we use ICC(2,1) (Shrout \& Fleiss).}
 \end{itemize}
 
 \noindent \textbf{Additional metric definitions (locked for reproducibility):}
 \begin{itemize}
-    \item \textbf{Calibration accuracy}: $1 - \text{MAE}(d_t, \hat{a})$ after mapping both to $[0,1]$, computed per-interview at convergence or at final round; sample unit is per-interview.
-    \item \textbf{Convergence}: first round $q$ such that $|d_q - d_{q-1}| < 0.5$ for two consecutive rounds; reported as average over interviews.
-    \item \textbf{Gap targeting}: $k$ (default 3) is the look-ahead window; denominator is human-annotated missing concepts; numerator is concepts queried within next $k$ questions.
-    \item \textbf{Coverage}: required chapter set from track curriculum; threshold is ``at least one question'' per chapter; fixed budget = user-specified round cap.
-    \item \textbf{Uptime}: $\frac{\text{successful evaluations}}{\text{total evaluation requests}}$; successful = rule-based or LLM output returned; failure = timeout, API error, or schema validation failure; fallback to rule counts as success.
+    \item \textbf{Calibration accuracy}: $1 - \text{MAE}(d_t, \hat{a})$ after mapping both to $[0,1]$, computed per-interview at convergence or at final round. The sample unit is per-interview.
+    \item \textbf{Convergence}: first round $q$ such that $|d_q - d_{q-1}| < 0.5$ for two consecutive rounds. We report it as average over interviews.
+    \item \textbf{Gap targeting}: $k$ (default 3) is the look-ahead window. The denominator is human-annotated missing concepts. The numerator is concepts queried within the next $k$ questions.
+    \item \textbf{Coverage}: required chapter set from track curriculum. The threshold is ``at least one question'' per chapter. The fixed budget equals the user-specified round cap.
+    \item \textbf{Uptime}: $\frac{\text{successful evaluations}}{\text{total evaluation requests}}$. A successful evaluation returns rule-based or LLM output. A failure is a timeout, API error, or schema validation failure. Fallback to rule counts as success.
 \end{itemize}
 
 \subsection{Control Variables}
 
-\noindent Several variables were controlled to ensure valid comparison and address potential confounding factors. Interview duration was standardized with a maximum of 45 minutes per session. Question bank composition remained constant across all conditions, ensuring fair comparison. Initial difficulty levels were randomized to control for initial difficulty bias. Resume availability was balanced across conditions (see Table~\ref{tab:participants}).
+\noindent We controlled several variables to ensure valid comparison and address potential confounding factors. We standardized interview duration with a maximum of 45 minutes per session. Question bank composition remained constant across all conditions, ensuring fair comparison. We randomized initial difficulty levels to control for initial difficulty bias. We balanced resume availability across conditions (see Table~\ref{tab:participants}).
 
-Environmental factors were controlled through standardized testing conditions. All interviews were conducted in quiet environments with consistent internet connectivity. Participants used similar devices (laptops or desktop computers) to minimize hardware-related variations. Audio quality was monitored to ensure consistent speech recognition accuracy.
+We controlled environmental factors through standardized testing conditions. We conducted all interviews in quiet environments with consistent internet connectivity. Participants used similar devices (laptops or desktop computers) to minimize hardware-related variations. We monitored audio quality to ensure consistent speech recognition accuracy.
 
 \subsection{Experimental Procedure}
 
 \noindent The experimental procedure consisted of three phases: preparation, interview, and evaluation. In the preparation phase, participants completed a demographic questionnaire and uploaded resumes if available. The system parsed resumes and extracted structured information for personalization.
 
-During the interview phase, participants engaged with the adaptive system following standard interview protocols. The system dynamically adjusted difficulty, selected questions using the multi-priority strategy, and evaluated responses using the hybrid framework. All interactions were logged for analysis, including response times, difficulty adjustments, question selections, and evaluation scores.
+During the interview phase, participants engaged with the adaptive system following standard interview protocols. The system dynamically adjusted difficulty, selected questions using the multi-priority strategy, and evaluated responses using the hybrid framework. The system logged all interactions for analysis, including response times, difficulty adjustments, question selections, and evaluation scores.
 
-In the evaluation phase, human evaluators independently assessed a randomly selected subset of responses to establish ground truth for agreement analysis. Two expert evaluators with 5+ years of technical interview experience evaluated each selected response across all five dimensions; inter-rater reliability (ICC) is reported in Section~10.
+In the evaluation phase, human evaluators independently assessed a randomly selected subset of responses to establish ground truth for agreement analysis. Two expert evaluators with 5+ years of technical interview experience evaluated each selected response across all five dimensions. We report inter-rater reliability (ICC) in Section~10.
 
 \subsection{Baseline Comparisons}
 
@@ -668,7 +720,8 @@ These baselines enable systematic comparison of our innovations against common a
     \item \textbf{Difficulty update strategy}: Compare \texttt{difficulty\_strategy=heuristic} vs.\ \texttt{difficulty\_strategy=target\_score\_control}. Sensitivity over \texttt{target\_score} (0.65/0.70/0.75) and controller gains (\texttt{difficulty\_kp}, \texttt{difficulty\_kd}).
     \item \textbf{Chapter selection strategy}: Compare \texttt{selector\_strategy=weighted\_random} vs.\ \texttt{selector\_strategy=thompson\_sampling}. Sensitivity over \texttt{thompson\_context} (chapter vs.\ chapter\_difficulty) and \texttt{success\_threshold}.
     \item \textbf{Recency constraint}: Sensitivity over \texttt{recent\_chapter\_avoid\_k} (0/2/3) to quantify diversity vs.\ targeting trade-offs.
-    \item \textbf{Evaluation pipeline}: Compare rule-only vs.\ hybrid (LLM on/off); report fallback rate and agreement metrics (ICC/$\kappa$).
+    \item \textbf{Evaluation pipeline}: Compare rule-only vs.\ hybrid (LLM on/off). Report fallback rate and agreement metrics (ICC/$\kappa$).
+    \item \textbf{LLM evaluator variants}: Compare \texttt{llm\_use\_cot=false/true} and \texttt{llm\_multi\_judge\_count=1/3}; report agreement gain, variance reduction, and latency overhead.
 \end{itemize}
 
 \subsection{Data Collection Protocol}
@@ -679,7 +732,7 @@ Human evaluation data was collected through a double-blind process where evaluat
 
 \subsection{Reproducibility Notes}
 
-\noindent To ensure traceability, we provide: (1) \texttt{results\_audit.md}---a table of all result claims with source data, recompute scripts, and fix actions; (2) \texttt{reproduce\_results/}---scripts to regenerate tables from raw data (\texttt{reproduce.py}, \texttt{calc\_*.py}); (3) \texttt{MISSING\_DATA.md}---required data files and schemas. Until raw data (CSV/DB export) is provided, numeric values in this paper are illustrative. Table captions should include ``Generated by script: reproduce\_results/reproduce.py [commit] [date] [seed]'' when results are recomputed. Multiple comparison correction: Bonferroni throughout. Random seed: fixed via \texttt{REPRODUCE\_SEED}.
+\noindent To ensure traceability, we provide three artifacts. (1) \texttt{results\_audit.md} contains a table of all result claims with source data, recompute scripts, and fix actions. (2) \texttt{reproduce\_results/} contains scripts to regenerate tables from raw data (\texttt{reproduce.py}, \texttt{calc\_*.py}). (3) \texttt{MISSING\_DATA.md} lists required data files and schemas. Until raw data (CSV/DB export) is provided, numeric values in this paper are illustrative. Table captions should include ``Generated by script: reproduce\_results/reproduce.py [commit] [date] [seed]'' when results are recomputed. We apply Bonferroni correction for multiple comparisons throughout. We fix the random seed via \texttt{REPRODUCE\_SEED}.
 
 \section{Participants}
 
@@ -687,11 +740,11 @@ Human evaluation data was collected through a double-blind process where evaluat
 
 Participants were informed about the study objectives and provided consent for data collection and analysis. The experimental protocol was approved by the institutional review board. Participants were assigned unique identifiers to maintain anonymity while enabling longitudinal analysis.
 
-Table \ref{tab:participants} presents participant demographics and distribution. Demographics are illustrative until final recruitment; see \texttt{MISSING\_DATA.md} for required participant roster.
+Table \ref{tab:participants} presents participant demographics and distribution. Demographics are illustrative until final recruitment. See \texttt{MISSING\_DATA.md} for the required participant roster.
 
 \begin{table}[H]
 \centering
-\caption{Participant demographics and distribution. Values illustrative until participant roster provided; see \texttt{MISSING\_DATA.md}.}
+\caption{Participant demographics and distribution. Values are illustrative until the participant roster is provided. See \texttt{MISSING\_DATA.md}.}
 \label{tab:participants}
 \begin{tabular}{lcc}
 \toprule
@@ -752,7 +805,7 @@ Question bank data is collected through Excel file imports with standardized for
 
 Resume data is collected through user uploads in PDF or DOCX formats. The parser extracts structured information including education history, work experience, project descriptions, and technical skills. Raw text is preserved for additional analysis while structured data enables algorithmic processing. This data directly supports RQ2's personalization requirement.
 
-Interview session data captures comprehensive information about each interview to evaluate all research questions. Session metadata includes technical track, initial difficulty level, total rounds configured, and resume association. For each question asked, the system records question identifier, timestamp, difficulty level, and chapter. Candidate responses are stored as text or audio references, with audio data stored as base64-encoded content. This data enables evaluation of RQ1 (difficulty adjustments), RQ2 (question selection patterns), and RQ3 (evaluation accuracy).
+Interview session data captures comprehensive information about each interview to evaluate all research questions. Session metadata includes technical track, initial difficulty level, total rounds configured, and resume association. For each question asked, the system records question identifier, timestamp, difficulty level, and chapter. The system stores candidate responses as text or audio references, with audio data stored as base64-encoded content. This data enables evaluation of RQ1 (difficulty adjustments), RQ2 (question selection patterns), and RQ3 (evaluation accuracy).
 
 Evaluation data includes multi-dimensional scores for each response. The system records correctness, depth, clarity, practicality, and tradeoff scores along with overall scores. Missing knowledge points are extracted and stored as structured lists. Feedback text and next direction suggestions are preserved for analysis. This data directly supports RQ3 evaluation.
 
@@ -786,7 +839,7 @@ where $w_i = \frac{1}{d_i}$ weights questions inversely by difficulty $d_i$ (har
 
 Additionally, piecewise linear regression identifies performance phases, detecting transitions between learning, stable, and declining phases. The algorithm uses change-point detection to identify significant trend shifts, enabling nuanced analysis of performance evolution beyond simple linear trends.
 
-\noindent To make phase segmentation more principled and reproducible, we recommend implementing offline change-point detection on the score sequence (or on residuals after difficulty adjustment) using the PELT algorithm, which provides exact optimization under common cost functions with linear expected time \cite{killick2012optimal}. In addition, for a monitoring-style view of ``when performance meaningfully shifts'' during an interview, sequential change detection can be reported using classical statistical process control charts such as CUSUM and EWMA \cite{page1954continuous}. These methods provide interpretable, publication-standard diagnostics that complement our adaptive-policy narrative: the adaptive engine changes difficulty; change-point/control-chart analysis quantifies whether the candidate’s performance distribution changes and when.
+\noindent To make phase segmentation more principled and reproducible, we recommend implementing offline change-point detection on the score sequence (or on residuals after difficulty adjustment) using the PELT algorithm, which provides exact optimization under common cost functions with linear expected time \cite{killick2012optimal}. In addition, for a monitoring-style view of ``when performance meaningfully shifts'' during an interview, sequential change detection can be reported using classical statistical process control charts such as CUSUM and EWMA \cite{page1954continuous}. These methods provide interpretable, publication-standard diagnostics that complement our adaptive-policy narrative: the adaptive engine changes difficulty. Change-point and control-chart analysis quantifies whether the candidate’s performance distribution changes and when.
 
 Early-late comparison divides the interview into halves and compares average scores. The early average $\bar{s}_{early} = \frac{2}{n}\sum_{i=1}^{n/2} s_i$ and late average $\bar{s}_{late} = \frac{2}{n}\sum_{i=n/2+1}^{n} s_i$ enable identification of learning effects or fatigue. The difference $\Delta = \bar{s}_{late} - \bar{s}_{early}$ quantifies performance change.
 
@@ -854,7 +907,9 @@ Table \ref{tab:analysis_summary} presents a summary of key analysis metrics comp
 \centering
 \caption{Summary of key analysis metrics and their values}
 \label{tab:analysis_summary}
-\begin{tabular}{lcc}
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabularx}{\textwidth}{l Y c}
 \toprule
 \textbf{Metric Category} & \textbf{Key Metrics} & \textbf{Typical Range} \\
 \midrule
@@ -867,24 +922,24 @@ Stability Metrics & CV, Consistency Ratio & CV: 0.12-0.28 \\
 Coverage Metrics & Chapter Diversity Entropy & 0.65-0.85 \\
 Improvement Indicators & Improvement Ratio & -0.10 to +0.15 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-The analysis framework addresses all three research questions by providing metrics relevant to each. RQ1 (difficulty calibration) is evaluated through difficulty progression analysis and correlation metrics. RQ2 (question selection) is evaluated through chapter coverage and diversity metrics. RQ3 (evaluation framework) is evaluated through dimension analysis and stability metrics. The comprehensive framework ensures thorough assessment of system effectiveness.
+The analysis framework addresses all three research questions by providing metrics relevant to each. We evaluate RQ1 (difficulty calibration) through difficulty progression analysis and correlation metrics. We evaluate RQ2 (question selection) through chapter coverage and diversity metrics. We evaluate RQ3 (evaluation framework) through dimension analysis and stability metrics. The comprehensive framework ensures thorough assessment of system effectiveness.
 
 \section{Results}
 
-\noindent This section presents experimental results in the order of our research questions: RQ1 (difficulty calibration), RQ2 (question selection), and RQ3 (hybrid evaluation). We conclude with cross-component integration. All numeric values are illustrative until recomputed from raw data; see \texttt{reproduce\_results/}, \texttt{results\_audit.md}, and \texttt{MISSING\_DATA.md}.
+\noindent This section presents experimental results in the order of our research questions: RQ1 (difficulty calibration), RQ2 (question selection), and RQ3 (hybrid evaluation). We conclude with cross-component integration. All numeric values are illustrative until recomputed from raw data. See \texttt{reproduce\_results/}, \texttt{results\_audit.md}, and \texttt{MISSING\_DATA.md}.
 
 \subsection{Results for RQ1: Difficulty Calibration Effectiveness}
 
-\noindent The adaptive difficulty adjustment algorithm is evaluated using clearly defined metrics (Section~10.1) under a fixed question budget and a fixed question bank. For transparency, numeric values are illustrative until recomputed from the protocol in \texttt{reproduce\_results/}.
+\noindent We evaluate the adaptive difficulty adjustment algorithm using clearly defined metrics (Section~10.1) under a fixed question budget and a fixed question bank. For transparency, numeric values are illustrative until recomputed from the protocol in \texttt{reproduce\_results/}.
 
 Table \ref{tab:calibration} presents calibration accuracy metrics across different candidate ability levels and initial difficulty settings. The algorithm achieved consistent calibration accuracy across ability ranges, demonstrating robustness. A majority of interviews reached stable difficulty levels within the first five questions (see table for illustrative values).
 
 \begin{table}[H]
 \centering
-\caption{Calibration accuracy metrics across candidate ability levels and initial difficulty settings. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_calibration.py}.}
+\caption{Calibration accuracy metrics across candidate ability levels and initial difficulty settings. Values are illustrative until recomputed. See \texttt{reproduce\_results/calc\_calibration.py}.}
 \label{tab:calibration}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -946,13 +1001,13 @@ Figure \ref{fig:convergence} illustrates convergence patterns, showing how the a
 \label{fig:convergence}
 \end{figure}
 
-\noindent Statistical analysis focused on a small set of reproducible tests. We report (i) bootstrapped confidence intervals (1,000 resamples) for calibration-related metrics, (ii) paired comparisons for ablations (e.g., with vs. without the trend term) using paired $t$-tests with effect sizes (Cohen’s $d$), and (iii) one-way ANOVA for group comparisons (e.g., across self-reported experience strata), with post-hoc correction where applicable. Numeric values are illustrative until recomputed; see \texttt{reproduce\_results/} and \texttt{MISSING\_DATA.md}.
+\noindent Statistical analysis focused on a small set of reproducible tests. We report (i) bootstrapped confidence intervals (1,000 resamples) for calibration-related metrics, (ii) paired comparisons for ablations (e.g., with vs. without the trend term) using paired $t$-tests with effect sizes (Cohen’s $d$), and (iii) one-way ANOVA for group comparisons (e.g., across self-reported experience strata), with post-hoc correction where applicable. Numeric values are illustrative until recomputed. See \texttt{reproduce\_results/} and \texttt{MISSING\_DATA.md}.
 
 Table \ref{tab:difficulty_adjustment} presents detailed statistics on difficulty adjustment patterns, showing the frequency and magnitude of adjustments.
 
 \begin{table}[H]
 \centering
-\caption{Difficulty adjustment frequency and patterns. Values illustrative until recomputed; see \texttt{reproduce\_results/}.}
+\caption{Difficulty adjustment frequency and patterns. Values are illustrative until recomputed. See \texttt{reproduce\_results/}.}
 \label{tab:difficulty_adjustment}
 \begin{tabular}{lcc}
 \toprule
@@ -1004,7 +1059,7 @@ Table \ref{tab:selection} presents selection metrics comparing the multi-priorit
 
 \begin{table}[H]
 \centering
-\caption{Question selection metrics: Multi-priority strategy vs. baseline approaches. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_selection.py}.}
+\caption{Question selection metrics: Multi-priority strategy vs. baseline approaches. Values are illustrative until recomputed. See \texttt{reproduce\_results/calc\_selection.py}.}
 \label{tab:selection}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -1041,7 +1096,7 @@ Priority 3 (Weighted Random) & 37.1 & 3.7 \\
 \end{tabular}
 \end{table}
 
-Figure \ref{fig:priority} illustrates priority application patterns, showing how different priorities are balanced throughout interviews. Priority one (missing chapters) was applied in 34.2\% of selections, priority two (resume matching) in 28.7\%, and priority three (weighted random) in 37.1\%. This distribution demonstrates effective balancing of competing objectives as required by RQ2.
+Figure \ref{fig:priority} illustrates priority application patterns, showing how different priorities are balanced throughout interviews. The system applied priority one (missing chapters) in 34.2\% of selections, priority two (resume matching) in 28.7\%, and priority three (weighted random) in 37.1\%. This distribution demonstrates effective balancing of competing objectives as required by RQ2.
 
 \begin{figure}[H]
 \centering
@@ -1110,13 +1165,13 @@ These ablation results demonstrate that while Thompson sampling provides modest 
 
 \subsection{Results for RQ3: Hybrid Evaluation Framework}
 
-\noindent The hybrid evaluation framework achieved high agreement with human evaluators across all dimensions, addressing RQ3's reliability and nuance requirements. Rule-based evaluation alone provided a reliable baseline; LLM-enhanced evaluation reached higher agreement. The hybrid approach combined reliability of rule-based methods with nuance of LLM analysis.
+\noindent The hybrid evaluation framework achieved high agreement with human evaluators across all dimensions, addressing RQ3's reliability and nuance requirements. Rule-based evaluation alone provided a reliable baseline. LLM-enhanced evaluation reached higher agreement. The hybrid approach combined reliability of rule-based methods with nuance of LLM analysis.
 
-Table \ref{tab:evaluation} presents agreement metrics for each evaluation dimension. Correctness and depth showed highest agreement; tradeoff analysis showed lower agreement, consistent with the subjective nature of this dimension. LLM enhancement provided substantial improvement in depth and tradeoff analysis (see table for illustrative values).
+Table \ref{tab:evaluation} presents agreement metrics for each evaluation dimension. Correctness and depth showed highest agreement. Tradeoff analysis showed lower agreement, consistent with the subjective nature of this dimension. LLM enhancement provided substantial improvement in depth and tradeoff analysis (see table for illustrative values).
 
 \begin{table}[H]
 \centering
-\caption{Evaluation agreement metrics: Comparison across evaluation approaches. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_evaluation.py}.}
+\caption{Evaluation agreement metrics: Comparison across evaluation approaches. Values are illustrative until recomputed. See \texttt{reproduce\_results/calc\_evaluation.py}.}
 \label{tab:evaluation}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -1139,7 +1194,7 @@ Table \ref{tab:evaluation_reliability} presents inter-rater reliability metrics 
 
 \begin{table}[H]
 \centering
-\caption{Inter-rater reliability metrics (Cohen's Kappa and ICC). ICC(2,1) form; values illustrative until recomputed.}
+\caption{Inter-rater reliability metrics (Cohen's Kappa and ICC). ICC(2,1) form. Values are illustrative until recomputed.}
 \label{tab:evaluation_reliability}
 \begin{tabular}{lcc}
 \toprule
@@ -1192,13 +1247,13 @@ Figure \ref{fig:agreement} illustrates agreement patterns across different respo
 \label{fig:agreement}
 \end{figure}
 
-Statistical analysis employed mixed-effects models to account for nested data structure (responses within interviews within participants). The hybrid approach achieved significantly higher agreement than rule-based alone and was comparable to LLM-enhanced (see Table~\ref{tab:evaluation} for illustrative values). Dimension-specific analysis revealed varying agreement patterns: correctness and depth showed highest agreement; tradeoff analysis showed lowest agreement but largest improvement with LLM enhancement, consistent with its subjective nature.
+Statistical analysis employed mixed-effects models to account for nested data structure (responses within interviews within participants). The hybrid approach achieved significantly higher agreement than rule-based alone and was comparable to LLM-enhanced (see Table~\ref{tab:evaluation} for illustrative values). Dimension-specific analysis revealed varying agreement patterns: correctness and depth showed highest agreement. Tradeoff analysis showed lowest agreement but largest improvement with LLM enhancement, consistent with its subjective nature.
 
-\noindent Agreement analysis is reported using Cohen’s $\kappa$ for ordinal/categorical agreement and intraclass correlation (ICC) for continuous scores, together with bootstrap confidence intervals. We avoid analyses that require stronger assumptions (e.g., Bland–Altman) unless preconditions and plots are provided.
+\noindent We report agreement analysis using Cohen’s $\kappa$ for ordinal/categorical agreement and intraclass correlation (ICC) for continuous scores, together with bootstrap confidence intervals. We avoid analyses that require stronger assumptions (e.g., Bland–Altman) unless we include preconditions and plots.
 
 Response complexity analysis showed that the hybrid framework maintained high agreement for straightforward responses through rule-based evaluation while providing enhanced analysis for complex responses through LLM enhancement.
 
-Availability analysis revealed that the system maintained high uptime through rule-based fallback when LLM services were unavailable, addressing RQ3's availability requirement. LLM enhancement was successfully applied when available, with automatic fallback ensuring continuous operation. Fallback rate is reported in Table~\ref{tab:ablation_evaluation}. Response times for rule-based and LLM-enhanced evaluation demonstrated acceptable latency for both modes (see \texttt{reproduce\_results/} for recomputation).
+Availability analysis revealed that the system maintained high uptime through rule-based fallback when LLM services were unavailable, addressing RQ3's availability requirement. LLM enhancement was successfully applied when available, with automatic fallback ensuring continuous operation. We report the fallback rate in Table~\ref{tab:ablation_evaluation}. Response times for rule-based and LLM-enhanced evaluation demonstrated acceptable latency for both modes (see \texttt{reproduce\_results/} for recomputation).
 
 \subsubsection{Ablation Analysis: Hybrid vs. Rule-Only Evaluation}
 
@@ -1208,7 +1263,7 @@ Table \ref{tab:ablation_evaluation} presents comparative results. The hybrid app
 
 \begin{table}[H]
 \centering
-\caption{Ablation: Evaluation framework comparison (rule-only vs. hybrid). Values illustrative until recomputed; fallback rate requires provenance log.}
+\caption{Ablation: Evaluation framework comparison (rule-only vs. hybrid). Values are illustrative until recomputed. Fallback rate requires provenance log.}
 \label{tab:ablation_evaluation}
 \adjustbox{width=\textwidth,center}{%
 \begin{tabular}{lcccc}
@@ -1225,7 +1280,7 @@ Hybrid (LLM+Rule) & \textbf{84.7} & \textbf{86.4} & \textbf{72.8} & 17.6 \\
 }
 \end{table}
 
-Fallback analysis showed that automatic fallback occurred when LLM services were unavailable, ensuring continuous operation. The fallback rate is reported in Table~\ref{tab:ablation_evaluation}; the hybrid framework maintained high uptime while providing enhanced evaluation when LLM services were available.
+Fallback analysis showed that automatic fallback occurred when LLM services were unavailable, ensuring continuous operation. We report the fallback rate in Table~\ref{tab:ablation_evaluation}. The hybrid framework maintained high uptime while providing enhanced evaluation when LLM services were available.
 
 These ablation results demonstrate that the hybrid framework provides significant improvements over rule-only evaluation, particularly in dimensions requiring nuanced analysis, while maintaining system availability through automatic fallback. The effectiveness of RQ3's hybrid evaluation is validated through this ablation, ensuring code--paper consistency between algorithmic design (Section~5.4), experimental protocol (Section~7.4), and empirical validation.
 
@@ -1233,7 +1288,7 @@ These ablation results demonstrate that the hybrid framework provides significan
 
 \noindent Cross-component integration is analyzed descriptively and via ablations. Specifically, we report the performance of the full system and three ablated variants that disable (i) the trend term in difficulty updates, (ii) resume-informed priority in question selection, and (iii) LLM augmentation in evaluation. This yields a transparent evidence chain for whether the proposed components contribute under the same question budget and question bank.
 
-Mediation analysis using bootstrapping confirmed that question selection relevance partially mediates the relationship between calibration accuracy and evaluation agreement. Interaction effects through moderated regression indicated that the benefits of accurate calibration are amplified when combined with effective selection. Comparative analysis revealed super-additive effects; the synergy score was calculated as:
+Mediation analysis using bootstrapping confirmed that question selection relevance partially mediates the relationship between calibration accuracy and evaluation agreement. Interaction effects through moderated regression indicated that the benefits of accurate calibration are amplified when combined with effective selection. Comparative analysis revealed super-additive effects. The synergy score was calculated as:
 
 \begin{equation}
 S = \frac{E_{integrated} - E_{baseline}}{(E_{calibration} - E_{baseline}) + (E_{selection} - E_{baseline}) + (E_{evaluation} - E_{baseline})} - 1
@@ -1245,10 +1300,11 @@ Table \ref{tab:system_performance} presents overall system performance metrics w
 
 \begin{table}[H]
 \centering
-\caption{Overall system performance metrics with confidence intervals. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_system\_performance.py}.}
+\caption{Overall system performance metrics with confidence intervals. Values are illustrative until recomputed. See \texttt{reproduce\_results/calc\_system\_performance.py}.}
 \label{tab:system_performance}
-\adjustbox{width=\textwidth,center}{%
-\begin{tabular}{lccc}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{l c c Y}
 \toprule
 \textbf{Metric} & \textbf{Value} & \textbf{95\% CI} & \textbf{Description} \\
 \midrule
@@ -1261,17 +1317,16 @@ System Uptime & 99.2\% & [98.7, 99.6] & System availability \\
 Avg. Response Time & 1.8s & [1.6, 2.0] & Average response time per question \\
 User Satisfaction & 4.3/5.0 & [4.1, 4.5] & Average user satisfaction rating \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabularx}
 \end{table}
 
-Additional analysis revealed that interview duration correlated positively with number of questions; the adaptive termination algorithm effectively controlled duration. User satisfaction correlated with evaluation agreement, question relevance, and interview duration. Performance consistency analysis revealed low variance in system metrics across participant groups, indicating consistent system performance regardless of candidate background (see Table~\ref{tab:system_performance} for illustrative values).
+Additional analysis revealed that interview duration correlated positively with number of questions. The adaptive termination algorithm effectively controlled duration. User satisfaction correlated with evaluation agreement, question relevance, and interview duration. Performance consistency analysis revealed low variance in system metrics across participant groups, indicating consistent system performance regardless of candidate background (see Table~\ref{tab:system_performance} for illustrative values).
 
 Table \ref{tab:interview_outcomes} presents interview outcome distribution, showing how the termination algorithm effectively categorizes candidate performance.
 
 \begin{table}[H]
 \centering
-\caption{Interview outcome distribution by termination type. $\bar{r}$ = average rounds. Values illustrative until recomputed; see \texttt{reproduce\_results/calc\_interview\_outcomes.py}.}
+\caption{Interview outcome distribution by termination type. $\bar{r}$ = average rounds. Values are illustrative until recomputed. See \texttt{reproduce\_results/calc\_interview\_outcomes.py}.}
 \label{tab:interview_outcomes}
 \begin{tabular}{lccc}
 \toprule
@@ -1319,29 +1374,31 @@ However, LLM enhancement introduces variability that may reduce consistency. Whi
 
 \subsection{Design Implications}
 
-\noindent Our findings yield design implications for AI-assisted interview systems. \textbf{Calibration:} Lightweight sliding-window mechanisms can achieve rapid adaptation without IRT calibration; designers should prioritize responsiveness over theoretical optimality when question budgets are limited. \textbf{Selection:} Multi-priority frameworks enable balancing competing goals (gap targeting, personalization, coverage); designers should avoid single-objective optimization. \textbf{Evaluation:} Hybrid rule+LLM pipelines with automatic fallback preserve both reliability and nuance; designers should never rely on LLM-only evaluation for high-stakes assessment. \textbf{Candidate experience:} Resume-informed personalization and adaptive difficulty improve perceived fairness and relevance; user satisfaction correlates with evaluation agreement and question relevance. \textbf{Fairness:} Speech-derived metrics can be biased by accent and disability; we recommend treating them as auxiliary and reporting subgroup analyses where permissible.
+\noindent Our findings yield design implications for AI-assisted interview systems. \textbf{Calibration:} Lightweight sliding-window mechanisms can achieve rapid adaptation without IRT calibration. Designers should prioritize responsiveness over theoretical optimality when question budgets are limited. \textbf{Selection:} Multi-priority frameworks enable balancing competing goals (gap targeting, personalization, coverage). Designers should avoid single-objective optimization. \textbf{Evaluation:} Hybrid rule+LLM pipelines with automatic fallback preserve both reliability and nuance. Designers should never rely on LLM-only evaluation for high-stakes assessment. \textbf{Candidate experience:} Resume-informed personalization and adaptive difficulty improve perceived fairness and relevance. User satisfaction correlates with evaluation agreement and question relevance. \textbf{Fairness:} Speech-derived metrics can be biased by accent and disability. We recommend treating them as auxiliary and reporting subgroup analyses where permissible.
 
 \subsection{Limitations}
 
 \noindent Several limitations should be acknowledged. The system is currently optimized for Chinese language interviews, limiting applicability to other languages. LLM enhancement requires API access, creating dependency on external services despite fallback mechanisms. Question bank quality significantly influences system performance, requiring careful curation and maintenance.
 
-Algorithm parameters (e.g., 0.85, 0.4, 0.15 for termination; 70\% similarity threshold) are heuristics; sensitivity analysis is reported in Section~10.1, but pre-registration or validation-set tuning was not performed. Audio processing accuracy depends on speech recognition quality, which may vary across accents and speaking styles; speech-rate calibration per language/population is recommended. The system assumes structured resume formats, which may not always be available. Evaluation accuracy, while good, may not match expert human evaluators in all scenarios, particularly for highly subjective dimensions like tradeoff analysis. Numeric results are illustrative until recomputed from raw data (see \texttt{reproduce\_results/}).
+Algorithm parameters (e.g., 0.85, 0.4, 0.15 for termination, 70\% similarity threshold) are heuristics. We report sensitivity analysis in Section~10.1, but we did not perform pre-registration or validation-set tuning. Audio processing accuracy depends on speech recognition quality, which may vary across accents and speaking styles. We recommend speech-rate calibration per language and population. The system assumes structured resume formats, which may not always be available. Evaluation accuracy, while good, may not match expert human evaluators in all scenarios, particularly for highly subjective dimensions like tradeoff analysis. Numeric results are illustrative until recomputed from raw data (see \texttt{reproduce\_results/}).
 
 \subsection{Future Work}
 
 \noindent Future research directions include multi-language support through internationalization and translation services. Integration with additional LLM providers would reduce dependency on single services and improve availability. Advanced audio analysis incorporating prosody and emotion detection could enhance communication assessment.
 
-Real-time code execution and testing would enable practical programming assessments beyond theoretical questions. Collaborative interview modes could support panel interviews and peer assessment. Longitudinal performance tracking would enable analysis of candidate development over time. Algorithm improvements could incorporate machine learning for difficulty estimation and question selection; reinforcement learning could optimize interview flow based on historical data.
+\noindent \textbf{Agentic and LLM enhancements.} We have implemented preliminary code support for two directions: chain-of-thought-style structured reasoning (\texttt{llm\_use\_cot}) and multi-judge LLM aggregation (\texttt{llm\_multi\_judge\_count}). The next step is rigorous validation of their impact on agreement, stability, and latency under the same protocol as Section~10. Beyond these prototypes, agentic report generation---using an LLM to produce narrative, personalized feedback from structured evaluation data---could enhance candidate experience beyond template-based reports. Conversation memory and context-aware prompting could enable more coherent, multi-turn follow-ups. ReAct-style interview flows (explicit Thought--Action--Observation loops) could provide interpretable decision traces. Tool-augmented interviews (e.g., code execution, documentation retrieval) would extend assessment beyond theoretical questions.
+
+\noindent \textbf{Other directions.} Real-time code execution and testing would enable practical programming assessments. Collaborative interview modes could support panel interviews and peer assessment. Longitudinal performance tracking would enable analysis of candidate development over time. Algorithm improvements could incorporate machine learning for difficulty estimation and question selection. Reinforcement learning could optimize interview flow based on historical data.
 
 \subsection{Ethics, Privacy, and Fairness Considerations}
 
 \noindent AI-assisted interviewing is a high-stakes setting. We therefore include explicit safeguards and documentation requirements:
 \begin{itemize}
-    \item \textbf{Informed consent}: participants must be informed that responses (including audio) may be processed by automated components and optionally by an external LLM API; consent must be recorded.
-    \item \textbf{Data minimization and retention}: store only the minimum required fields; define retention windows; support deletion on request. Audio should be stored as short-lived artifacts or encrypted blobs with access control.
-    \item \textbf{De-identification}: remove direct identifiers from logs; use pseudonymous participant IDs; separate identity tables from evaluation tables.
-    \item \textbf{LLM compliance}: if an external LLM API is used, document what data is sent, where it is processed, and the provider’s policy; provide a no-LLM mode.
-    \item \textbf{Fairness risks}: speech-derived indicators can be biased by accent, disability, microphone quality, and language proficiency. We treat speech features as auxiliary and recommend reporting subgroup analyses where legally/ethically permissible (e.g., experience strata; optional self-reported language proficiency).
+    \item \textbf{Informed consent}: participants must be informed that responses (including audio) may be processed by automated components and optionally by an external LLM API. Consent must be recorded.
+    \item \textbf{Data minimization and retention}: store only the minimum required fields, define retention windows, and support deletion on request. Audio should be stored as short-lived artifacts or encrypted blobs with access control.
+    \item \textbf{De-identification}: remove direct identifiers from logs, use pseudonymous participant IDs, and separate identity tables from evaluation tables.
+    \item \textbf{LLM compliance}: if an external LLM API is used, document what data is sent, where it is processed, and the provider’s policy. Provide a no-LLM mode.
+    \item \textbf{Fairness risks}: speech-derived indicators can be biased by accent, disability, microphone quality, and language proficiency. We treat speech features as auxiliary and recommend reporting subgroup analyses where legally/ethically permissible (e.g., experience strata, optional self-reported language proficiency).
     \item \textbf{Speech signals}: fluency, nervousness, and speech rate are \emph{auxiliary} and \emph{not used for scoring or hiring decisions}. If future versions use speech for scoring, cross-language, accent, and device fairness analysis is required.
     \item \textbf{Human-in-the-loop}: when evaluation confidence is low (e.g., rule--LLM disagreement or schema validation failure), flag for human review. System outputs are decision support, not the sole basis for hiring decisions.
 \end{itemize}
@@ -1376,11 +1433,11 @@ The high system availability through rule-based fallback ensures reliable operat
 
 \subsection{Impact on Assessment Quality}
 
-\noindent Our system improves assessment quality through three mechanisms: (1) adaptive difficulty ensures questions match candidate ability, improving both validity and experience; (2) knowledge gap targeting enables systematic identification of weaknesses (Section~10.2); (3) five-dimensional evaluation captures depth, clarity, practicality, and tradeoffs beyond simple correctness. Speech analysis provides auxiliary communication insights, complementing technical assessment.
+\noindent Our system improves assessment quality through three mechanisms: (1) adaptive difficulty ensures questions match candidate ability, improving both validity and experience. (2) Knowledge gap targeting enables systematic identification of weaknesses (Section~10.2). (3) Five-dimensional evaluation captures depth, clarity, practicality, and tradeoffs beyond simple correctness. Speech analysis provides auxiliary communication insights, complementing technical assessment.
 
 \subsection{Broader Implications}
 
-\noindent This research has implications beyond technical interviews. The adaptive algorithms can be applied to educational assessment, certification testing, and skill evaluation contexts. The hybrid evaluation framework provides a model for building robust AI systems that combine rule-based reliability with LLM sophistication.
+\noindent This research has implications beyond technical interviews. Researchers and practitioners can apply the adaptive algorithms to educational assessment, certification testing, and skill evaluation contexts. The hybrid evaluation framework provides a model for building robust AI systems that combine rule-based reliability with LLM sophistication.
 
 The multi-priority selection strategy can inform content recommendation systems, personalized learning platforms, and adaptive educational technologies. The balance between targeted assessment and comprehensive coverage is relevant to many adaptive systems.
 
@@ -1388,7 +1445,7 @@ The system's ability to operate without LLM services demonstrates that sophistic
 
 \subsection{Advancement of Research Questions}
 
-\noindent Our work advances understanding of the three fundamental research questions (see Discussion, Section~11.1). RQ1 challenges assumptions about calibration data requirements; RQ2 provides a systematic solution to the coverage-personalization trade-off; RQ3 resolves the reliability-nuance dichotomy. These advances provide foundations for future research and baselines for comparison.
+\noindent Our work advances understanding of the three fundamental research questions (see Discussion, Section~11.1). RQ1 challenges assumptions about calibration data requirements. RQ2 provides a systematic solution to the coverage-personalization trade-off. RQ3 resolves the reliability-nuance dichotomy. These advances provide foundations for future research and baselines for comparison.
 
 \subsection{Open Science Contributions}
 
