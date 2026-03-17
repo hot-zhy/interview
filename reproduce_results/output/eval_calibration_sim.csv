@@ -1,0 +1,4 @@
+metric,value
+mae_mean,2.0622
+conv_mean,2.48
+n_sessions,100

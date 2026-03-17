@@ -13,24 +13,33 @@ pip install pandas numpy scipy pingouin
 
 ## Data Directory Layout
 
+**Export from DB:** `python scripts/export_db.py --output data/`
+
+**Or generate synthetic raw data** (no DB): `python scripts/generate_raw_data.py --output data/ --n-sessions 60 --n-participants 15`
+
+**Generate synthetic annotations** (for testing): `python scripts/generate_synthetic_data.py --output data/ --seed 42`
+
 Place raw data files in the paths specified below (or set `DATA_DIR` environment variable):
 
 ```
 data/
-├── participants.csv
+├── participants.csv      (from export_db)
 ├── sessions.csv
 ├── asked_questions.csv
 ├── question_bank.csv
 ├── evaluations.csv
-├── human_evaluations.csv
-├── ability_labels.csv
-├── missing_concepts.csv
+├── turns.csv
+├── resumes.csv
+├── human_evaluations.csv  (manual annotation)
+├── ability_labels.csv     (manual annotation)
+├── missing_concepts.csv   (manual annotation)
+├── expert_relevance_ratings.csv
 ├── evaluation_provenance_log.csv
 ├── termination_log.csv
 └── survey_responses.csv
 ```
 
-See `MISSING_DATA.md` for required schema and fields.
+See `MISSING_DATA.md` for required schema and fields. See `paper/EVALUATION_PLAN.md` for evaluation workflow.
 
 ## Usage
 
@@ -46,6 +55,10 @@ python calc_calibration.py
 python calc_selection.py
 python calc_evaluation.py
 python calc_system_performance.py
+python calc_interview_outcomes.py
+
+# Module-level technical evaluation (see eval_modules/README.md)
+python eval_modules/run_calibration_sim.py --seed 42
 ```
 
 ## Output

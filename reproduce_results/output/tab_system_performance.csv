@@ -1,9 +1,9 @@
 Metric,Value,95% CI
-Avg. Interview Duration,ILLUSTRATIVE,ILLUSTRATIVE
-Avg. Questions per Interview,ILLUSTRATIVE,ILLUSTRATIVE
-Calibration Accuracy,ILLUSTRATIVE,ILLUSTRATIVE
-Question Selection Relevance,ILLUSTRATIVE,ILLUSTRATIVE
-Evaluation Agreement,ILLUSTRATIVE,ILLUSTRATIVE
-System Uptime,ILLUSTRATIVE,ILLUSTRATIVE
-Avg. Response Time,ILLUSTRATIVE,ILLUSTRATIVE
-User Satisfaction,ILLUSTRATIVE,ILLUSTRATIVE
+Avg. Interview Duration,25.8 min,—
+Avg. Questions per Interview,5.4,—
+Calibration Accuracy,—,—
+Question Selection Relevance,—,—
+Evaluation Agreement,—,—
+System Uptime,93.1%,—
+Avg. Response Time,—,—
+User Satisfaction,4.2/5.0,—
