@@ -7,6 +7,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from backend.db.models import QuestionBank, InterviewSession, AskedQuestion, Evaluation
 from backend.core.config import settings
+from backend.services.personalized_algorithms import (
+    SkillMasteryProfile,
+    estimate_ability,
+    ucb_chapter_score,
+    compute_personalization_weights,
+)
 
 try:
     from rapidfuzz import fuzz as _rf_fuzz  # type: ignore
@@ -31,7 +37,8 @@ def select_question(
     session: InterviewSession,
     current_difficulty: int,
     resume_skills: Optional[List[str]] = None,
-    missing_chapters: Optional[List[str]] = None
+    missing_chapters: Optional[List[str]] = None,
+    next_direction_hints: Optional[List[str]] = None
 ) -> Optional[QuestionBank]:
     """
     Select next question based on adaptive strategy.
@@ -42,6 +49,7 @@ def select_question(
         current_difficulty: Current difficulty level
         resume_skills: Skills from resume (optional)
         missing_chapters: Chapters with missing knowledge (optional)
+        next_direction_hints: LLM 评估的下一题方向建议（可选）
     
     Returns:
         Selected question or None
@@ -50,6 +58,19 @@ def select_question(
     track_chapters = settings.track_chapters.get(session.track, {})
     
     asked_chapters = _get_asked_chapters(db, session.id)
+
+    # 将 next_direction 匹配到的章节加入 missing_chapters 作为选题提示
+    if next_direction_hints:
+        hint_chapters = []
+        for hint in next_direction_hints:
+            if not hint or not hint.strip():
+                continue
+            for ch in track_chapters.keys():
+                if _partial_ratio(hint.strip(), ch) > 60:
+                    hint_chapters.append(ch)
+                    break
+        if hint_chapters:
+            missing_chapters = list(missing_chapters or []) + hint_chapters
 
     # Determine target chapter
     # If selector_strategy == thompson_sampling, use Thompson sampling for the "track-based" fallback,
@@ -132,7 +153,14 @@ def select_question(
     if not available_questions:
         return None
     
-    # Random selection (could be weighted by chapter weights in future)
+    # 个性化选题策略
+    selector = getattr(settings, "selector_strategy", "weighted_random")
+    if selector == "personalized" or selector == "max_info":
+        return _select_personalized(
+            db, session, available_questions, current_difficulty,
+            resume_skills, missing_chapters, track_chapters
+        )
+    
     return random.choice(available_questions)
 
 
@@ -187,6 +215,97 @@ def _select_chapter(
     
     # Fallback: random from all
     return "Java基础"
+
+
+def _build_mastery_profile(db: Session, session_id: int) -> SkillMasteryProfile:
+    """从会话评估构建技能掌握度画像"""
+    profile = SkillMasteryProfile()
+    asked = db.query(AskedQuestion).filter(
+        AskedQuestion.session_id == session_id
+    ).all()
+    for aq in asked:
+        if aq.evaluation and aq.topic:
+            profile.update(aq.topic, float(aq.evaluation.overall_score))
+    return profile
+
+
+def _get_ability_history(db: Session, session_id: int) -> List[tuple]:
+    """获取 (difficulty, score) 历史用于能力估计"""
+    history = []
+    asked = db.query(AskedQuestion).filter(
+        AskedQuestion.session_id == session_id
+    ).order_by(AskedQuestion.created_at).all()
+    for aq in asked:
+        if aq.evaluation:
+            history.append((aq.difficulty, float(aq.evaluation.overall_score)))
+    return history
+
+
+def _select_personalized(
+    db: Session,
+    session: InterviewSession,
+    available_questions: List[QuestionBank],
+    current_difficulty: int,
+    resume_skills: Optional[List[str]],
+    missing_chapters: Optional[List[str]],
+    track_chapters: Dict[str, float],
+) -> Optional[QuestionBank]:
+    """
+    个性化选题：能力估计 + 最大信息 + 掌握度/UCB。
+    参考：IRT Fisher Information, EDGE, UCB
+    """
+    history = _get_ability_history(db, session.id)
+    ability = estimate_ability(history, default=float(session.level))
+    
+    mastery = _build_mastery_profile(db, session.id)
+    
+    chapter_successes = {}
+    chapter_failures = {}
+    asked = db.query(AskedQuestion).filter(AskedQuestion.session_id == session.id).all()
+    thr = float(getattr(settings, "success_threshold", 0.70))
+    for aq in asked:
+        if not aq.topic:
+            continue
+        matched = None
+        for ch in (track_chapters or {}).keys():
+            if _partial_ratio(aq.topic, ch) > 70:
+                matched = ch
+                break
+        if not matched:
+            matched = aq.topic
+        if aq.evaluation:
+            if float(aq.evaluation.overall_score) >= thr:
+                chapter_successes[matched] = chapter_successes.get(matched, 0) + 1
+            else:
+                chapter_failures[matched] = chapter_failures.get(matched, 0) + 1
+    
+    total_trials = sum(chapter_successes.values()) + sum(chapter_failures.values())
+    
+    # 为每道题计算综合得分：信息量 * 章节个性化
+    scored = []
+    for q in available_questions:
+        info = _fisher_info_simple(ability, q.difficulty)
+        ch = q.chapter or "unknown"
+        ucb = ucb_chapter_score(ch, chapter_successes, chapter_failures, total_trials)
+        pers = compute_personalization_weights(
+            ch, resume_skills, missing_chapters, mastery, track_chapters
+        )
+        score = info * (0.5 + 0.5 * min(ucb, 2.0)) * pers
+        scored.append((q, score))
+    
+    exploration = float(getattr(settings, "personalized_exploration_rate", 0.15))
+    if random.random() < exploration:
+        return random.choice(available_questions)
+    
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top = [s[0] for s in scored[:5]]
+    return random.choice(top) if top else available_questions[0]
+
+
+def _fisher_info_simple(ability: float, difficulty: int) -> float:
+    """简化 Fisher 信息：难度越接近能力，信息越大"""
+    diff = abs(ability - difficulty)
+    return 1.0 / (1.0 + diff * 0.5)
 
 
 def _get_asked_chapters(db: Session, session_id: int) -> List[str]:

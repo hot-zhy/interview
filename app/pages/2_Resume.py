@@ -1,4 +1,8 @@
 """Resume management page."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import streamlit as st
 import os
 import tempfile
@@ -9,10 +13,15 @@ from backend.services.resume_parser import parse_resume
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
-from app.components.ui import inject_common_styles
+from app.components.styles import inject_global_styles
+from app.components.sidebar import render_sidebar
+from app.i18n import t
 import json
 
-st.set_page_config(page_title="简历管理", page_icon="📄")
+st.set_page_config(page_title="Resume", page_icon="📄", layout="wide")
+
+# Inject global styles
+inject_global_styles()
 
 # Load auth from localStorage first
 load_auth_on_page_load()
@@ -21,37 +30,37 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
-    inject_common_styles()
+    render_sidebar()
     check_auth()
-
-    st.title("📄 简历管理")
-    st.divider()
-
+    
+    st.title(f"📄 {t('resume.title')}")
+    st.caption(t("resume.subtitle"))
+    st.markdown("---")
+    
     user_id = st.session_state.user_id
     db = next(get_db())
+    
     resumes = db.query(Resume).filter(Resume.user_id == user_id).order_by(Resume.created_at.desc()).all()
-
-    st.subheader("上传简历")
-    st.caption("支持 PDF、DOCX 格式，解析后可参与面试题目定制")
+    
+    st.subheader(f"📤 {t('resume.upload')}")
     uploaded_file = st.file_uploader(
-        "选择 PDF 或 DOCX 文件",
+        t("resume.select_file"),
         type=["pdf", "docx", "doc"],
-        help="支持 PDF 和 DOCX 格式"
+        help=t("resume.file_help")
     )
     
     if uploaded_file is not None:
-        if st.button("解析并保存", use_container_width=True):
+        size_kb = getattr(uploaded_file, 'size', 0) / 1024
+        st.info(f"{t('resume.file_selected')}: **{uploaded_file.name}** ({size_kb:.1f} KB)")
+        if st.button(t("resume.parse_save"), use_container_width=True, type="primary"):
             try:
-                # Save uploaded file temporarily
                 with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
                     tmp_file.write(uploaded_file.getvalue())
                     tmp_path = tmp_file.name
                 
-                # Parse resume
-                with st.spinner("正在解析简历..."):
+                with st.spinner(t("resume.parsing")):
                     parsed_data = parse_resume(tmp_path, uploaded_file.name)
                 
-                # Save to database
                 resume = Resume(
                     user_id=user_id,
                     filename=uploaded_file.name,
@@ -62,28 +71,30 @@ def main():
                 db.commit()
                 db.refresh(resume)
                 
-                # Clean up temp file
                 os.unlink(tmp_path)
                 
-                st.success("简历上传并解析成功！")
+                st.success(t("resume.success"))
                 st.rerun()
                 
             except Exception as e:
                 logger.error(f"Resume parsing error: {e}")
-                st.error(f"解析失败：{str(e)}")
+                st.error(f"{t('resume.parse_failed')}: {str(e)}")
                 if 'tmp_path' in locals():
                     try:
                         os.unlink(tmp_path)
                     except:
                         pass
     
-    st.divider()
-    st.subheader("我的简历")
+    st.markdown("---")
+    
+    # Display resumes
+    st.subheader("📋 我的简历")
+    
     if not resumes:
-        st.info("暂无简历，请上传一份简历")
+        st.info("📭 暂无简历，请在上方上传一份 PDF 或 DOCX 格式的简历")
     else:
         for resume in resumes:
-            with st.expander(f"📄 {resume.filename} (上传于 {resume.created_at.strftime('%Y-%m-%d %H:%M')})"):
+            with st.expander(f"📄 {resume.filename} · 上传于 {resume.created_at.strftime('%Y-%m-%d %H:%M')}", expanded=False):
                 # Display parsed data
                 if resume.parsed_json:
                     parsed = resume.parsed_json
@@ -145,7 +156,7 @@ def main():
                     st.info("该简历尚未解析")
                 
                 # Delete button
-                if st.button("删除简历", key=f"delete_{resume.id}", type="secondary"):
+                if st.button("🗑️ 删除简历", key=f"delete_{resume.id}", type="secondary"):
                     db.delete(resume)
                     db.commit()
                     st.success("已删除")

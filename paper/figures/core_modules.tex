@@ -1,0 +1,31 @@
+% Core Modules: RQ1, RQ2, RQ3 Technical Interfaces (block diagram)
+% Use with: \input{figures/core_modules.tex}
+
+\begin{tikzpicture}[
+    module/.style={rectangle, draw, fill=blue!12, minimum width=3.4cm, minimum height=2cm, align=left, font=\small},
+    header/.style={font=\bfseries}
+]
+\node[module] (rq1) {
+  \textbf{RQ1: Difficulty \& Termination}\\
+  \textit{AdaptiveInterviewEngine}\\[0.4em]
+  \scriptsize
+  In: $\{s_t\}$, $d$, $r$, $r_{\text{user}}$, $\rho_{\min}$, $\rho_{\max}$\\
+  Out: $d' \in \{1..5\}$, end, reason
+};
+
+\node[module, right=0.8cm of rq1] (rq2) {
+  \textbf{RQ2: Question Selection}\\
+  \textit{QuestionSelector}\\[0.4em]
+  \scriptsize
+  In: $Q$, $A$, $d$, $m$, $r$, $C$, $H$\\
+  Out: $q^* \in Q_c$
+};
+
+\node[module, right=0.8cm of rq2] (rq3) {
+  \textbf{RQ3: Evaluation}\\
+  \textit{EvaluationEngine}\\[0.4em]
+  \scriptsize
+  In: $q$, $a^*$, $a$\\
+  Out: $S_{\text{5-dim}}$, feedback, provenance
+};
+\end{tikzpicture}

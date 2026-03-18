@@ -65,6 +65,7 @@ class InterviewSession(Base):
     current_round = Column(Integer, default=0)
     started_at = Column(DateTime(timezone=True), server_default=func.now())
     ended_at = Column(DateTime(timezone=True), nullable=True)
+    expression_history_json = Column(JSON, nullable=True)  # Real-time expression samples from video stream
     
     # Relationships
     user = relationship("User", back_populates="interviews")
@@ -120,6 +121,7 @@ class Evaluation(Base):
     missing_points_json = Column(JSON)  # List of missing points
     next_direction = Column(Text)  # Next question direction
     speech_analysis_json = Column(JSON, nullable=True)  # Speech analysis results
+    expression_analysis_json = Column(JSON, nullable=True)  # Facial expression analysis results
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships

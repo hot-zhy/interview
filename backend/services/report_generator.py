@@ -1,8 +1,14 @@
 """Report generator service."""
-from typing import Dict, List
+from typing import Dict, List, Any
 from sqlalchemy.orm import Session
 from backend.db.models import InterviewSession, Evaluation, AskedQuestion, QuestionBank
-from backend.services.question_selector import _get_asked_chapters
+from backend.services.llm_provider import (
+    generate_report_summary_llm,
+    generate_strengths_weaknesses_llm,
+    generate_learning_plan_llm,
+    generate_speech_recommendations_llm,
+    generate_question_rationale_llm,
+)
 
 
 def generate_report(db: Session, session_id: int) -> Dict:
@@ -28,11 +34,15 @@ def generate_report(db: Session, session_id: int) -> Dict:
         return {
             "summary_json": {
                 "overall_score": 0.0,
+                "overall_summary": None,
                 "strengths": [],
                 "weaknesses": [],
                 "missing_knowledge": [],
                 "learning_plan": [],
-                "recommended_questions": []
+                "recommended_questions": [],
+                "recommended_questions_detail": [],
+                "speech_summary": {"available": False, "message": "本次面试未使用语音输入"},
+                "expression_summary": {"available": False, "message": "本次面试未开启实时表情分析"}
             },
             "markdown": "# 面试报告\n\n暂无评价数据。"
         }
@@ -40,29 +50,57 @@ def generate_report(db: Session, session_id: int) -> Dict:
     # Calculate overall score
     overall_score = sum(e.overall_score for e in evaluations) / len(evaluations)
     
-    # Analyze strengths and weaknesses
+    # Analyze strengths and weaknesses (rule-based baseline)
     strengths, weaknesses = _analyze_performance(evaluations)
+    avg_scores = _get_avg_scores(evaluations)
     
     # Collect missing knowledge
     missing_knowledge = _collect_missing_knowledge(evaluations)
     
-    # Generate learning plan
-    learning_plan = _generate_learning_plan(missing_knowledge, session.track)
+    # LLM 增强：个性化优势/待改进（失败则用规则结果）
+    llm_sw = generate_strengths_weaknesses_llm(avg_scores, missing_knowledge)
+    if llm_sw:
+        strengths, weaknesses = llm_sw
     
-    # Recommend questions
-    recommended_questions = _recommend_questions(db, session, missing_knowledge)
+    # Generate learning plan（LLM 优先，失败则规则）
+    learning_plan = generate_learning_plan_llm(
+        missing_knowledge, session.track, weaknesses
+    )
+    if not learning_plan:
+        learning_plan = _generate_learning_plan(missing_knowledge, session.track)
     
-    # Analyze speech patterns across all evaluations
+    # Recommend questions（含 LLM 推荐理由）
+    recommended_questions, recommended_questions_detail = _recommend_questions(
+        db, session, missing_knowledge
+    )
+    
+    # Analyze speech patterns
     speech_summary = _analyze_speech_patterns(evaluations)
+    # LLM 增强：语音改进建议
+    speech_recs = generate_speech_recommendations_llm(speech_summary)
+    if speech_recs:
+        speech_summary["recommendations"] = speech_recs
+
+    # Analyze expression patterns (from evaluations and/or real-time session history)
+    expression_summary = _analyze_expression_patterns(evaluations, session)
     
-    summary = {
+    # LLM 增强：综合总结
+    overall_summary = generate_report_summary_llm(
+        overall_score, strengths, weaknesses, missing_knowledge,
+        session.track, session.current_round or 0
+    )
+    
+    summary: Dict[str, Any] = {
         "overall_score": round(overall_score, 2),
+        "overall_summary": overall_summary,
         "strengths": strengths,
         "weaknesses": weaknesses,
         "missing_knowledge": missing_knowledge,
         "learning_plan": learning_plan,
         "recommended_questions": recommended_questions,
-        "speech_summary": speech_summary
+        "recommended_questions_detail": recommended_questions_detail,
+        "speech_summary": speech_summary,
+        "expression_summary": expression_summary
     }
     
     # Generate markdown
@@ -74,12 +112,8 @@ def generate_report(db: Session, session_id: int) -> Dict:
     }
 
 
-def _analyze_performance(evaluations: List[Evaluation]) -> tuple[List[str], List[str]]:
-    """Analyze performance to identify strengths and weaknesses."""
-    strengths = []
-    weaknesses = []
-    
-    # Aggregate scores by dimension
+def _get_avg_scores(evaluations: List[Evaluation]) -> Dict[str, float]:
+    """Aggregate scores by dimension."""
     score_sums = {
         "correctness": 0.0,
         "depth": 0.0,
@@ -87,13 +121,18 @@ def _analyze_performance(evaluations: List[Evaluation]) -> tuple[List[str], List
         "practicality": 0.0,
         "tradeoffs": 0.0
     }
-    
     for eval_obj in evaluations:
-        scores = eval_obj.scores_json
+        scores = eval_obj.scores_json or {}
         for key in score_sums:
             score_sums[key] += scores.get(key, 0.0)
-    
-    avg_scores = {k: v / len(evaluations) for k, v in score_sums.items()}
+    return {k: v / len(evaluations) for k, v in score_sums.items()}
+
+
+def _analyze_performance(evaluations: List[Evaluation]) -> tuple[List[str], List[str]]:
+    """Analyze performance to identify strengths and weaknesses (rule-based)."""
+    strengths = []
+    weaknesses = []
+    avg_scores = _get_avg_scores(evaluations)
     
     # Identify strengths (>= 0.7)
     if avg_scores["correctness"] >= 0.7:
@@ -172,33 +211,94 @@ def _recommend_questions(
     db: Session,
     session: InterviewSession,
     missing_knowledge: List[str]
-) -> List[str]:
-    """Recommend questions based on missing knowledge."""
-    recommended = []
+) -> tuple[List[str], List[Dict[str, Any]]]:
+    """Recommend questions based on missing knowledge. Returns (ids, detail_list)."""
+    recommended_ids: List[str] = []
+    detail_list: List[Dict[str, Any]] = []
     
     # Get chapters from missing knowledge
     missing_chapters = []
     for knowledge in missing_knowledge[:5]:
-        # Try to match with chapters
         chapters = db.query(QuestionBank.chapter).distinct().all()
         for (chapter,) in chapters:
-            if any(kw in chapter for kw in knowledge.split()[:2]):
+            if any(kw in chapter for kw in (knowledge or "").split()[:2]):
                 missing_chapters.append(chapter)
                 break
     
-    # Get questions from these chapters
     if missing_chapters:
         questions = db.query(QuestionBank).filter(
             QuestionBank.chapter.in_(missing_chapters[:3])
         ).limit(5).all()
-        recommended = [q.id for q in questions]
+    else:
+        questions = []
     
-    # If not enough, get random questions
-    if len(recommended) < 3:
-        all_questions = db.query(QuestionBank).limit(10).all()
-        recommended.extend([q.id for q in all_questions[:5]])
+    if len(questions) < 3:
+        questions = db.query(QuestionBank).limit(5).all()
     
-    return list(set(recommended))[:5]
+    for q in questions[:5]:
+        qid = str(q.id) if q.id else ""
+        rationale = generate_question_rationale_llm(
+            q.question or "", missing_knowledge, q.chapter or ""
+        )
+        detail_list.append({
+            "id": qid,
+            "question_text": (q.question or "")[:80] + ("..." if len(q.question or "") > 80 else ""),
+            "rationale": rationale or "针对薄弱知识点练习"
+        })
+        recommended_ids.append(qid)
+    
+    return list(dict.fromkeys(recommended_ids))[:5], detail_list[:5]
+
+
+def _analyze_expression_patterns(
+    evaluations: List[Evaluation],
+    session: InterviewSession | None = None
+) -> Dict:
+    """分析整体表情模式（支持实时视频采集与历史拍照）"""
+    expr_analyses = [e.expression_analysis_json for e in evaluations if e.expression_analysis_json]
+    # 合并实时视频采集的表情历史
+    if session and session.expression_history_json:
+        expr_analyses = list(expr_analyses) + list(session.expression_history_json)
+    
+    if not expr_analyses:
+        return {
+            "available": False,
+            "message": "本次面试未开启实时表情分析"
+        }
+    
+    # 聚合情绪与面试相关指标
+    ir_list = [e.get("interview_relevance", {}) for e in expr_analyses if e.get("interview_relevance")]
+    if not ir_list:
+        return {
+            "available": True,
+            "total_questions_with_expression": len(expr_analyses),
+            "average_nervousness": 0,
+            "dominant_emotions": [],
+            "message": "无有效表情分析数据"
+        }
+    
+    avg_nervousness = sum(ir.get("nervousness", 0) for ir in ir_list) / len(ir_list)
+    dominant_emotions = [e.get("dominant_emotion", "neutral") for e in expr_analyses if e.get("dominant_emotion")]
+    emotion_counts = {}
+    for em in dominant_emotions:
+        emotion_counts[em] = emotion_counts.get(em, 0) + 1
+    top_emotions = sorted(emotion_counts.items(), key=lambda x: -x[1])[:3]
+    
+    # 紧张度趋势
+    if len(ir_list) >= 2:
+        first_n = ir_list[0].get("nervousness", 0)
+        last_n = ir_list[-1].get("nervousness", 0)
+        nervousness_trend = "improving" if last_n < first_n else "stable" if abs(last_n - first_n) < 0.1 else "increasing"
+    else:
+        nervousness_trend = "stable"
+    
+    return {
+        "available": True,
+        "total_questions_with_expression": len(expr_analyses),
+        "average_nervousness": round(avg_nervousness, 3),
+        "dominant_emotions": [e[0] for e in top_emotions],
+        "nervousness_trend": nervousness_trend,
+    }
 
 
 def _analyze_speech_patterns(evaluations: List[Evaluation]) -> Dict:
@@ -252,19 +352,16 @@ def _generate_markdown(
 - **完成轮数**: {session.current_round}
 - **综合得分**: {summary['overall_score']:.2f} / 1.0
 
----
-
-## 综合评分
-
-### 优势
-
 """
+    if summary.get("overall_summary"):
+        md += f"\n**综合总结**: {summary['overall_summary']}\n"
+    md += "\n---\n\n## 综合评分\n\n### 优势\n\n"
     
-    for strength in summary['strengths']:
+    for strength in summary.get('strengths', []):
         md += f"- ✅ {strength}\n"
     
     md += "\n### 待改进\n\n"
-    for weakness in summary['weaknesses']:
+    for weakness in summary.get('weaknesses', []):
         md += f"- ⚠️ {weakness}\n"
     
     md += "\n---\n\n## 缺失知识点\n\n"
@@ -282,18 +379,48 @@ def _generate_markdown(
         md += f"- **平均紧张度**: {speech_summary.get('average_nervousness', 0):.2f}\n"
         md += f"- **平均停顿频率**: {speech_summary.get('average_pause_frequency', 0):.1f} 次/分钟\n"
         trend = speech_summary.get('nervousness_trend', 'stable')
-        trend_desc = {"improving": "逐渐放松", "stable": "保持稳定", "increasing": "略有紧张"}[trend]
+        trend_desc = {"improving": "逐渐放松", "stable": "保持稳定", "increasing": "略有紧张"}.get(trend, "保持稳定")
         md += f"- **紧张度趋势**: {trend_desc}\n"
         md += f"- **使用语音回答的题目数**: {speech_summary.get('total_questions_with_speech', 0)}\n"
+        if speech_summary.get("recommendations"):
+            md += "\n**改进建议**:\n"
+            for rec in speech_summary["recommendations"]:
+                md += f"- 💡 {rec}\n"
     else:
         md += f"- {speech_summary.get('message', '本次面试未使用语音输入')}\n"
+    
+    md += "\n---\n\n## 表情分析\n\n"
+    expr_summary = summary.get("expression_summary", {})
+    if expr_summary.get("available"):
+        md += f"- **平均紧张度**: {expr_summary.get('average_nervousness', 0):.2f}\n"
+        md += f"- **主要情绪**: {', '.join(expr_summary.get('dominant_emotions', [])) or '无'}\n"
+        trend = expr_summary.get('nervousness_trend', 'stable')
+        trend_desc = {"improving": "逐渐放松", "stable": "保持稳定", "increasing": "略有紧张"}.get(trend, "保持稳定")
+        md += f"- **紧张度趋势**: {trend_desc}\n"
+        md += f"- **使用表情拍照的题目数**: {expr_summary.get('total_questions_with_expression', 0)}\n"
+    else:
+        md += f"- {expr_summary.get('message', '本次面试未使用表情拍照')}\n"
     
     md += "\n---\n\n## 学习建议\n\n"
     for plan in summary['learning_plan']:
         md += f"- 📚 {plan}\n"
     
     md += "\n---\n\n## 推荐题单\n\n"
-    if summary['recommended_questions']:
+    detail_list = summary.get("recommended_questions_detail", [])
+    if detail_list:
+        md += "建议重点练习以下题目：\n\n"
+        for item in detail_list:
+            qtext = item.get("question_text", "")
+            rationale = item.get("rationale", "")
+            qid = item.get("id", "")
+            if qtext or rationale:
+                md += f"- **{qtext or f'题目 ID: {qid}'}**"
+                if rationale:
+                    md += f" — {rationale}"
+                md += "\n"
+            else:
+                md += f"- 题目 ID: {qid}\n"
+    elif summary.get('recommended_questions'):
         md += "建议重点练习以下题目：\n\n"
         for qid in summary['recommended_questions']:
             md += f"- 题目 ID: {qid}\n"
@@ -327,6 +454,18 @@ def _generate_markdown(
             md += f"- 平均停顿时长: {speech.get('average_pause_duration', 0):.2f} 秒\n"
             if analysis.get("recommendations"):
                 md += f"- 建议: {'; '.join(analysis['recommendations'])}\n"
+            md += "\n"
+        
+        # Add expression analysis if available
+        if eval_obj.expression_analysis_json:
+            expr = eval_obj.expression_analysis_json
+            ir = expr.get("interview_relevance", {})
+            md += f"**表情分析**:\n"
+            md += f"- 主导情绪: {expr.get('dominant_emotion', 'neutral')}\n"
+            md += f"- 紧张度: {ir.get('nervousness', 0):.2f} ({ir.get('confidence_desc', '')})\n"
+            md += f"- 投入度: {ir.get('engagement_desc', '')}\n"
+            if ir.get("recommendations"):
+                md += f"- 建议: {'; '.join(ir['recommendations'])}\n"
             md += "\n"
         
         md += f"**反馈**:\n\n{eval_obj.feedback_text}\n\n"
