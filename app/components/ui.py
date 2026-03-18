@@ -2,6 +2,30 @@
 import streamlit as st
 import pandas as pd
 
+
+def inject_common_styles():
+    """Inject shared spacing and typography (no color change)."""
+    st.markdown("""
+    <style>
+    /* Section spacing */
+    .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+    h1 { margin-bottom: 0.5rem; font-size: 1.85rem; }
+    h2, h3 { margin-top: 1.25rem; margin-bottom: 0.6rem; }
+    /* Form and widget spacing */
+    [data-testid="stVerticalBlock"] > div { gap: 0.5rem; }
+    [data-testid="column"] + [data-testid="column"] { margin-left: 0.5rem; }
+    /* Chat messages: consistent padding */
+    [data-testid="stChatMessage"] { padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+    /* Buttons in columns: full width where used */
+    .stButton > button { font-weight: 500; min-height: 2.25rem; }
+    /* Sidebar section spacing */
+    [data-testid="stSidebar"] .stMarkdown { margin-bottom: 0.5rem; }
+    /* Metric cards: tighter on small screens */
+    [data-testid="stMetricValue"] { font-size: 1.25rem; }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 def show_evaluation(evaluation: dict):
     """Display evaluation results."""
     scores = evaluation.get("scores", {})

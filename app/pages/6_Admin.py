@@ -8,6 +8,7 @@ from backend.db.models import (
 from sqlalchemy import func
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.ui import inject_common_styles
 
 st.set_page_config(page_title="管理后台", page_icon="⚙️")
 
@@ -18,16 +19,14 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    inject_common_styles()
     check_auth()
-    
+
     db = next(get_db())
-    
     st.title("⚙️ 管理后台")
-    st.markdown("---")
-    
-    # Statistics
+    st.divider()
+
     st.subheader("系统统计")
-    
     col1, col2, col3, col4 = st.columns(4)
     
     user_count = db.query(User).count()
@@ -39,10 +38,7 @@ def main():
     col2.metric("简历数", resume_count)
     col3.metric("题目数", question_count)
     col4.metric("面试数", session_count)
-    
-    st.markdown("---")
-    
-    # Interview records
+    st.divider()
     st.subheader("面试记录")
     
     sessions = db.query(InterviewSession).order_by(InterviewSession.started_at.desc()).limit(20).all()

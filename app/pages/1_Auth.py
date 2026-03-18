@@ -7,6 +7,7 @@ from backend.core.security import verify_password, get_password_hash
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.ui import inject_common_styles
 
 st.set_page_config(page_title="登录/注册", page_icon="🔐")
 
@@ -51,11 +52,11 @@ def login_user(db: Session, email: str, password: str) -> tuple[bool, str, int]:
 
 
 def main():
+    inject_common_styles()
     st.title("🔐 登录 / 注册")
-    st.markdown("---")
-    
+    st.divider()
+
     tab1, tab2 = st.tabs(["登录", "注册"])
-    
     with tab1:
         st.subheader("登录")
         with st.form("login_form"):

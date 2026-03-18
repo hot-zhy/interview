@@ -9,6 +9,7 @@ from backend.services.resume_parser import parse_resume
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.ui import inject_common_styles
 import json
 
 st.set_page_config(page_title="简历管理", page_icon="📄")
@@ -20,19 +21,18 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    inject_common_styles()
     check_auth()
-    
+
     st.title("📄 简历管理")
-    st.markdown("---")
-    
+    st.divider()
+
     user_id = st.session_state.user_id
     db = next(get_db())
-    
-    # Get user's resumes
     resumes = db.query(Resume).filter(Resume.user_id == user_id).order_by(Resume.created_at.desc()).all()
-    
-    # Upload section
+
     st.subheader("上传简历")
+    st.caption("支持 PDF、DOCX 格式，解析后可参与面试题目定制")
     uploaded_file = st.file_uploader(
         "选择 PDF 或 DOCX 文件",
         type=["pdf", "docx", "doc"],
@@ -77,11 +77,8 @@ def main():
                     except:
                         pass
     
-    st.markdown("---")
-    
-    # Display resumes
+    st.divider()
     st.subheader("我的简历")
-    
     if not resumes:
         st.info("暂无简历，请上传一份简历")
     else:

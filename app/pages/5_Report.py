@@ -7,6 +7,7 @@ from backend.services.report_generator import generate_report
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.ui import inject_common_styles
 
 st.set_page_config(page_title="面试报告", page_icon="📊", layout="wide")
 
@@ -17,14 +18,14 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    inject_common_styles()
     check_auth()
-    
+
     user_id = st.session_state.user_id
     db = next(get_db())
-    
     st.title("📊 面试报告")
-    st.markdown("---")
-    
+    st.divider()
+
     # Get user's completed interviews
     sessions = db.query(InterviewSession).filter(
         InterviewSession.user_id == user_id,
@@ -35,9 +36,9 @@ def main():
         st.info("暂无完成的面试，请先完成一次面试")
         return
     
-    # Session selector
+    st.caption("选择一场已结束的面试查看或生成报告")
     session_options = {
-        f"{s.track} - {s.started_at.strftime('%Y-%m-%d %H:%M')}": s.id
+        f"{s.track} — {s.started_at.strftime('%Y-%m-%d %H:%M')}": s.id
         for s in sessions
     }
     selected_session = st.selectbox(
@@ -75,10 +76,7 @@ def main():
                     logger.error(f"Report generation error: {e}")
                     st.error(f"生成失败：{str(e)}")
     else:
-        # Display report
-        st.markdown("---")
-        
-        # Summary metrics
+        st.divider()
         summary = report.summary_json
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("综合得分", f"{summary.get('overall_score', 0):.2f}")
@@ -111,10 +109,8 @@ def main():
         </style>
         """, unsafe_allow_html=True)
         
-        st.markdown("---")
+        st.divider()
         st.markdown(report.markdown)
-        
-        # Download button
         st.download_button(
             "下载报告 (Markdown)",
             data=report.markdown,

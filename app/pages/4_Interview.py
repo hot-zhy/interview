@@ -13,6 +13,7 @@ from app.components.audio_submit import render_audio_submit
 from app.components.auth_utils import init_session_state, check_auth
 from st_audiorec import st_audiorec
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.ui import inject_common_styles
 import time
 import base64
 import json
@@ -26,14 +27,15 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    inject_common_styles()
     check_auth()
-    
+
     user_id = st.session_state.user_id
     db = next(get_db())
-    
+
     st.title("💼 开始面试")
-    st.markdown("---")
-    
+    st.divider()
+
     # Initialize session state
     if "current_session_id" not in st.session_state:
         st.session_state.current_session_id = None
@@ -107,9 +109,10 @@ def main():
             st.session_state.current_session_id = None
             st.rerun()
         
-        st.markdown("---")
-        st.markdown(f"### 面试进行中 - {session.track} (第 {session.current_round}/{session.total_rounds} 轮)")
-        
+        st.divider()
+        st.markdown(f"### 面试进行中 · {session.track}")
+        st.caption(f"第 {session.current_round} / {session.total_rounds} 轮")
+
         # Initialize interview if needed
         if session.current_round == 0:
             if st.button("开始第一题", use_container_width=True, type="primary"):
@@ -131,7 +134,6 @@ def main():
             
             with col2:
                 st.markdown("#### 💬 对话区")
-                
                 # Display conversation history
                 turns = get_session_turns(db, session_id)
                 
@@ -154,9 +156,8 @@ def main():
                 
                 # Answer input - support both text and audio
                 if session.status == "active":
-                    st.markdown("---")
+                    st.divider()
                     st.markdown("#### 💬 输入回答")
-                    
                     # Answer mode selection
                     answer_mode = st.radio(
                         "选择回答方式",
@@ -219,6 +220,7 @@ def main():
 
                         st.session_state.avatar_state = "listening"
 
+                    st.caption("提交后将自动进入下一题，评价结果可在面试结束后的报告中查看。")
                     col_submit, col_end = st.columns([3, 1])
                     with col_submit:
                         submit_clicked = st.button("提交回答", use_container_width=True, type="primary")
@@ -281,11 +283,8 @@ def main():
         # Session info sidebar
         with st.sidebar:
             st.markdown("### 面试信息")
-            st.text(f"方向: {session.track}")
-            st.text(f"难度: {session.level}")
-            st.text(f"状态: {session.status}")
-            st.text(f"轮数: {session.current_round}/{session.total_rounds}")
-            
+            st.markdown(f"**方向** {session.track}  \n**难度** {session.level}  \n**状态** {session.status}  \n**进度** {session.current_round} / {session.total_rounds} 轮")
+            st.divider()
             if st.button("退出当前面试", use_container_width=True):
                 st.session_state.current_session_id = None
                 st.rerun()

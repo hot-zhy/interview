@@ -9,6 +9,7 @@ from backend.services.question_bank_loader import import_questions_from_excel
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
+from app.components.ui import inject_common_styles
 
 st.set_page_config(page_title="题库管理", page_icon="📚")
 
@@ -19,14 +20,13 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
+    inject_common_styles()
     check_auth()
-    
+
     st.title("📚 题库管理")
-    st.markdown("---")
-    
+    st.divider()
+
     db = next(get_db())
-    
-    # Load from fixed file path
     st.subheader("题库加载")
     
     # Fixed file path
