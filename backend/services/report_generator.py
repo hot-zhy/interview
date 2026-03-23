@@ -50,7 +50,10 @@ def generate_report(db: Session, session_id: int) -> Dict:
             "markdown": "# 面试报告\n\n暂无评价数据。"
         }
     
-    # Calculate overall score
+    # Re-score with LLM if original scores came from rules (upgrade old interviews)
+    _rescore_with_llm_if_needed(db, evaluations)
+
+    # Calculate overall score (now reflects LLM scores if available)
     overall_score = sum(e.overall_score for e in evaluations) / len(evaluations)
     
     # Analyze strengths and weaknesses (rule-based baseline)
@@ -176,6 +179,61 @@ def generate_report(db: Session, session_id: int) -> Dict:
         "summary_json": summary,
         "markdown": markdown
     }
+
+
+def _rescore_with_llm_if_needed(db: Session, evaluations: List[Evaluation]) -> None:
+    """Re-score evaluations with LLM if they were originally rule-scored.
+
+    Checks each evaluation — if it looks like pure rule scoring (the telltale
+    pattern of clarity=0.5/practicality=0.4/tradeoffs=0.3, or provenance
+    indicates rule-only), re-evaluates with LLM and updates the DB row.
+    This upgrades old interviews to have proper LLM-quality scores.
+    """
+    from backend.core.config import settings
+    if not settings.zhipuai_api_key:
+        return
+
+    from backend.services.llm_provider import evaluate_with_llm
+
+    for ev in evaluations:
+        scores = ev.scores_json or {}
+        # Detect if this was rule-scored (no LLM)
+        is_rule_scored = (
+            scores.get("_provenance") == "rule"
+            or (not ev.next_direction and not scores.get("_provenance"))
+        )
+
+        if not is_rule_scored:
+            continue
+
+        # Get the question text for re-evaluation
+        aq = ev.asked_question
+        if not aq:
+            continue
+
+        try:
+            print(f"[report] re-scoring Q{aq.id} with LLM...")
+            llm_result = evaluate_with_llm(
+                aq.question_text or "",
+                aq.correct_answer_text or "",
+                ev.answer_text or "",
+            )
+            if llm_result and llm_result.get("overall_score") is not None:
+                ev.scores_json = llm_result["scores"]
+                ev.overall_score = llm_result["overall_score"]
+                ev.feedback_text = llm_result.get("feedback", ev.feedback_text)
+                ev.missing_points_json = llm_result.get("missing_points", ev.missing_points_json)
+                ev.next_direction = llm_result.get("next_direction", ev.next_direction)
+                db.flush()
+                print(f"[report] Q{aq.id} re-scored: {llm_result['overall_score']:.2f}")
+        except Exception as e:
+            print(f"[report] re-scoring Q{aq.id} failed: {e}")
+            continue
+
+    try:
+        db.commit()
+    except Exception:
+        pass
 
 
 def _get_per_question_scores(evaluations: List[Evaluation]) -> List[Dict[str, Any]]:
