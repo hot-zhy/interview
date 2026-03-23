@@ -283,17 +283,70 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-                    with st.spinner("AI 面试官正在分析你的回答..."):
-                        result = submit_answer(
-                            db, session_id, answer_text.strip(),
-                            answer_type="text", expression_data=expr_data,
+
+                    # ── Streaming thinking display ──
+                    import time as _tt
+                    thinking_box = st.empty()
+                    _lines = []
+
+                    def _show(text):
+                        _lines.append(text)
+                        thinking_box.markdown(
+                            '<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;font-size:13px;border-left:3px solid #6366f1">'
+                            + "<br>".join(_lines) + '<br><span style="color:#6366f1">●●●</span></div>',
+                            unsafe_allow_html=True,
                         )
+
+                    _show("🔍 正在评估你的回答...")
+                    _t0 = _tt.time()
+
+                    result = submit_answer(
+                        db, session_id, answer_text.strip(),
+                        answer_type="text", expression_data=expr_data,
+                    )
+
                     if "error" in result:
+                        thinking_box.empty()
                         st.error(result["error"])
                     else:
                         ev = result.get("evaluation", {})
-                        if ev:
-                            st.session_state["_last_eval"] = ev
+                        score = ev.get("overall_score", 0)
+                        dims = ev.get("scores", {})
+                        fb = ev.get("feedback", "")
+                        missing = ev.get("missing_points", [])
+                        prov = ev.get("_provenance", "llm")
+                        elapsed = _tt.time() - _t0
+
+                        _show(f"✅ 评估完成 ({elapsed:.1f}s) [{prov}]")
+                        _tt.sleep(0.3)
+                        _show(f"📊 综合得分: <b>{score:.0%}</b>")
+                        if dims:
+                            dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
+                            parts = " | ".join(f"{dim_labels.get(k,k)} {v:.0%}" for k, v in dims.items() if k != "_provenance")
+                            _show(f"分项: {parts}")
+                        _tt.sleep(0.3)
+                        if fb:
+                            _show(f"💬 {fb[:200]}")
+                        if missing:
+                            _show(f"缺失: {'、'.join(missing[:4])}")
+                        _tt.sleep(0.3)
+
+                        if result.get("followup"):
+                            _show(f"🔄 AI 追问: {result.get('interviewer_message', '')[:100]}")
+                        else:
+                            _show("📋 正在选择下一题...")
+                            nq = result.get("next_question", "")
+                            if nq:
+                                _show(f"下一题: {nq[:60]}...")
+
+                        # Remove streaming dots, show final state
+                        thinking_box.markdown(
+                            '<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;font-size:13px;border-left:3px solid #6366f1">'
+                            + "<br>".join(_lines) + '</div>',
+                            unsafe_allow_html=True,
+                        )
+                        _tt.sleep(1.5)
+
                         st.session_state["_last_was_followup"] = result.get("followup", False)
                         clear_accumulated_expressions()
                         st.session_state.avatar_state = "idle"
