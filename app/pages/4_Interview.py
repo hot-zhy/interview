@@ -237,6 +237,16 @@ def main():
         with chat_container:
             _render_chat_bubbles(turns)
 
+        # Follow-up indicator
+        if st.session_state.get("_last_was_followup"):
+            st.markdown(
+                '<div style="display:inline-block;background:#6366f1;color:white;'
+                'padding:2px 10px;border-radius:12px;font-size:13px;margin-bottom:8px">'
+                '🔍 AI 追问 — 针对你上一个回答的知识缺口深入探查</div>',
+                unsafe_allow_html=True,
+            )
+            st.session_state["_last_was_followup"] = False
+
         # Answer input (directly below chat, no tab switch)
         if session.status != "active":
             st.info(t("interview.interview_ended"))
@@ -275,10 +285,11 @@ def main():
                     if "error" in result:
                         st.error(result["error"])
                     else:
-                        # Show evaluation feedback before moving to next question
                         ev = result.get("evaluation", {})
                         if ev:
                             st.session_state["_last_eval"] = ev
+                        st.session_state["_last_was_followup"] = result.get("followup", False)
+                        st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
                         clear_accumulated_expressions()
                         st.session_state.avatar_state = "idle"
                         st.rerun()
@@ -322,6 +333,8 @@ def main():
                             ev = result.get("evaluation", {})
                             if ev:
                                 st.session_state["_last_eval"] = ev
+                            st.session_state["_last_was_followup"] = result.get("followup", False)
+                            st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
                             clear_accumulated_expressions()
                             st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
                             st.session_state.avatar_state = "idle"

@@ -37,17 +37,31 @@ def evaluate_answer(
             "next_direction": str
         }
     """
+    # Quality gate: very short or empty answers get zero across the board
+    stripped = (user_answer or "").strip()
+    if len(stripped) < 10:
+        return {
+            "scores": {"correctness": 0, "depth": 0, "clarity": 0, "practicality": 0, "tradeoffs": 0},
+            "overall_score": 0.0,
+            "feedback": "回答内容过短，无法进行有效评估。请尝试详细回答。",
+            "missing_points": _extract_key_points(correct_answer)[:5],
+            "next_direction": _suggest_next_direction(_extract_key_points(correct_answer)[:3], question),
+        }
+
     # Extract key points from correct answer
     key_points = _extract_key_points(correct_answer)
     
     # Calculate coverage
     coverage_scores = _calculate_coverage(user_answer, key_points)
     
-    # Calculate structure scores
-    structure_scores = _evaluate_structure(user_answer)
-    
     # Calculate similarity
     similarity = _ratio(user_answer, correct_answer) / 100.0
+
+    # If answer has zero coverage of key points, structure scores are meaningless
+    has_substance = coverage_scores['coverage'] > 0.05 or similarity > 0.15
+
+    # Calculate structure scores (only if answer has substance)
+    structure_scores = _evaluate_structure(user_answer) if has_substance else {"clarity": 0, "practicality": 0, "tradeoffs": 0}
     
     # Combine scores
     correctness = (coverage_scores['coverage'] * 0.6 + similarity * 0.4)
@@ -157,26 +171,28 @@ def _calculate_coverage(user_answer: str, key_points: List[str]) -> Dict:
 
 
 def _evaluate_structure(user_answer: str) -> Dict:
-    """Evaluate answer structure and quality indicators."""
-    answer_lower = user_answer.lower()
-    
-    # Clarity: check for structure indicators
+    """Evaluate answer structure and quality indicators.
+
+    Scores start at 0 — points are only awarded when specific
+    patterns are detected, so garbage/irrelevant answers get 0.
+    """
+    # Clarity: structure indicators + explanation markers
     has_structure = bool(re.search(r'[1-9][\.、]|[-•*]|首先|其次|最后|第一|第二', user_answer))
     has_explanation = bool(re.search(r'因为|由于|所以|因此|原理|机制', user_answer))
-    clarity = 0.5 + (0.3 if has_structure else 0) + (0.2 if has_explanation else 0)
-    
-    # Practicality: check for practical examples
+    clarity = (0.5 if has_structure else 0) + (0.5 if has_explanation else 0)
+
+    # Practicality: examples + code/implementation references
     has_example = bool(re.search(r'例如|比如|举例|实际|场景|案例', user_answer))
     has_code = bool(re.search(r'代码|实现|方法|函数|类|接口', user_answer))
-    practicality = 0.4 + (0.3 if has_example else 0) + (0.3 if has_code else 0)
-    
-    # Tradeoffs: check for comparison/limitation discussion
+    practicality = (0.5 if has_example else 0) + (0.5 if has_code else 0)
+
+    # Tradeoffs: comparison/limitation discussion
     has_tradeoff = bool(re.search(
         r'优缺点|利弊|权衡|取舍|对比|比较|限制|不足|缺点',
         user_answer
     ))
-    tradeoffs = 0.3 + (0.7 if has_tradeoff else 0)
-    
+    tradeoffs = 1.0 if has_tradeoff else 0.0
+
     return {
         "clarity": min(1.0, clarity),
         "practicality": min(1.0, practicality),

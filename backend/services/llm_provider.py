@@ -520,6 +520,67 @@ def generate_followup_with_context(
     return _call_zhipuai(system, user, temperature=0.5)
 
 
+def generate_resume_question_llm(
+    resume_parsed: Dict,
+    track: str,
+    difficulty: int,
+) -> Optional[Dict[str, str]]:
+    """Generate a personalized first question based on the candidate's resume.
+
+    Returns {"question": str, "reference_answer": str} or None.
+    """
+    if not settings.zhipuai_api_key:
+        return None
+
+    skills = resume_parsed.get("skills", [])
+    experience = resume_parsed.get("experience", [])
+    projects = resume_parsed.get("projects", [])
+    education = resume_parsed.get("education", [])
+
+    skills_str = "、".join(skills[:10]) if skills else "未提供"
+    exp_str = "；".join(str(e)[:80] for e in experience[:3]) if experience else "未提供"
+    proj_str = "；".join(str(p)[:80] for p in projects[:3]) if projects else "未提供"
+    edu_str = "；".join(str(e)[:60] for e in education[:2]) if education else "未提供"
+
+    diff_desc = {1: "入门级", 2: "初级", 3: "中级", 4: "高级", 5: "专家级"}.get(difficulty, "中级")
+
+    system = """你是资深Java技术面试官。根据候选人简历生成一道个性化的面试题。
+输出严格JSON：{"question": "面试题内容", "reference_answer": "参考答案要点（100-200字）"}
+只输出JSON，不要其他文字。"""
+
+    user = f"""面试方向：{track}
+难度要求：{diff_desc}（{difficulty}/5）
+
+候选人简历：
+- 技能：{skills_str}
+- 工作经历：{exp_str}
+- 项目经历：{proj_str}
+- 教育背景：{edu_str}
+
+要求：
+- 题目要结合候选人简历中的具体技能或项目经验
+- 例如：如果简历提到了Spring Boot项目，可以问Spring相关的深入问题
+- 如果简历提到了高并发经验，可以问并发相关的实际场景题
+- 难度要匹配{diff_desc}水平
+- 题目30-80字，参考答案100-200字，覆盖3-5个关键知识点"""
+
+    content = _call_zhipuai(system, user, temperature=0.5)
+    if not content:
+        return None
+    try:
+        if content.startswith("```"):
+            content = re.sub(r"^```\w*\n?", "", content)
+            content = re.sub(r"\n?```$", "", content)
+        data = json.loads(content.strip())
+        q = data.get("question", "")
+        a = data.get("reference_answer", "")
+        if q and len(q) > 5 and a:
+            return {"question": q, "reference_answer": a}
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
 def generate_deep_report_analysis(
     track: str,
     rounds: int,
