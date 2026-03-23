@@ -58,14 +58,36 @@ class FollowUpPlanner:
         if state.remaining_budget <= 0:
             return FollowUpPlan(should_followup=False, reason="no remaining budget")
 
-        text, source, _ = self.generator.invoke(
-            original_question=original_question,
-            user_answer=user_answer,
-            feedback=feedback,
-            missing_points=missing_points,
-            followup_count=followup_count,
-            correct_answer=correct_answer,
-        )
+        # Try memory-aware LLM follow-up first (richer context)
+        text = None
+        source = "none"
+        try:
+            from backend.services.llm_provider import generate_followup_with_context
+            text = generate_followup_with_context(
+                original_question=original_question,
+                user_answer=user_answer,
+                correct_answer=correct_answer,
+                feedback=feedback,
+                missing_points=missing_points,
+                followup_count=followup_count,
+                score_history=memory.score_history,
+                chapter_trace=memory.chapter_trace,
+            )
+            if text:
+                source = "llm_context"
+        except Exception:
+            pass
+
+        # Fallback to basic generator
+        if not text:
+            text, source, _ = self.generator.invoke(
+                original_question=original_question,
+                user_answer=user_answer,
+                feedback=feedback,
+                missing_points=missing_points,
+                followup_count=followup_count,
+                correct_answer=correct_answer,
+            )
 
         return FollowUpPlan(
             should_followup=True,

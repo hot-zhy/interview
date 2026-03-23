@@ -426,3 +426,199 @@ def generate_question_rationale_llm(
     user = f"题目：{question_text[:100]}...。章节：{chapter}。候选人需加强：{missing_str}。"
     return _call_zhipuai(system, user, temperature=0.3)
 
+
+# ======================================================================
+# Agentic LLM capabilities (topic planning, deep analysis, trace)
+# ======================================================================
+
+def suggest_next_topic_llm(
+    track: str,
+    chapters_covered: List[str],
+    chapter_scores: Dict[str, float],
+    missing_concepts: List[str],
+    resume_skills: Optional[List[str]],
+    available_chapters: List[str],
+    current_difficulty: int,
+    avg_score: float,
+) -> Optional[Dict[str, str]]:
+    """LLM-as-topic-planner: reason about what chapter to explore next.
+
+    Returns {"chapter": str, "reasoning": str} or None.
+    """
+    system = """你是一位资深面试策略规划师。根据面试状态决定下一题应考察哪个章节。
+输出严格JSON：{"chapter": "章节名", "reasoning": "一句话理由"}
+只输出JSON，不要其他文字。"""
+    covered_str = ", ".join(f"{c}(得分{chapter_scores.get(c, 0):.0%})" for c in chapters_covered) if chapters_covered else "尚未考察"
+    missing_str = "、".join(missing_concepts[:5]) if missing_concepts else "无"
+    resume_str = "、".join(resume_skills[:5]) if resume_skills else "未提供"
+    avail_str = "、".join(available_chapters) if available_chapters else "无"
+
+    user = f"""面试方向：{track}
+当前难度：{current_difficulty}/5，平均得分：{avg_score:.0%}
+已考察章节：{covered_str}
+候选人缺失的知识点：{missing_str}
+简历技能：{resume_str}
+可选章节（必须从中选择）：{avail_str}
+
+请选择最应该考察的章节并说明理由。优先考虑：
+1. 候选人明显薄弱但尚未充分考察的领域
+2. 与简历技能相关但还未验证的领域
+3. 覆盖度不足的重要领域"""
+
+    content = _call_zhipuai(system, user, temperature=0.3)
+    if not content:
+        return None
+    try:
+        if content.startswith("```"):
+            content = re.sub(r"^```\w*\n?", "", content)
+            content = re.sub(r"\n?```$", "", content)
+        data = json.loads(content.strip())
+        ch = data.get("chapter", "")
+        if ch and isinstance(ch, str):
+            return {"chapter": ch, "reasoning": data.get("reasoning", "")}
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+def generate_followup_with_context(
+    original_question: str,
+    user_answer: str,
+    correct_answer: str,
+    feedback: str,
+    missing_points: List[str],
+    followup_count: int,
+    score_history: Optional[List[float]] = None,
+    chapter_trace: Optional[List[str]] = None,
+) -> Optional[str]:
+    """Memory-aware follow-up: uses full interview context for richer probing."""
+    if not settings.zhipuai_api_key:
+        return None
+
+    missing_str = "；".join(missing_points[:3]) if missing_points else "无"
+    depth_hint = "首次追问，聚焦核心知识缺口" if followup_count == 0 else "二次追问，换角度或追问实践应用"
+
+    trajectory = ""
+    if score_history and len(score_history) >= 2:
+        recent = score_history[-3:]
+        trend = "上升" if recent[-1] > recent[0] else ("下降" if recent[-1] < recent[0] else "稳定")
+        trajectory = f"\n候选人近期表现趋势：{trend}（最近得分：{', '.join(f'{s:.0%}' for s in recent)}）"
+
+    system = "你是资深Java面试官。生成一句精准的追问，帮助深入评估候选人的真实理解水平。只输出追问内容，不要引号或前缀。"
+    user = f"""原题：{original_question}
+候选人回答：{user_answer[:600]}
+标准答案要点：{correct_answer[:400]}
+评价反馈：{feedback}
+识别到的知识缺口：{missing_str}{trajectory}
+
+这是{depth_hint}。要求：
+- 针对候选人回答中的具体错误或遗漏设计追问
+- 避免重复已问过的内容
+- 语气自然专业，30字以内
+- 如果候选人对某概念有误解，设计能暴露误解的追问"""
+
+    return _call_zhipuai(system, user, temperature=0.5)
+
+
+def generate_deep_report_analysis(
+    track: str,
+    rounds: int,
+    overall_score: float,
+    per_question_data: List[Dict],
+    missing_knowledge: List[str],
+    avg_scores: Dict[str, float],
+    difficulty_trajectory: List[int],
+    chapter_trace: List[str],
+    resume_skills: Optional[List[str]] = None,
+) -> Optional[Dict]:
+    """Multi-step agentic report: deep analysis with interview trace.
+
+    Returns a dict with keys: overall_summary, dimension_analysis,
+    gap_analysis, learning_plan, strategy_trace. Any key may be None.
+    """
+    if not settings.zhipuai_api_key:
+        return None
+
+    result = {}
+
+    # Build Q&A context string (compact)
+    qa_lines = []
+    for i, qd in enumerate(per_question_data[:15], 1):
+        qa_lines.append(
+            f"Q{i}[{qd.get('chapter','?')},难度{qd.get('difficulty',0)}]: "
+            f"{qd.get('question','')[:80]}... → 得分{qd.get('score',0):.0%}"
+            f"{' (缺失:' + ','.join(qd.get('missing',[])) + ')' if qd.get('missing') else ''}"
+        )
+    qa_context = "\n".join(qa_lines)
+
+    scores_str = ", ".join(f"{k}:{v:.2f}" for k, v in avg_scores.items())
+    diff_str = "→".join(str(d) for d in difficulty_trajectory) if difficulty_trajectory else "无"
+    ch_str = "→".join(chapter_trace) if chapter_trace else "无"
+    missing_str = "、".join(missing_knowledge[:10]) if missing_knowledge else "无"
+    resume_str = "、".join(resume_skills[:5]) if resume_skills else "未提供"
+
+    base_context = f"""面试方向：{track}，共{rounds}轮
+综合得分：{overall_score:.2f}/1.0
+分项平均：{scores_str}
+难度轨迹：{diff_str}
+章节轨迹：{ch_str}
+简历技能：{resume_str}
+缺失知识点：{missing_str}
+
+逐题记录：
+{qa_context}"""
+
+    # Step 1: Overall narrative summary
+    s1 = _call_zhipuai(
+        "你是资深面试评估专家。根据完整面试数据写一段个性化综合评估（100-150字），分析候选人的技术能力特点、表现趋势和关键亮点/不足。不要泛泛而谈，要结合具体的答题表现。",
+        base_context, temperature=0.4
+    )
+    result["overall_summary"] = s1
+
+    # Step 2: Per-dimension deep analysis
+    dim_analysis = _call_zhipuai(
+        """你是面试评估专家。对五个评分维度逐一深入分析，结合具体答题表现说明得分原因。
+输出格式（严格JSON）：
+{"correctness": "分析...", "depth": "分析...", "clarity": "分析...", "practicality": "分析...", "tradeoffs": "分析..."}
+每个维度30-50字，引用具体题目表现。只输出JSON。""",
+        base_context, temperature=0.3
+    )
+    if dim_analysis:
+        try:
+            if dim_analysis.startswith("```"):
+                dim_analysis = re.sub(r"^```\w*\n?", "", dim_analysis)
+                dim_analysis = re.sub(r"\n?```$", "", dim_analysis)
+            result["dimension_analysis"] = json.loads(dim_analysis.strip())
+        except (json.JSONDecodeError, TypeError):
+            result["dimension_analysis"] = None
+
+    # Step 3: Knowledge gap root-cause analysis
+    s3 = _call_zhipuai(
+        "你是技术能力诊断专家。分析候选人知识缺口的根本原因和关联性，不要简单列举缺失点，而是找出底层能力短板。80-120字。",
+        base_context, temperature=0.4
+    )
+    result["gap_analysis"] = s3
+
+    # Step 4: Personalized learning plan
+    plan = _call_zhipuai(
+        """你是技术学习规划师。根据面试暴露的具体问题，制定个性化学习计划。
+要求：5-8条，每条包含具体学习内容和建议资源/方法，20-40字。
+格式：每行一条，不要编号。""",
+        base_context, temperature=0.4
+    )
+    if plan:
+        result["learning_plan"] = [ln.strip() for ln in plan.split("\n") if ln.strip()][:8]
+
+    # Step 5: Interview strategy trace (innovation — explain what the agent did)
+    s5 = _call_zhipuai(
+        f"""你是AI面试系统的策略分析师。解释这场面试中自适应系统做了哪些决策以及为什么：
+- 难度如何调整（轨迹：{diff_str}）
+- 为什么选择了这些章节（轨迹：{ch_str}）
+- 面试节奏和终止时机是否合理
+用80-120字概述系统策略，让候选人理解AI面试官的出题逻辑。""",
+        base_context, temperature=0.4
+    )
+    result["strategy_trace"] = s5
+
+    return result if any(result.values()) else None
+

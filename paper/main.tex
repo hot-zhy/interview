@@ -93,9 +93,9 @@ We emphasize that this is an \emph{agentic orchestration framework} with structu
 \begin{itemize}
     \item \textbf{C1 (Framework)}: A memory-aware agentic interview framework with an observation--memory--policy--action loop that formulates adaptive interviewing as a sequential decision process with persistent state, structured tool invocation, and feedback-driven memory updates (Section~\ref{sec:method}).
     \item \textbf{C2 (Adaptive Control)}: A state-aware adaptive control mechanism for difficulty update and interview termination, using sliding-window calibration with trend-aware adjustment and budget-constrained stopping, converging within 4--5 questions without IRT calibration (Section~\ref{sec:adaptive_control}).
-    \item \textbf{C3 (Selection Policy)}: A multi-objective question selection policy conditioned on knowledge gaps, resume priors, coverage state, information value, and evaluator next-direction hints, with optional IRT-inspired and UCB-based enhancements (Section~\ref{sec:selection}).
+    \item \textbf{C3 (Selection Policy)}: A multi-objective question selection policy with an \emph{LLM-as-topic-planner} that reasons about which chapter to explore next based on the full interview state, falling back to a priority cascade with gap targeting, resume priors, coverage, and evaluator hints (Section~\ref{sec:selection}).
     \item \textbf{C4 (Hybrid Judging)}: A reliability-constrained hybrid judging framework with routing between rule-based and LLM judges, schema validation, automatic fallback, and optional multi-judge aggregation (Section~\ref{sec:hybrid_judging}).
-    \item \textbf{C5 (Tool Architecture)}: An extensible tool-augmented architecture where the interview agent invokes specialized tools---resume parser, follow-up generator, speech/expression analyzers, report synthesizer---each with graceful degradation (Section~\ref{sec:tools}).
+    \item \textbf{C5 (Tool Architecture)}: An extensible tool-augmented architecture with two innovations: (i)~\emph{LLM-as-topic-planner} for strategic question selection, and (ii)~\emph{multi-step agentic report generation} that produces unique, deeply personalized assessment reports through sequential LLM analysis with interview strategy transparency (Section~\ref{sec:tools}).
 \end{itemize}
 
 The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work and positions our contribution. Section~\ref{sec:method} presents the agentic method framework, including problem formulation, memory/state design, controller, and the three core mechanisms (RQ1--RQ3). Section~\ref{sec:implementation} describes implementation details. Section~\ref{sec:experiments} presents experimental design, and Section~\ref{sec:results} reports results. Section~\ref{sec:discussion} discusses findings, limitations, and future work. Section~\ref{sec:conclusion} concludes.
@@ -360,7 +360,7 @@ q_{t+1} = \arg\max_{q \in Q_t} \Bigl[\lambda_1 \cdot \text{Gap}(q) + \lambda_2 \
 
 where $Q_t$ is the set of unasked questions at the current difficulty, and the terms capture gap targeting, resume alignment, coverage maximization, Fisher information, exploration bonus, and evaluator next-direction alignment respectively.
 
-The current implementation approximates this objective through a three-tier priority system that operates on the state $s_t = (d_t, C_t, \mathcal{M}_t, R, E_t, B_t)$:
+The current implementation approximates this objective through a priority system that operates on the state $s_t = (d_t, C_t, \mathcal{M}_t, R, E_t, B_t)$. When an LLM is available, the system first invokes an \emph{LLM-as-topic-planner}: it sends the complete interview state (chapters covered with scores, identified gaps, resume skills, available chapters) to the language model and asks it to reason about which topic to explore next. The LLM returns a suggested chapter with a rationale, which is validated against the available chapter set via fuzzy matching. This ``Priority 0'' mechanism enables strategic, context-aware topic planning that goes beyond the priority cascade. When the LLM is unavailable or its suggestion does not match available chapters, the system falls back to the priority cascade below:
 
 \begin{algorithm}[h]
 \caption{State-Aware Multi-Objective Question Selection}
@@ -544,12 +544,15 @@ Follow-up generator & Misconception-aware probe generation & $\rightarrow$ Templ
 Resume parser & Extract structured skills/experience from PDF/DOCX & Proceed without personalization \\
 Speech analyzer & Communication metrics (fluency, rate, nervousness) & $\rightarrow$ Text heuristics \\
 Expression analyzer & Facial emotion analysis (nervousness, confidence) & Return None; proceed without \\
-Report synthesizer & LLM-enhanced personalized assessment report & $\rightarrow$ Rule-based report \\
+Report synthesizer & Multi-step agentic LLM report with deep analysis & $\rightarrow$ Rule-based report \\
+LLM topic planner & Reason about next chapter based on full interview state & $\rightarrow$ Priority cascade \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\noindent \textbf{Resume parser.} Extracts structured information from PDF and DOCX documents using hierarchical parsing \cite{li2022resume}. Education, experience, projects, and skills are structured into JSON with confidence scores. Fuzzy matching (70\% threshold) enables robust skill-to-chapter alignment for the selection policy.
+\noindent \textbf{LLM topic planner (innovation).} When available, the controller invokes the language model as a \emph{strategic topic planner}: the full interview state (chapters covered with scores, identified gaps, resume skills, remaining budget) is sent to the LLM, which returns a suggested chapter and reasoning. This enables context-aware, strategic topic selection that goes beyond rule-based priority cascades, while the suggestion is validated against the question bank via fuzzy matching before use.
+
+\noindent \textbf{Resume parser.} Extracts structured information from PDF, DOCX, and image files. For images, the system uses an LLM vision model for OCR when available, with fallback to PyMuPDF. Education, experience, projects, and skills are structured into JSON. Fuzzy matching (70\% threshold) enables robust skill-to-chapter alignment for the selection policy.
 
 \noindent \textbf{Speech analyzer.} Processes audio responses to extract communication metrics. Fluency assessment uses a weighted combination:
 \begin{equation}
@@ -559,7 +562,7 @@ Speech-derived signals are treated as auxiliary features (not primary decision c
 
 \noindent \textbf{Expression analyzer.} Uses DeepFace \cite{serengil2020deepface} for emotion detection from video frames sampled during the interview. Maps seven basic emotions to interview-relevant metrics: nervousness, confidence, and engagement. When DeepFace is unavailable or no face is detected, the module returns None---graceful degradation consistent with the tool-augmented design.
 
-\noindent \textbf{Report synthesizer.} Produces comprehensive assessment reports with optional LLM enhancement. Rule-based baseline aggregates scores and identifies strengths/weaknesses. LLM enhancement (when available) adds: (1)~personalized overall summary, (2)~context-aware strengths/weaknesses, (3)~actionable learning plan, (4)~speech improvement recommendations, and (5)~question rationales. Each LLM call validates output and falls back to rule-based generation on failure.
+\noindent \textbf{Report synthesizer (multi-step agentic).} Report generation is itself an agentic multi-step LLM pipeline. The system sends the complete interview record (per-question scores, Q\&A content, difficulty trajectory, chapter trace) through five sequential LLM analysis steps: (1)~\emph{narrative assessment} producing a personalized overall evaluation grounded in specific answer examples; (2)~\emph{per-dimension deep analysis} explaining why each of the five dimension scores is high or low with concrete references; (3)~\emph{knowledge gap root-cause analysis} identifying underlying capability deficits rather than surface-level missing points; (4)~\emph{personalized learning plan} with specific resources and methods; and (5)~\emph{interview strategy trace} explaining what the adaptive system did and why---making the agentic decision process transparent to the candidate. Each step has rule-based fallback; the pipeline produces unique, substantive reports even across candidates with similar overall scores.
 
 %% ============================================================
 %%  SECTION 4: IMPLEMENTATION
@@ -1252,10 +1255,12 @@ The 73.8\% state-triggered termination rate indicates that the controller's term
     \item \textbf{Structured state representation} (Section~\ref{sec:state}): memory is compressed into a state tuple that conditions the controller's action selection.
     \item \textbf{Constrained action space}: the controller selects from $\{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$ using deterministic, auditable logic.
     \item \textbf{State-aware adaptive control} (Section~\ref{sec:adaptive_control}): difficulty update and termination are conditioned on sliding-window performance aggregation from memory.
-    \item \textbf{State-conditioned question selection} (Section~\ref{sec:selection}): the multi-priority policy uses gap state, resume prior, coverage state, and evaluator hints from memory.
+    \item \textbf{State-conditioned question selection with LLM-as-planner} (Section~\ref{sec:selection}): the system invokes the LLM as a strategic topic planner, reasoning about which chapter to explore next based on the full interview state. The LLM suggestion is validated against the question bank and falls back to the priority cascade when unavailable.
+    \item \textbf{Memory-aware follow-up generation}: follow-up questions are generated with full interview context (score history, trajectory, identified gaps), enabling misconception-aware probing that adapts to the candidate's performance arc.
     \item \textbf{Feedback-driven memory update}: evaluation outputs (scores, missing concepts, next-direction hints) are written back into memory, closing the observation--memory--policy--action loop.
     \item \textbf{Reliability-constrained hybrid judging} (Section~\ref{sec:hybrid_judging}): routing between rule-based and LLM judges with validation and automatic fallback.
-    \item \textbf{Tool-augmented architecture} (Section~\ref{sec:tools}): specialized tools (resume parser, follow-up generator, speech/expression analyzers, report synthesizer) each with defined interfaces and fallback behavior.
+    \item \textbf{Multi-step agentic report generation} (Section~\ref{sec:tools}): report generation is an agentic pipeline with five sequential LLM analysis steps---narrative assessment, per-dimension deep analysis, knowledge gap root-cause analysis, personalized learning plan, and interview strategy trace---producing unique, substantive reports with full transparency into the adaptive system's decisions.
+    \item \textbf{Tool-augmented architecture} (Section~\ref{sec:tools}): specialized tools (resume parser, follow-up generator, speech/expression analyzers, report synthesizer, LLM topic planner) each with defined interfaces and fallback behavior.
 \end{itemize}
 
 \subsection{Prototype Features in Code}

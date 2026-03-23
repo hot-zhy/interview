@@ -77,7 +77,12 @@ def main():
         if st.button(t('report.generate'), use_container_width=True, type="primary"):
             with st.spinner(t("report.generating")):
                 try:
-                    report_data = generate_report(db, session_id)
+                    with st.status("正在生成面试报告...", expanded=True) as gen_status:
+                        st.write("📊 汇总评分数据...")
+                        st.write("🤖 AI 深度分析面试表现...")
+                        st.write("📝 生成个性化评估报告...")
+                        report_data = generate_report(db, session_id)
+                        gen_status.update(label="✅ 报告生成完成", state="complete")
                     
                     report = Report(
                         session_id=session_id,
@@ -96,18 +101,22 @@ def main():
     else:
         # Display report
         st.markdown("---")
-        if st.button("重新生成报告", key="regen_report", type="secondary"):
-            with st.spinner(t("report.generating")):
-                try:
+        if st.button("重新生成报告（AI深度分析）", key="regen_report", type="secondary"):
+            try:
+                with st.status("正在重新生成报告...", expanded=True) as regen_status:
+                    st.write("📊 汇总评分数据...")
+                    st.write("🤖 AI 多步深度分析...")
+                    st.write("📝 生成个性化报告...")
                     report_data = generate_report(db, session_id)
-                    report.summary_json = report_data["summary_json"]
-                    report.markdown = report_data["markdown"]
-                    db.commit()
-                    st.success("报告已更新")
-                    st.rerun()
-                except Exception as e:
-                    logger.error(f"Report regeneration error: {e}")
-                    st.error(f"重新生成失败：{str(e)}")
+                    regen_status.update(label="✅ 报告更新完成", state="complete")
+                report.summary_json = report_data["summary_json"]
+                report.markdown = report_data["markdown"]
+                db.commit()
+                st.success("报告已更新")
+                st.rerun()
+            except Exception as e:
+                logger.error(f"Report regeneration error: {e}")
+                st.error(f"重新生成失败：{str(e)}")
 
         # Summary metrics
         summary = report.summary_json
@@ -143,6 +152,24 @@ def main():
         col2.metric("优势数量", len(summary.get('strengths', [])))
         col3.metric("待改进", len(summary.get('weaknesses', [])))
         col4.metric("缺失知识点", len(summary.get('missing_knowledge', [])))
+
+        # LLM-generated overall summary callout
+        if summary.get("overall_summary"):
+            st.info(f"**AI 综合评估**: {summary['overall_summary']}")
+
+        # Strategy trace (agentic innovation)
+        if summary.get("strategy_trace"):
+            with st.expander("🤖 AI 面试策略解读", expanded=False):
+                st.write(summary["strategy_trace"])
+                if summary.get("difficulty_trajectory"):
+                    st.caption(f"难度轨迹: {' → '.join(str(d) for d in summary['difficulty_trajectory'])}")
+                if summary.get("chapter_trace"):
+                    st.caption(f"章节轨迹: {' → '.join(summary['chapter_trace'])}")
+
+        # Knowledge gap analysis
+        if summary.get("gap_analysis"):
+            with st.expander("🔍 知识缺口深度分析", expanded=False):
+                st.write(summary["gap_analysis"])
 
         # Dimension scores charts
         dim_scores = summary.get("dimension_scores", {})

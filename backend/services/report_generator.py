@@ -1,4 +1,4 @@
-"""Report generator service."""
+"""Report generator service — multi-step agentic analysis."""
 from typing import Dict, List, Any
 from sqlalchemy.orm import Session
 from backend.db.models import InterviewSession, Evaluation, AskedQuestion, QuestionBank
@@ -8,6 +8,7 @@ from backend.services.llm_provider import (
     generate_learning_plan_llm,
     generate_speech_recommendations_llm,
     generate_question_rationale_llm,
+    generate_deep_report_analysis,
 )
 
 
@@ -82,25 +83,82 @@ def generate_report(db: Session, session_id: int) -> Dict:
     
     # Analyze speech patterns
     speech_summary = _analyze_speech_patterns(evaluations)
-    # LLM 增强：语音改进建议
     speech_recs = generate_speech_recommendations_llm(speech_summary)
     if speech_recs:
         speech_summary["recommendations"] = speech_recs
 
-    # Analyze expression patterns (from evaluations and/or real-time session history)
+    # Analyze expression patterns
     expression_summary = _analyze_expression_patterns(evaluations, session)
-    
-    # LLM 增强：综合总结
-    overall_summary = generate_report_summary_llm(
-        overall_score, strengths, weaknesses, missing_knowledge,
-        session.track, session.current_round or 0
+
+    # Multi-step agentic deep analysis (innovation)
+    asked_qs = db.query(AskedQuestion).filter(
+        AskedQuestion.session_id == session_id
+    ).order_by(AskedQuestion.created_at).all()
+
+    per_q_data = []
+    difficulty_trajectory = []
+    chapter_trace = []
+    for aq in asked_qs:
+        difficulty_trajectory.append(aq.difficulty)
+        chapter_trace.append(aq.topic or "")
+        ev = aq.evaluation
+        if ev:
+            per_q_data.append({
+                "question": aq.question_text[:100],
+                "chapter": aq.topic or "",
+                "difficulty": aq.difficulty,
+                "score": ev.overall_score,
+                "missing": ev.missing_points_json or [],
+            })
+
+    resume_skills = None
+    if session.resume_id:
+        from backend.db.models import Resume
+        resume = db.query(Resume).filter(Resume.id == session.resume_id).first()
+        if resume and resume.parsed_json:
+            resume_skills = resume.parsed_json.get("skills", [])
+
+    deep = generate_deep_report_analysis(
+        track=session.track,
+        rounds=session.current_round or len(evaluations),
+        overall_score=overall_score,
+        per_question_data=per_q_data,
+        missing_knowledge=missing_knowledge,
+        avg_scores=avg_scores,
+        difficulty_trajectory=difficulty_trajectory,
+        chapter_trace=chapter_trace,
+        resume_skills=resume_skills,
     )
+
+    overall_summary = None
+    dimension_analysis = None
+    gap_analysis = None
+    strategy_trace = None
+
+    if deep:
+        overall_summary = deep.get("overall_summary")
+        dimension_analysis = deep.get("dimension_analysis")
+        gap_analysis = deep.get("gap_analysis")
+        strategy_trace = deep.get("strategy_trace")
+        if deep.get("learning_plan"):
+            learning_plan = deep["learning_plan"]
+
+    if not overall_summary:
+        overall_summary = generate_report_summary_llm(
+            overall_score, strengths, weaknesses, missing_knowledge,
+            session.track, session.current_round or 0
+        )
     
     summary: Dict[str, Any] = {
         "overall_score": round(overall_score, 2),
         "dimension_scores": dimension_scores,
         "per_question_scores": per_question_scores,
         "overall_summary": overall_summary,
+        "dimension_analysis": dimension_analysis,
+        "gap_analysis": gap_analysis,
+        "strategy_trace": strategy_trace,
+        "difficulty_trajectory": difficulty_trajectory,
+        "chapter_trace": chapter_trace,
         "strengths": strengths,
         "weaknesses": weaknesses,
         "missing_knowledge": missing_knowledge,
@@ -108,7 +166,7 @@ def generate_report(db: Session, session_id: int) -> Dict:
         "recommended_questions": recommended_questions,
         "recommended_questions_detail": recommended_questions_detail,
         "speech_summary": speech_summary,
-        "expression_summary": expression_summary
+        "expression_summary": expression_summary,
     }
     
     # Generate markdown
@@ -396,7 +454,30 @@ def _generate_markdown(
         md += "\n"
 
     if summary.get("overall_summary"):
-        md += f"\n**综合总结**: {summary['overall_summary']}\n"
+        md += f"\n## 综合评估\n\n{summary['overall_summary']}\n"
+
+    # Dimension deep analysis (agentic multi-step)
+    dim_analysis = summary.get("dimension_analysis")
+    if dim_analysis and isinstance(dim_analysis, dict):
+        dim_labels = {"correctness": "正确性", "depth": "深度", "clarity": "清晰度", "practicality": "实用性", "tradeoffs": "权衡分析"}
+        md += "\n### 各维度深度分析\n\n"
+        for key in ["correctness", "depth", "clarity", "practicality", "tradeoffs"]:
+            analysis_text = dim_analysis.get(key, "")
+            if analysis_text:
+                md += f"**{dim_labels.get(key, key)}** ({dim_scores.get(key, 0):.2f}): {analysis_text}\n\n"
+
+    # Knowledge gap root-cause analysis
+    if summary.get("gap_analysis"):
+        md += f"\n### 知识缺口深度分析\n\n{summary['gap_analysis']}\n"
+
+    # Interview strategy trace (innovation)
+    if summary.get("strategy_trace"):
+        md += f"\n### AI面试策略解读\n\n{summary['strategy_trace']}\n"
+        if summary.get("difficulty_trajectory"):
+            md += f"\n- **难度轨迹**: {' → '.join(str(d) for d in summary['difficulty_trajectory'])}\n"
+        if summary.get("chapter_trace"):
+            md += f"- **章节轨迹**: {' → '.join(summary['chapter_trace'])}\n"
+
     md += "\n---\n\n## 综合评分\n\n### 优势\n\n"
     
     for strength in summary.get('strengths', []):

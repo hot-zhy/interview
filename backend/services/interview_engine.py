@@ -444,7 +444,24 @@ def _generate_followup(
     followup_count: int = 0,
     correct_answer: str = "",
 ) -> str:
-    """Generate follow-up question: LLM 优先（Misconception-Aware），否则使用多样化模板。"""
+    """Generate follow-up: memory-aware LLM > basic LLM > template."""
+    # Try context-aware LLM follow-up first
+    try:
+        from backend.services.llm_provider import generate_followup_with_context
+        ctx_result = generate_followup_with_context(
+            original_question=original_question,
+            user_answer=user_answer,
+            correct_answer=correct_answer,
+            feedback=feedback,
+            missing_points=missing_points,
+            followup_count=followup_count,
+        )
+        if ctx_result:
+            return ctx_result
+    except Exception:
+        pass
+
+    # Fallback to basic LLM
     llm_result = generate_followup_with_llm(
         original_question=original_question,
         user_answer=user_answer,

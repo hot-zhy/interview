@@ -72,28 +72,38 @@ def select_question(
         if hint_chapters:
             missing_chapters = list(missing_chapters or []) + hint_chapters
 
+    # Build LLM context for topic planning (pass to _select_chapter)
+    llm_ctx = None
+    if settings.zhipuai_api_key:
+        ch_scores = {}
+        asked_qs = db.query(AskedQuestion).filter(AskedQuestion.session_id == session.id).all()
+        for aq in asked_qs:
+            if aq.evaluation and aq.topic:
+                ch_scores.setdefault(aq.topic, []).append(float(aq.evaluation.overall_score))
+        ch_avg = {ch: sum(sc) / len(sc) for ch, sc in ch_scores.items()}
+        all_scores = [float(aq.evaluation.overall_score) for aq in asked_qs if aq.evaluation]
+        llm_ctx = {
+            "track": session.track,
+            "chapter_scores": ch_avg,
+            "missing_concepts": list(missing_chapters or []),
+            "current_difficulty": current_difficulty,
+            "avg_score": sum(all_scores) / len(all_scores) if all_scores else 0.5,
+        }
+
     # Determine target chapter
-    # If selector_strategy == thompson_sampling, use Thompson sampling for the "track-based" fallback,
-    # while still honoring priority-1/2 rules (missing chapters, resume skills).
     if getattr(settings, "selector_strategy", "weighted_random") == "thompson_sampling":
         target_chapter = _select_chapter(
             track_chapters=track_chapters,
             resume_skills=resume_skills,
             missing_chapters=missing_chapters,
-            asked_chapters=asked_chapters
-        )
-        # If priority-1/2 did not trigger (i.e., returns fallback default), override with TS.
-        # Heuristic: if returned chapter is not in track_chapters, force TS. If it is, still allow TS
-        # when we have enough history to sample.
-        ts_chapter = _select_chapter_thompson(
-            db=db,
-            session=session,
-            track_chapters=track_chapters,
             asked_chapters=asked_chapters,
-            current_difficulty=current_difficulty
+            llm_context=llm_ctx,
+        )
+        ts_chapter = _select_chapter_thompson(
+            db=db, session=session, track_chapters=track_chapters,
+            asked_chapters=asked_chapters, current_difficulty=current_difficulty
         )
         if ts_chapter:
-            # Only override when we are in fallback mode (no missing/resume match).
             if not missing_chapters and not resume_skills:
                 target_chapter = ts_chapter
     else:
@@ -101,7 +111,8 @@ def select_question(
             track_chapters=track_chapters,
             resume_skills=resume_skills,
             missing_chapters=missing_chapters,
-            asked_chapters=asked_chapters
+            asked_chapters=asked_chapters,
+            llm_context=llm_ctx,
         )
     
     # Query questions matching criteria
@@ -168,11 +179,39 @@ def _select_chapter(
     track_chapters: Dict[str, float],
     resume_skills: Optional[List[str]],
     missing_chapters: Optional[List[str]],
-    asked_chapters: List[str]
+    asked_chapters: List[str],
+    llm_context: Optional[Dict] = None,
 ) -> str:
-    """Select target chapter based on strategy."""
+    """Select target chapter based on strategy.
+
+    Args:
+        llm_context: Optional dict with keys for LLM topic planning:
+            track, chapter_scores, missing_concepts, current_difficulty, avg_score
+    """
     avoid_k = int(getattr(settings, "recent_chapter_avoid_k", 2))
     recent_avoid = asked_chapters[-avoid_k:] if avoid_k > 0 else []
+
+    # Priority 0 (LLM-as-planner): ask LLM to reason about next topic
+    if llm_context and settings.zhipuai_api_key:
+        try:
+            from backend.services.llm_provider import suggest_next_topic_llm
+            suggestion = suggest_next_topic_llm(
+                track=llm_context.get("track", ""),
+                chapters_covered=asked_chapters,
+                chapter_scores=llm_context.get("chapter_scores", {}),
+                missing_concepts=llm_context.get("missing_concepts", []),
+                resume_skills=resume_skills,
+                available_chapters=list(track_chapters.keys()),
+                current_difficulty=llm_context.get("current_difficulty", 3),
+                avg_score=llm_context.get("avg_score", 0.5),
+            )
+            if suggestion:
+                ch = suggestion["chapter"]
+                for key in track_chapters.keys():
+                    if _partial_ratio(ch, key) > 70 and key not in recent_avoid:
+                        return key
+        except Exception:
+            pass
 
     # Priority 1: Missing chapters (weak areas)
     if missing_chapters:

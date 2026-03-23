@@ -129,8 +129,8 @@ class AgentController:
         )
         self.tracer.record_state_snapshot(state)
 
-        # 5. Choose action
-        action = self._choose_action(state, asked_question, eval_result)
+        # 5. Choose action (pass answer_text for memory-aware follow-up)
+        action = self._choose_action(state, asked_question, eval_result, answer_text)
         self.tracer.record_action(action)
 
         # 6. Execute action
@@ -145,6 +145,7 @@ class AgentController:
         state: InterviewState,
         asked_question: AskedQuestion,
         eval_result: EvaluationResult,
+        answer_text: str = "",
     ) -> ActionDecision:
         # Check termination (reuse existing logic)
         should_end, end_reason = self.adaptive_engine.should_end_interview()
@@ -154,7 +155,7 @@ class AgentController:
                 reason=end_reason,
             )
 
-        # Check follow-up
+        # Check follow-up (pass actual answer for misconception-aware probing)
         followup_plan = self.followup_planner.plan(
             state=state,
             memory=self.memory,
@@ -162,7 +163,7 @@ class AgentController:
             evaluation_score=eval_result.overall_score,
             missing_points=eval_result.missing_points,
             original_question=asked_question.question_text,
-            user_answer="",  # already consumed
+            user_answer=answer_text,
             correct_answer=asked_question.correct_answer_text or "",
             feedback=eval_result.feedback,
         )

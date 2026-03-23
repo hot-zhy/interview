@@ -262,14 +262,23 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-                    with st.spinner(t("interview.submitting")):
+                    with st.status("正在评估你的回答...", expanded=True) as status:
+                        st.write("🔍 分析回答内容...")
                         result = submit_answer(
                             db, session_id, answer_text.strip(),
                             answer_type="text", expression_data=expr_data,
                         )
+                        if "error" not in result:
+                            st.write("📊 计算自适应难度...")
+                            st.write("📋 选择下一个问题...")
+                            status.update(label="✅ 评估完成", state="complete")
                     if "error" in result:
                         st.error(result["error"])
                     else:
+                        # Show evaluation feedback before moving to next question
+                        ev = result.get("evaluation", {})
+                        if ev:
+                            st.session_state["_last_eval"] = ev
                         clear_accumulated_expressions()
                         st.session_state.avatar_state = "idle"
                         st.rerun()
@@ -296,25 +305,67 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-                        with st.spinner(t("interview.submitting_audio")):
+                        with st.status("正在处理语音回答...", expanded=True) as status:
+                            st.write("🎤 识别语音内容...")
                             result = submit_answer(
                                 db, session_id, answer_text=None,
                                 answer_type="audio", audio_data=audio_data,
                                 expression_data=expr_data,
                             )
+                            if "error" not in result:
+                                st.write("🔍 分析回答内容...")
+                                st.write("📋 选择下一个问题...")
+                                status.update(label="✅ 评估完成", state="complete")
                         if "error" in result:
                             st.error(result["error"])
                         else:
+                            ev = result.get("evaluation", {})
+                            if ev:
+                                st.session_state["_last_eval"] = ev
                             clear_accumulated_expressions()
                             st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
                             st.session_state.avatar_state = "idle"
                             st.rerun()
             st.session_state.avatar_state = "listening"
 
+    # Show last evaluation feedback (if available)
+    last_eval = st.session_state.get("_last_eval")
+    if last_eval and session.status == "active":
+        with col_main:
+            with st.expander("📊 上一题评估反馈", expanded=False):
+                score = last_eval.get("overall_score", 0)
+                cols = st.columns(6)
+                cols[0].metric("综合", f"{score:.0%}")
+                for i, (dim, label) in enumerate([
+                    ("correctness", "正确"), ("depth", "深度"), ("clarity", "清晰"),
+                    ("practicality", "实用"), ("tradeoffs", "权衡")
+                ]):
+                    val = last_eval.get("scores", {}).get(dim, 0)
+                    cols[i + 1].metric(label, f"{val:.0%}")
+                fb = last_eval.get("feedback", "")
+                if fb:
+                    st.caption(fb[:200])
+                missing = last_eval.get("missing_points", [])
+                if missing:
+                    st.caption("缺失点: " + " · ".join(missing[:3]))
+
+    # Sidebar info with adaptive difficulty
+    current_difficulty = session.level
+    asked_qs = db.query(AskedQuestion).filter(
+        AskedQuestion.session_id == session_id
+    ).order_by(AskedQuestion.created_at.desc()).first()
+    if asked_qs:
+        current_difficulty = asked_qs.difficulty
+
     with st.sidebar:
         st.markdown(f"### {t('interview.session_info')}")
         st.text(f"{t('interview.direction')}: {session.track}")
-        st.text(f"{t('interview.difficulty')}: {session.level}")
+        diff_arrow = ""
+        if current_difficulty > session.level:
+            diff_arrow = " ↑"
+        elif current_difficulty < session.level:
+            diff_arrow = " ↓"
+        st.text(f"{t('interview.difficulty')}: {current_difficulty}/5{diff_arrow}")
         st.text(f"{t('interview.status')}: {session.status}")
         st.text(f"{t('interview.rounds_count')}: {session.current_round}/{session.total_rounds}")
         st.markdown("---")
