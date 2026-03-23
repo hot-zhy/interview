@@ -180,14 +180,27 @@ def _show_thinking(placeholder, message: str, step: int = 1):
     )
 
 
-def _render_eval_card(ev: dict) -> str:
-    """Build HTML for an inline evaluation card."""
+def _render_eval_block(ev: dict) -> str:
+    """Build HTML for thinking trace + evaluation card (persisted in chat)."""
     scores = ev.get("scores", {})
     overall = ev.get("overall_score", 0)
     feedback = ev.get("feedback", "")
+    missing = ev.get("missing_points", [])
     provenance = ev.get("_provenance", "")
     prov_tag = "AI评估" if provenance == "llm" else "规则评估" if provenance == "rule" else "混合评估"
 
+    # Thinking trace (completed)
+    thinking = (
+        '<div class="thinking-label">💭 AI 分析过程</div>'
+        '<div class="thinking-bubble">'
+        '<div class="step done">🔍 ✓ 分析回答内容，提取知识点</div>'
+        '<div class="step done">🤖 ✓ AI 评估回答质量（5维度评分）</div>'
+        '<div class="step done">📊 ✓ 计算自适应难度，更新面试状态</div>'
+        '<div class="step done">📋 ✓ 智能选择下一个问题</div>'
+        '</div>'
+    )
+
+    # Score card
     dims = [("综合", overall), ("正确", scores.get("correctness", 0)),
             ("深度", scores.get("depth", 0)), ("清晰", scores.get("clarity", 0)),
             ("实用", scores.get("practicality", 0)), ("权衡", scores.get("tradeoffs", 0))]
@@ -196,14 +209,24 @@ def _render_eval_card(ev: dict) -> str:
         f'<div class="score-item"><div class="val">{v:.0%}</div><div class="lbl">{k}</div></div>'
         for k, v in dims
     )
-    fb_html = f'<div class="feedback">{feedback[:150]}{"..." if len(feedback) > 150 else ""}</div>' if feedback else ""
-    return (
+
+    fb_text = feedback[:200] + ("..." if len(feedback) > 200 else "")
+    fb_html = f'<div class="feedback">{fb_text}</div>' if feedback else ""
+
+    missing_html = ""
+    if missing:
+        tags = " · ".join(m[:30] for m in missing[:3])
+        missing_html = f'<div class="feedback" style="color:#e11d48;margin-top:4px">缺失: {tags}</div>'
+
+    card = (
         f'<div class="thinking-label">📊 {prov_tag}</div>'
         f'<div class="eval-card">'
         f'<div class="score-row">{items}</div>'
-        f'{fb_html}'
+        f'{fb_html}{missing_html}'
         f'</div>'
     )
+
+    return thinking + card
 
 
 def _render_chat_bubbles(turns):
@@ -223,11 +246,11 @@ def _render_chat_bubbles(turns):
                 f'<div class="chat-bubble candidate">{turn["content"]}</div>',
                 unsafe_allow_html=True,
             )
-            # Show eval card after each candidate answer (if we have data)
+            # Show thinking trace + eval card after each candidate answer
             turn_id = str(turn.get("id", i))
             ev = eval_history.get(turn_id)
             if ev:
-                st.markdown(_render_eval_card(ev), unsafe_allow_html=True)
+                st.markdown(_render_eval_block(ev), unsafe_allow_html=True)
 
 
 def main():
@@ -398,28 +421,18 @@ def main():
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
 
-                    # Show thinking process inside the chat area
-                    with chat_container:
-                        thinking_placeholder = st.empty()
-                        _show_thinking(thinking_placeholder, "🔍 正在分析你的回答...", step=1)
-
-                    result = submit_answer(
-                        db, session_id, answer_text.strip(),
-                        answer_type="text", expression_data=expr_data,
-                    )
+                    with st.spinner("💭 AI 正在分析你的回答..."):
+                        result = submit_answer(
+                            db, session_id, answer_text.strip(),
+                            answer_type="text", expression_data=expr_data,
+                        )
 
                     if "error" in result:
-                        with chat_container:
-                            thinking_placeholder.empty()
                         st.error(result["error"])
                     else:
-                        with chat_container:
-                            _show_thinking(thinking_placeholder, "📊 评估完成，正在选择下一题...", step=2)
-
                         ev = result.get("evaluation", {})
                         if ev:
                             st.session_state["_last_eval"] = ev
-                            # Store eval keyed by the latest candidate turn ID
                             candidate_turns = [t for t in get_session_turns(db, session_id) if t["role"] == "candidate"]
                             if candidate_turns:
                                 if "_eval_history" not in st.session_state:
@@ -453,21 +466,15 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-                        with chat_container:
-                            thinking_placeholder = st.empty()
-                            _show_thinking(thinking_placeholder, "🎤 正在识别语音并分析...", step=1)
-                        result = submit_answer(
-                            db, session_id, answer_text=None,
-                            answer_type="audio", audio_data=audio_data,
-                            expression_data=expr_data,
-                        )
+                        with st.spinner("💭 AI 正在识别语音并分析..."):
+                            result = submit_answer(
+                                db, session_id, answer_text=None,
+                                answer_type="audio", audio_data=audio_data,
+                                expression_data=expr_data,
+                            )
                         if "error" in result:
-                            with chat_container:
-                                thinking_placeholder.empty()
                             st.error(result["error"])
                         else:
-                            with chat_container:
-                                _show_thinking(thinking_placeholder, "📊 评估完成，正在选择下一题...", step=2)
                             ev = result.get("evaluation", {})
                             if ev:
                                 st.session_state["_last_eval"] = ev
