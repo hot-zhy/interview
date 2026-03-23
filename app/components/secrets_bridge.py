@@ -30,5 +30,29 @@ def bridge_secrets():
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"[secrets_bridge] auto_init_db: {e}")
+        return
+
+    # 3. Auto-load question bank if table is empty and data file exists
+    try:
+        from sqlalchemy.orm import Session as _Ses
+        from backend.db.base import SessionLocal
+        from backend.db.models import QuestionBank
+
+        db = SessionLocal()
+        try:
+            count = db.query(QuestionBank).count()
+            if count == 0:
+                xlsx = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    "data", "question.xlsx",
+                )
+                if os.path.exists(xlsx):
+                    from backend.services.question_bank_loader import import_questions_from_excel
+                    result = import_questions_from_excel(db, xlsx)
+                    print(f"[secrets_bridge] auto-loaded {result.total} questions ({result.created} new)")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[secrets_bridge] auto_load_questions: {e}")
 
 bridge_secrets()

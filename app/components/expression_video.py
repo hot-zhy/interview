@@ -97,6 +97,13 @@ def clear_accumulated_expressions():
 
 
 def render_expression_video(session_id: int):
+    # WebRTC P2P video requires TURN servers and a camera.
+    # On Streamlit Cloud there is no camera and no TURN; skip gracefully.
+    import os
+    if os.environ.get("DISABLE_WEBRTC", "").lower() in ("1", "true", "yes"):
+        st.caption("表情分析在云端部署中暂不可用（本地运行时可用）")
+        return
+
     fq = _ensure_frame_queue()
     _start_worker()
 
