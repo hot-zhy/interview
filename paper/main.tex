@@ -485,9 +485,9 @@ The follow-up generator $G(q_t, y_t, M_t^{\text{new}}, k)$ produces a targeted p
     \STATE \textbf{Step 3 (Validator):} Check schema compliance, score range $[0,1]$, required fields
     \IF{validation passes}
         \STATE Combine $S_{\text{rule}}$ and $S_{\text{llm}}$; extract $\eta$; provenance $\leftarrow$ hybrid
-    \ELSE
+\ELSE
         \STATE Fallback to $S_{\text{rule}}$; provenance $\leftarrow$ rule (validation failure)
-    \ENDIF
+\ENDIF
 \ELSE
     \STATE provenance $\leftarrow$ rule (LLM unavailable)
 \ENDIF

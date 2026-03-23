@@ -316,12 +316,7 @@ def submit_answer(
                 raise  # Re-raise if still can't find it
     
     db.flush()
-
-    # Save analysis thinking log as an interviewer turn (visible in chat)
-    analysis_turn = _build_analysis_turn(session_id, evaluation_result)
-    db.add(analysis_turn)
-    db.flush()
-
+    
     # Initialize adaptive engine
     adaptive_engine = AdaptiveInterviewEngine(db, session)
     
@@ -475,39 +470,6 @@ def end_interview(db: Session, session_id: int) -> Dict:
         "status": "completed",
         "message": "面试已结束，请查看报告页面。"
     }
-
-
-def _build_analysis_turn(session_id: int, evaluation_result: Dict) -> InterviewTurn:
-    """Build an interviewer turn containing the LLM analysis thinking log."""
-    scores = evaluation_result.get("scores", {})
-    overall = evaluation_result.get("overall_score", 0)
-    feedback = evaluation_result.get("feedback", "")
-    missing = evaluation_result.get("missing_points", [])
-    provenance = evaluation_result.get("_provenance", "hybrid")
-
-    dim_labels = {
-        "correctness": "正确性", "depth": "深度",
-        "clarity": "清晰度", "practicality": "实用性", "tradeoffs": "权衡"
-    }
-    dims_str = " | ".join(
-        f"{dim_labels.get(k, k)} {v:.0%}" for k, v in scores.items()
-        if k != "_provenance"
-    )
-    missing_str = "、".join(missing[:5]) if missing else "无"
-
-    content = (
-        f"📊 **AI 评估报告** [{provenance}]\n\n"
-        f"综合得分：**{overall:.0%}**\n"
-        f"分项：{dims_str}\n\n"
-        f"💬 {feedback[:300]}\n\n"
-        f"缺失知识点：{missing_str}"
-    )
-
-    return InterviewTurn(
-        session_id=session_id,
-        role="interviewer",
-        content=content,
-    )
 
 
 def _evaluate_answer_with_fallback(
