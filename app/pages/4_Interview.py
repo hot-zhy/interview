@@ -252,6 +252,40 @@ def main():
             st.info(t("interview.interview_ended"))
             return
 
+        # ── Pending analysis result (shown persistently after answer submission) ──
+        if st.session_state.get("_pending_result"):
+            _pr = st.session_state["_pending_result"]
+            ev = _pr.get("evaluation", {})
+            score = ev.get("overall_score", 0)
+            dims = ev.get("scores", {})
+            dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
+
+            st.markdown("---")
+            st.success(f"**AI 评估完成** — 综合得分 **{score:.0%}**")
+            if dims:
+                dcols = st.columns(5)
+                for i, (k, label) in enumerate(dim_labels.items()):
+                    dcols[i].metric(label, f"{dims.get(k, 0):.0%}")
+            fb = ev.get("feedback", "")
+            if fb:
+                st.info(fb[:400])
+            missing = ev.get("missing_points", [])
+            if missing:
+                st.caption("**缺失知识点:** " + " · ".join(missing[:5]))
+            if _pr.get("followup"):
+                st.warning(f"**AI 追问:** {_pr.get('interviewer_message', '')[:150]}")
+
+            if st.button("继续下一题 →", type="primary", use_container_width=True, key="continue_btn"):
+                st.session_state["_last_eval"] = ev
+                st.session_state["_last_was_followup"] = _pr.get("followup", False)
+                st.session_state["_last_followup_reason"] = _pr.get("followup_reason", "")
+                st.session_state["_pending_result"] = None
+                clear_accumulated_expressions()
+                st.session_state.avatar_state = "idle"
+                st.rerun()
+            return  # Don't show answer input while analysis is displayed
+
+        # ── Normal answer input ──
         answer_mode = st.radio(
             "", [t("interview.text_answer"), t("interview.voice_answer")],
             horizontal=True, key="answer_mode", label_visibility="collapsed",
@@ -265,31 +299,6 @@ def main():
             )
             if answer_text:
                 st.session_state.avatar_state = "listening"
-
-            # Show pending analysis result (persists across reruns)
-            if st.session_state.get("_pending_result"):
-                _pr = st.session_state["_pending_result"]
-                ev = _pr.get("evaluation", {})
-                score = ev.get("overall_score", 0)
-                dims = ev.get("scores", {})
-                dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
-                st.success(f"**AI 评估完成** — 综合得分 **{score:.0%}**")
-                if dims:
-                    dcols = st.columns(5)
-                    for i, (k, label) in enumerate(dim_labels.items()):
-                        dcols[i].metric(label, f"{dims.get(k, 0):.0%}")
-                fb = ev.get("feedback", "")
-                if fb:
-                    st.caption(fb[:300])
-                if st.button("继续下一题 →", type="primary", use_container_width=True):
-                    st.session_state["_last_eval"] = ev
-                    st.session_state["_last_was_followup"] = _pr.get("followup", False)
-                    st.session_state["_last_followup_reason"] = _pr.get("followup_reason", "")
-                    st.session_state["_pending_result"] = None
-                    clear_accumulated_expressions()
-                    st.session_state.avatar_state = "idle"
-                    st.rerun()
-                return  # Don't show input while analysis is displayed
 
             if st.button(t('interview.submit'), use_container_width=True, type="primary"):
                 if not answer_text or not answer_text.strip():
