@@ -4,10 +4,12 @@ from docx import Document
 from typing import Dict, Any, Optional
 import re
 
+_IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp')
+
 
 def parse_resume(file_path: str, filename: str) -> Dict[str, Any]:
     """
-    Parse resume from PDF or DOCX file.
+    Parse resume from PDF, DOCX, or image file.
     
     Returns structured information:
     {
@@ -20,15 +22,19 @@ def parse_resume(file_path: str, filename: str) -> Dict[str, Any]:
     """
     raw_text = ""
     
-    # Extract text based on file type
-    if filename.lower().endswith('.pdf'):
+    lower = filename.lower()
+    if lower.endswith('.pdf'):
         raw_text = extract_text_from_pdf(file_path)
-    elif filename.lower().endswith(('.docx', '.doc')):
+    elif lower.endswith(('.docx', '.doc')):
         raw_text = extract_text_from_docx(file_path)
+    elif lower.endswith(_IMAGE_EXTENSIONS):
+        raw_text = extract_text_from_image(file_path)
     else:
         raise ValueError(f"Unsupported file type: {filename}")
     
-    # Parse structured information
+    if not raw_text or not raw_text.strip():
+        raise ValueError("未能从文件中提取到文字内容，请确认文件清晰可读。")
+    
     parsed = {
         "education": extract_education(raw_text),
         "experience": extract_experience(raw_text),
@@ -38,6 +44,63 @@ def parse_resume(file_path: str, filename: str) -> Dict[str, Any]:
     }
     
     return parsed
+
+
+def extract_text_from_image(file_path: str) -> str:
+    """Extract text from an image file (resume screenshot / photo).
+
+    Strategy:
+    1. Try PyMuPDF (fitz) — convert image to single-page PDF, then extract text.
+       This works well for images that are scans of text-rich documents.
+    2. If PyMuPDF yields very little text, fall back to a simple keyword scan
+       of the raw OCR output (if pytesseract is available).
+    """
+    text = ""
+
+    # Approach 1: PyMuPDF (always available via requirements.txt)
+    try:
+        import fitz  # PyMuPDF
+        doc = fitz.open(file_path)
+        for page in doc:
+            text += page.get_text() or ""
+        doc.close()
+    except Exception:
+        pass
+
+    if text.strip():
+        return text
+
+    # Approach 2: If the image was opened as-is by fitz (raster), build a
+    # temporary single-page PDF from the image and try again.
+    try:
+        import fitz
+        img_doc = fitz.open()
+        img_page = img_doc.new_page(width=595, height=842)  # A4
+        rect = img_page.rect
+        img_page.insert_image(rect, filename=file_path)
+        pdf_bytes = img_doc.convert_to_pdf()
+        img_doc.close()
+
+        pdf_doc = fitz.open("pdf", pdf_bytes)
+        for page in pdf_doc:
+            text += page.get_text() or ""
+        pdf_doc.close()
+    except Exception:
+        pass
+
+    if text.strip():
+        return text
+
+    # Approach 3: pytesseract (optional dependency)
+    try:
+        from PIL import Image
+        import pytesseract
+        img = Image.open(file_path)
+        text = pytesseract.image_to_string(img, lang="chi_sim+eng")
+    except Exception:
+        pass
+
+    return text
 
 
 def extract_text_from_pdf(file_path: str) -> str:

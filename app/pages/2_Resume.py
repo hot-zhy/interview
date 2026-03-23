@@ -46,8 +46,8 @@ def main():
     st.subheader(t('resume.upload'))
     uploaded_file = st.file_uploader(
         t("resume.select_file"),
-        type=["pdf", "docx", "doc"],
-        help=t("resume.file_help")
+        type=["pdf", "docx", "doc", "png", "jpg", "jpeg", "bmp", "tiff", "webp"],
+        help="支持 PDF、DOCX、图片（PNG/JPG/BMP/TIFF/WebP）格式"
     )
     
     if uploaded_file is not None:
