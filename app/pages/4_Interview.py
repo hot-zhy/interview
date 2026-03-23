@@ -272,16 +272,38 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-                    with st.status("正在评估你的回答...", expanded=True) as status:
-                        st.write("🔍 分析回答内容...")
+                    with st.status("AI 面试官正在分析...", expanded=True) as status:
+                        import time as _ui_time
+                        _t0 = _ui_time.time()
+                        st.write("🔍 **Step 1/3** — LLM 正在评估你的回答...")
                         result = submit_answer(
                             db, session_id, answer_text.strip(),
                             answer_type="text", expression_data=expr_data,
                         )
+                        _t1 = _ui_time.time()
                         if "error" not in result:
-                            st.write("📊 计算自适应难度...")
-                            st.write("📋 选择下一个问题...")
-                            status.update(label="✅ 评估完成", state="complete")
+                            ev = result.get("evaluation", {})
+                            score = ev.get("overall_score", 0)
+                            prov = ev.get("_provenance", "hybrid")
+                            st.write(f"✅ 评估完成 ({_t1 - _t0:.1f}s) — 综合得分 **{score:.0%}** [{prov}]")
+                            # Show dimension scores inline
+                            dims = ev.get("scores", {})
+                            if dims:
+                                dim_parts = [f"{k[:3]}={v:.0%}" for k, v in dims.items()]
+                                st.caption(f"分项: {' | '.join(dim_parts)}")
+                            if result.get("followup"):
+                                st.write("🔄 **Step 2/3** — 检测到知识缺口，AI 生成追问...")
+                                st.write(f"💬 追问: _{result.get('interviewer_message', '')[:80]}_")
+                                status.update(label=f"✅ AI 追问已生成 ({_ui_time.time() - _t0:.1f}s)", state="complete")
+                            else:
+                                st.write("📊 **Step 2/3** — 自适应难度调整...")
+                                st.write("📋 **Step 3/3** — LLM 策略规划 → 选择下一题...")
+                                next_q = result.get("next_question", "")
+                                if next_q:
+                                    st.write(f"✅ 下一题已选定: _{next_q[:60]}..._")
+                                status.update(label=f"✅ 评估完成 ({_ui_time.time() - _t0:.1f}s)", state="complete")
+                        else:
+                            status.update(label="❌ 评估失败", state="error")
                     if "error" in result:
                         st.error(result["error"])
                     else:
@@ -292,6 +314,8 @@ def main():
                         st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
                         clear_accumulated_expressions()
                         st.session_state.avatar_state = "idle"
+                        import time as _delay
+                        _delay.sleep(1.5)  # Let user read the analysis before rerun
                         st.rerun()
         else:
             st.caption(t('interview.audio_tip'))
@@ -316,17 +340,28 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-                        with st.status("正在处理语音回答...", expanded=True) as status:
-                            st.write("🎤 识别语音内容...")
+                        with st.status("AI 面试官正在分析语音回答...", expanded=True) as status:
+                            import time as _ui_time
+                            _t0 = _ui_time.time()
+                            st.write("🎤 **Step 1/3** — 语音识别 + LLM 评估...")
                             result = submit_answer(
                                 db, session_id, answer_text=None,
                                 answer_type="audio", audio_data=audio_data,
                                 expression_data=expr_data,
                             )
+                            _t1 = _ui_time.time()
                             if "error" not in result:
-                                st.write("🔍 分析回答内容...")
-                                st.write("📋 选择下一个问题...")
-                                status.update(label="✅ 评估完成", state="complete")
+                                ev = result.get("evaluation", {})
+                                score = ev.get("overall_score", 0)
+                                st.write(f"✅ 评估完成 ({_t1 - _t0:.1f}s) — 综合得分 **{score:.0%}**")
+                                if result.get("followup"):
+                                    st.write("🔄 **Step 2/3** — AI 生成追问...")
+                                else:
+                                    st.write("📊 **Step 2/3** — 自适应难度调整...")
+                                    st.write("📋 **Step 3/3** — 选择下一题...")
+                                status.update(label=f"✅ 完成 ({_ui_time.time() - _t0:.1f}s)", state="complete")
+                            else:
+                                status.update(label="❌ 处理失败", state="error")
                         if "error" in result:
                             st.error(result["error"])
                         else:
@@ -338,6 +373,8 @@ def main():
                             clear_accumulated_expressions()
                             st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
                             st.session_state.avatar_state = "idle"
+                            import time as _delay
+                            _delay.sleep(1.5)
                             st.rerun()
             st.session_state.avatar_state = "listening"
 
