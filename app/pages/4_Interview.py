@@ -284,21 +284,17 @@ def main():
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
 
-                    # ── Streaming thinking display ──
+                    # ── Streaming thinking: character-by-character like ChatGPT ──
                     import time as _tt
-                    thinking_box = st.empty()
-                    _lines = []
 
-                    def _show(text):
-                        _lines.append(text)
-                        thinking_box.markdown(
-                            '<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;font-size:13px;border-left:3px solid #6366f1">'
-                            + "<br>".join(_lines) + '<br><span style="color:#6366f1">●●●</span></div>',
-                            unsafe_allow_html=True,
-                        )
-
-                    _show("🔍 正在评估你的回答...")
-                    _t0 = _tt.time()
+                    # Show "thinking..." indicator first
+                    stream_box = st.empty()
+                    stream_box.markdown(
+                        f'<div class="chat-role">{t("interview.interviewer")} · 思考中</div>'
+                        '<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;border-left:3px solid #6366f1">'
+                        '<span style="color:#6366f1">● ● ● 正在分析...</span></div>',
+                        unsafe_allow_html=True,
+                    )
 
                     result = submit_answer(
                         db, session_id, answer_text.strip(),
@@ -306,51 +302,54 @@ def main():
                     )
 
                     if "error" in result:
-                        thinking_box.empty()
+                        stream_box.empty()
                         st.error(result["error"])
                     else:
+                        # Build the full analysis text (same as what _build_analysis_turn saves to DB)
                         ev = result.get("evaluation", {})
                         score = ev.get("overall_score", 0)
                         dims = ev.get("scores", {})
                         fb = ev.get("feedback", "")
                         missing = ev.get("missing_points", [])
                         prov = ev.get("_provenance", "llm")
-                        elapsed = _tt.time() - _t0
 
-                        _show(f"✅ 评估完成 ({elapsed:.1f}s) [{prov}]")
-                        _tt.sleep(0.3)
-                        _show(f"📊 综合得分: <b>{score:.0%}</b>")
-                        if dims:
-                            dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
-                            parts = " | ".join(f"{dim_labels.get(k,k)} {v:.0%}" for k, v in dims.items() if k != "_provenance")
-                            _show(f"分项: {parts}")
-                        _tt.sleep(0.3)
-                        if fb:
-                            _show(f"💬 {fb[:200]}")
-                        if missing:
-                            _show(f"缺失: {'、'.join(missing[:4])}")
-                        _tt.sleep(0.3)
+                        dim_labels = {"correctness": "正确性", "depth": "深度", "clarity": "清晰度", "practicality": "实用性", "tradeoffs": "权衡"}
+                        dims_str = " | ".join(f"{dim_labels.get(k,k)} {v:.0%}" for k, v in dims.items() if k != "_provenance")
+                        missing_str = "、".join(missing[:5]) if missing else "无"
 
-                        if result.get("followup"):
-                            _show(f"🔄 AI 追问: {result.get('interviewer_message', '')[:100]}")
-                        else:
-                            _show("📋 正在选择下一题...")
-                            nq = result.get("next_question", "")
-                            if nq:
-                                _show(f"下一题: {nq[:60]}...")
+                        full_text = (
+                            f"📊 AI 评估报告 [{prov}]\n\n"
+                            f"综合得分：{score:.0%}\n"
+                            f"分项：{dims_str}\n\n"
+                            f"💬 {fb[:300]}\n\n"
+                            f"缺失知识点：{missing_str}"
+                        )
 
-                        # Remove streaming dots, show final state
-                        thinking_box.markdown(
-                            '<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;font-size:13px;border-left:3px solid #6366f1">'
-                            + "<br>".join(_lines) + '</div>',
+                        # Stream character by character
+                        displayed = ""
+                        for char in full_text:
+                            displayed += char
+                            stream_box.markdown(
+                                f'<div class="chat-role">{t("interview.interviewer")} · 评估</div>'
+                                f'<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;font-size:13px;border-left:3px solid #6366f1;white-space:pre-wrap">'
+                                f'{displayed}<span style="color:#6366f1">▌</span></div>',
+                                unsafe_allow_html=True,
+                            )
+                            _tt.sleep(0.015)
+
+                        # Final state (remove cursor)
+                        stream_box.markdown(
+                            f'<div class="chat-role">{t("interview.interviewer")} · 评估</div>'
+                            f'<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff,#e8ecff);color:#334155;font-size:13px;border-left:3px solid #6366f1;white-space:pre-wrap">'
+                            f'{full_text}</div>',
                             unsafe_allow_html=True,
                         )
-                        _tt.sleep(1.5)
+                        _tt.sleep(1.0)
 
                         st.session_state["_last_was_followup"] = result.get("followup", False)
                         clear_accumulated_expressions()
                         st.session_state.avatar_state = "idle"
-                        st.rerun()
+                        st.rerun()  # Analysis is already saved in DB as InterviewTurn, will show in chat
         else:
             st.caption(t('interview.audio_tip'))
             wav_audio_data = st_audiorec()
