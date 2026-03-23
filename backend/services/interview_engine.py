@@ -7,6 +7,7 @@ from backend.db.models import (
     InterviewSession, InterviewTurn, AskedQuestion, Evaluation,
     QuestionBank, Resume
 )
+from backend.core.config import settings
 from backend.services.question_selector import select_question, adjust_difficulty
 from backend.services.evaluator_rules import evaluate_answer
 from backend.services.llm_provider import evaluate_with_llm, generate_followup_with_llm
@@ -178,8 +179,7 @@ def submit_answer(
             - {"analyses": [...]}: real-time video mode, pre-computed analyses from video stream
     """
     # --- Agentic controller gate (feature flag) ---
-    from backend.core.config import settings as _cfg
-    if getattr(_cfg, "enable_agent_controller", False):
+    if getattr(settings, "enable_agent_controller", False):
         return _submit_answer_agentic(
             db, session_id, answer_text, answer_type, audio_data, expression_data
         )
