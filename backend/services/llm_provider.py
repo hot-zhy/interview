@@ -49,7 +49,9 @@ def evaluate_with_llm(
                 use_cot=use_cot,
             )
         except Exception as e:
-            print(f"ZhipuAI evaluation failed: {e}")
+            import traceback
+            print(f"[LLM eval] ZhipuAI evaluation failed: {e}")
+            traceback.print_exc()
     
     return None
 

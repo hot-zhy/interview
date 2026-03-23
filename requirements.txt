@@ -28,6 +28,7 @@ plotly>=5.18.0
 
 # LLM (optional)
 zhipuai>=2.0.0
+sniffio>=1.3.0
 
 # Facial expression recognition (optional, graceful fallback if missing)
 # deepface>=0.0.93

@@ -477,19 +477,28 @@ def _evaluate_answer_with_fallback(
     correct_answer: str,
     user_answer: str
 ) -> Dict:
-    """Evaluate answer with LLM fallback to rules."""
-    # Try LLM first
-    llm_result = evaluate_with_llm(question, correct_answer, user_answer)
-    
-    if llm_result:
-        # Retry once if validation fails
-        try:
+    """Evaluate answer: LLM primary (semantic understanding), rules as fallback."""
+    # Short/garbage answers — fast reject without LLM cost
+    if len((user_answer or "").strip()) < 10:
+        return evaluate_answer(question, correct_answer, user_answer)
+
+    # Try LLM first (understands semantics, gives fair partial credit)
+    try:
+        llm_result = evaluate_with_llm(question, correct_answer, user_answer)
+        if llm_result:
+            llm_result["_provenance"] = "llm"
+            print(f"[eval] LLM scored: {llm_result.get('overall_score', 0):.2f}")
             return llm_result
-        except Exception as e:
-            print(f"LLM evaluation failed, retrying with rules: {e}")
-    
+        else:
+            print("[eval] LLM returned None, falling back to rules")
+    except Exception as e:
+        print(f"[eval] LLM evaluation error: {e}, falling back to rules")
+
     # Fallback to rules
-    return evaluate_answer(question, correct_answer, user_answer)
+    rule_result = evaluate_answer(question, correct_answer, user_answer)
+    rule_result["_provenance"] = "rule"
+    print(f"[eval] Rule scored: {rule_result.get('overall_score', 0):.2f}")
+    return rule_result
 
 
 def _generate_followup(
