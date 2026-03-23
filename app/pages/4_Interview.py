@@ -6,7 +6,7 @@ from app.components.secrets_bridge import bridge_secrets; bridge_secrets()
 
 import streamlit as st
 from backend.db.base import get_db
-from backend.db.models import InterviewSession, Resume
+from backend.db.models import InterviewSession, Resume, AskedQuestion
 from backend.services.interview_engine import (
     create_session, start_interview, submit_answer, get_session_turns
 )
