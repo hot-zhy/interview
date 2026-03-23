@@ -276,13 +276,14 @@ def main():
                 st.warning(f"**AI 追问:** {_pr.get('interviewer_message', '')[:150]}")
 
             if st.button("继续下一题 →", type="primary", use_container_width=True, key="continue_btn"):
-                st.session_state["_last_eval"] = ev
-                st.session_state["_last_was_followup"] = _pr.get("followup", False)
-                st.session_state["_last_followup_reason"] = _pr.get("followup_reason", "")
-                st.session_state["_pending_result"] = None
-                clear_accumulated_expressions()
-                st.session_state.avatar_state = "idle"
-                st.rerun()
+                with st.spinner("正在加载下一题..."):
+                    st.session_state["_last_eval"] = ev
+                    st.session_state["_last_was_followup"] = _pr.get("followup", False)
+                    st.session_state["_last_followup_reason"] = _pr.get("followup_reason", "")
+                    st.session_state["_pending_result"] = None
+                    clear_accumulated_expressions()
+                    st.session_state.avatar_state = "idle"
+                    st.rerun()
             return  # Don't show answer input while analysis is displayed
 
         # ── Normal answer input ──
@@ -306,32 +307,49 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-                    with st.status("AI 面试官正在分析...", expanded=True) as status:
-                        import time as _ui_time
-                        _t0 = _ui_time.time()
-                        st.write("🔍 **Step 1** — LLM 正在评估你的回答...")
-                        result = submit_answer(
-                            db, session_id, answer_text.strip(),
-                            answer_type="text", expression_data=expr_data,
-                        )
-                        _t1 = _ui_time.time()
-                        if "error" not in result:
-                            ev = result.get("evaluation", {})
-                            score = ev.get("overall_score", 0)
-                            st.write(f"✅ 评估完成 ({_t1 - _t0:.1f}s) — 综合得分 **{score:.0%}**")
-                            if result.get("followup"):
-                                st.write("🔄 **Step 2** — 检测到知识缺口，AI 生成追问")
+
+                    # ── Live analysis display (stays visible, no rerun) ──
+                    import time as _ui_time
+                    analysis_container = st.container()
+
+                    with analysis_container:
+                        with st.status("AI 面试官正在分析...", expanded=True) as status:
+                            _t0 = _ui_time.time()
+                            st.write("🔍 **Step 1** — 提交回答，LLM 正在评估...")
+                            result = submit_answer(
+                                db, session_id, answer_text.strip(),
+                                answer_type="text", expression_data=expr_data,
+                            )
+                            _t1 = _ui_time.time()
+
+                            if "error" not in result:
+                                ev = result.get("evaluation", {})
+                                score = ev.get("overall_score", 0)
+                                dims = ev.get("scores", {})
+                                st.write(f"✅ 评估完成 ({_t1 - _t0:.1f}s)")
+                                st.write(f"**综合得分: {score:.0%}**")
+                                if dims:
+                                    parts = " | ".join(f"{k[:4]}={v:.0%}" for k, v in dims.items())
+                                    st.write(f"分项: {parts}")
+                                fb = ev.get("feedback", "")
+                                if fb:
+                                    st.write(f"💬 {fb[:200]}")
+                                if result.get("followup"):
+                                    st.write(f"🔄 **Step 2** — AI 追问: _{result.get('interviewer_message', '')[:100]}_")
+                                else:
+                                    st.write("📊 **Step 2** — 自适应难度调整，选择下一题...")
+                                    nq = result.get("next_question", "")
+                                    if nq:
+                                        st.write(f"📋 下一题: _{nq[:80]}_")
+                                status.update(label=f"✅ 分析完成 ({_t1 - _t0:.1f}s)", state="complete")
                             else:
-                                st.write("📊 **Step 2** — 自适应难度调整 + 选择下一题")
-                            status.update(label=f"✅ 分析完成 ({_t1 - _t0:.1f}s)", state="complete")
-                        else:
-                            status.update(label="❌ 评估失败", state="error")
+                                status.update(label="❌ 评估失败", state="error")
+
                     if "error" in result:
                         st.error(result["error"])
                     else:
-                        # Store result and rerun to show it persistently
+                        # Store and show persistent result card below
                         st.session_state["_pending_result"] = result
-                        st.rerun()
         else:
             st.caption(t('interview.audio_tip'))
             wav_audio_data = st_audiorec()
@@ -378,7 +396,6 @@ def main():
                         else:
                             st.session_state["_pending_result"] = result
                             st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
-                            st.rerun()
             st.session_state.avatar_state = "listening"
 
     # Show last evaluation feedback (if available)
