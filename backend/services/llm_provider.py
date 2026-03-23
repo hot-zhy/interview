@@ -64,6 +64,9 @@ def _evaluate_with_zhipuai(
     temperature: float = 0.3,
 ) -> Dict:
     """Evaluate using ZhipuAI GLM-4-Flash API."""
+    import time as _t
+    _start = _t.time()
+    print(f"[LLM evaluate] calling {settings.zhipuai_model} (cot={use_cot})...")
     try:
         import zhipuai
         client = zhipuai.ZhipuAI(api_key=settings.zhipuai_api_key)
@@ -119,6 +122,7 @@ def _evaluate_with_zhipuai(
         )
         
         result_text = response.choices[0].message.content.strip()
+        print(f"[LLM evaluate] response received in {_t.time() - _start:.1f}s")
         
         # Remove markdown code blocks if present
         if result_text.startswith("```json"):
@@ -139,6 +143,7 @@ def _evaluate_with_zhipuai(
         # Validate with Pydantic
         try:
             validated = EvaluationOutput(**result_dict)
+            print(f"[LLM evaluate] score={validated.overall_score:.2f}, dims={validated.scores.model_dump()}")
             return {
                 "scores": validated.scores.model_dump(),
                 "overall_score": validated.overall_score,
@@ -148,9 +153,11 @@ def _evaluate_with_zhipuai(
                 "reasoning": validated.reasoning,
             }
         except ValidationError as e:
+            print(f"[LLM evaluate] validation failed: {e}")
             raise ValueError(f"LLM output validation failed: {e}")
             
     except Exception as e:
+        print(f"[LLM evaluate] error: {e}")
         raise Exception(f"ZhipuAI API error: {str(e)}")
 
 
@@ -246,9 +253,13 @@ def generate_followup_with_llm(
         追问内容，或 None（LLM 不可用时）
     """
     if not settings.zhipuai_api_key:
+        print("[LLM followup] skipped — no API key")
         return None
     
     try:
+        import time as _t
+        _start = _t.time()
+        print(f"[LLM followup] calling {settings.zhipuai_model}...")
         import zhipuai
         client = zhipuai.ZhipuAI(api_key=settings.zhipuai_api_key)
         
@@ -289,20 +300,26 @@ def generate_followup_with_llm(
         )
         
         content = response.choices[0].message.content.strip()
-        if content and len(content) < 200:  # 避免过长
+        print(f"[LLM followup] done in {_t.time() - _start:.1f}s — '{content[:60]}...'")
+        if content and len(content) < 200:
             return content
         return None
-    except Exception:
+    except Exception as e:
+        print(f"[LLM followup] error: {e}")
         return None
 
 
-def _call_zhipuai(system: str, user_content: str, temperature: float = 0.5) -> Optional[str]:
+def _call_zhipuai(system: str, user_content: str, temperature: float = 0.5, label: str = "generic") -> Optional[str]:
     """通用智谱 API 调用，返回 content 或 None。"""
     if not settings.zhipuai_api_key:
+        print(f"[LLM {label}] skipped — no API key")
         return None
     try:
+        import time as _t
+        _start = _t.time()
         import zhipuai
         client = zhipuai.ZhipuAI(api_key=settings.zhipuai_api_key)
+        print(f"[LLM {label}] calling {settings.zhipuai_model}...")
         response = client.chat.completions.create(
             model=settings.zhipuai_model,
             messages=[
@@ -311,8 +328,12 @@ def _call_zhipuai(system: str, user_content: str, temperature: float = 0.5) -> O
             ],
             temperature=temperature
         )
-        return response.choices[0].message.content.strip() or None
-    except Exception:
+        content = response.choices[0].message.content.strip() or None
+        elapsed = _t.time() - _start
+        print(f"[LLM {label}] done in {elapsed:.1f}s — {len(content or '')} chars")
+        return content
+    except Exception as e:
+        print(f"[LLM {label}] error: {e}")
         return None
 
 
@@ -336,7 +357,7 @@ def generate_report_summary_llm(
 缺失知识点：{', '.join(missing_knowledge[:5]) if missing_knowledge else '无'}。
 
 请输出一句简洁的总结，不要加引号或前缀："""
-    return _call_zhipuai(system, user, temperature=0.4)
+    return _call_zhipuai(system, user, temperature=0.4, label="report_summary")
 
 
 def generate_strengths_weaknesses_llm(
@@ -354,7 +375,7 @@ def generate_strengths_weaknesses_llm(
     scores_str = ", ".join(f"{k}:{v:.2f}" for k, v in avg_scores.items())
     missing_str = ", ".join(missing_knowledge[:5]) if missing_knowledge else "无"
     user = f"分项得分：{scores_str}。缺失点：{missing_str}。"
-    content = _call_zhipuai(system, user, temperature=0.3)
+    content = _call_zhipuai(system, user, temperature=0.3, label="strengths_weaknesses")
     if not content:
         return None
     try:
@@ -387,7 +408,7 @@ def generate_learning_plan_llm(
     missing_str = "；".join(missing_knowledge[:8])
     weak_str = "；".join(weaknesses[:3]) if weaknesses else ""
     user = f"面试方向：{track}。缺失知识点：{missing_str}。待改进：{weak_str}。"
-    content = _call_zhipuai(system, user, temperature=0.4)
+    content = _call_zhipuai(system, user, temperature=0.4, label="learning_plan")
     if not content:
         return None
     lines = [ln.strip() for ln in content.split("\n") if ln.strip()][:6]
@@ -408,7 +429,7 @@ def generate_speech_recommendations_llm(
 紧张度：{speech_summary.get('average_nervousness', 0)}；
 停顿频率：{speech_summary.get('average_pause_frequency', 0)}次/分；
 紧张度趋势：{speech_summary.get('nervousness_trend', 'stable')}。"""
-    content = _call_zhipuai(system, user, temperature=0.3)
+    content = _call_zhipuai(system, user, temperature=0.3, label="speech_recommendations")
     if not content:
         return None
     lines = [ln.strip() for ln in content.split("\n") if ln.strip()][:3]
@@ -426,7 +447,7 @@ def generate_question_rationale_llm(
     system = "你是面试辅导专家。用一句话说明为何推荐这道题，20字以内。直接输出，不要引号。"
     missing_str = "、".join(missing_knowledge[:3]) if missing_knowledge else "巩固"
     user = f"题目：{question_text[:100]}...。章节：{chapter}。候选人需加强：{missing_str}。"
-    return _call_zhipuai(system, user, temperature=0.3)
+    return _call_zhipuai(system, user, temperature=0.3, label="question_rationale")
 
 
 # ======================================================================
@@ -467,7 +488,7 @@ def suggest_next_topic_llm(
 2. 与简历技能相关但还未验证的领域
 3. 覆盖度不足的重要领域"""
 
-    content = _call_zhipuai(system, user, temperature=0.3)
+    content = _call_zhipuai(system, user, temperature=0.3, label="topic_planner")
     if not content:
         return None
     try:
@@ -519,7 +540,7 @@ def generate_followup_with_context(
 - 语气自然专业，30字以内
 - 如果候选人对某概念有误解，设计能暴露误解的追问"""
 
-    return _call_zhipuai(system, user, temperature=0.5)
+    return _call_zhipuai(system, user, temperature=0.5, label="followup_context")
 
 
 def generate_resume_question_llm(
@@ -566,7 +587,7 @@ def generate_resume_question_llm(
 - 难度要匹配{diff_desc}水平
 - 题目30-80字，参考答案100-200字，覆盖3-5个关键知识点"""
 
-    content = _call_zhipuai(system, user, temperature=0.5)
+    content = _call_zhipuai(system, user, temperature=0.5, label="resume_question")
     if not content:
         return None
     try:
@@ -634,7 +655,7 @@ def generate_deep_report_analysis(
     # Step 1: Overall narrative summary
     s1 = _call_zhipuai(
         "你是资深面试评估专家。根据完整面试数据写一段个性化综合评估（100-150字），分析候选人的技术能力特点、表现趋势和关键亮点/不足。不要泛泛而谈，要结合具体的答题表现。",
-        base_context, temperature=0.4
+        base_context, temperature=0.4, label="report_step1_summary"
     )
     result["overall_summary"] = s1
 
@@ -644,7 +665,7 @@ def generate_deep_report_analysis(
 输出格式（严格JSON）：
 {"correctness": "分析...", "depth": "分析...", "clarity": "分析...", "practicality": "分析...", "tradeoffs": "分析..."}
 每个维度30-50字，引用具体题目表现。只输出JSON。""",
-        base_context, temperature=0.3
+        base_context, temperature=0.3, label="report_step2_dimensions"
     )
     if dim_analysis:
         try:
@@ -658,7 +679,7 @@ def generate_deep_report_analysis(
     # Step 3: Knowledge gap root-cause analysis
     s3 = _call_zhipuai(
         "你是技术能力诊断专家。分析候选人知识缺口的根本原因和关联性，不要简单列举缺失点，而是找出底层能力短板。80-120字。",
-        base_context, temperature=0.4
+        base_context, temperature=0.4, label="report_step3_gaps"
     )
     result["gap_analysis"] = s3
 
@@ -667,7 +688,7 @@ def generate_deep_report_analysis(
         """你是技术学习规划师。根据面试暴露的具体问题，制定个性化学习计划。
 要求：5-8条，每条包含具体学习内容和建议资源/方法，20-40字。
 格式：每行一条，不要编号。""",
-        base_context, temperature=0.4
+        base_context, temperature=0.4, label="report_step4_learning"
     )
     if plan:
         result["learning_plan"] = [ln.strip() for ln in plan.split("\n") if ln.strip()][:8]
@@ -679,7 +700,7 @@ def generate_deep_report_analysis(
 - 为什么选择了这些章节（轨迹：{ch_str}）
 - 面试节奏和终止时机是否合理
 用80-120字概述系统策略，让候选人理解AI面试官的出题逻辑。""",
-        base_context, temperature=0.4
+        base_context, temperature=0.4, label="report_step5_strategy"
     )
     result["strategy_trace"] = s5
 
