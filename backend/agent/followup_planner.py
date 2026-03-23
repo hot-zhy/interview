@@ -45,12 +45,15 @@ class FollowUpPlanner:
         should = False
         reason = ""
 
-        if evaluation_score < 0.6 and len(missing_points) > 0:
+        if len(missing_points) < 2:
+            return FollowUpPlan(should_followup=False, reason="insufficient gaps for follow-up")
+
+        if evaluation_score < 0.45 and followup_count < 1:
             should = True
-            reason = "low score with missing concepts"
-        elif 0.6 <= evaluation_score < 0.7 and len(missing_points) > 0 and followup_count < 1:
+            reason = "low score with substantial knowledge gaps"
+        elif 0.45 <= evaluation_score < 0.6 and followup_count < 1:
             should = True
-            reason = "moderate score, first follow-up for deeper probing"
+            reason = "moderate score, first follow-up to confirm understanding"
 
         if not should:
             return FollowUpPlan(should_followup=False, reason="score adequate or no gaps")

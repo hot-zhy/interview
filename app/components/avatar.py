@@ -103,13 +103,20 @@ def render_avatar(state: str = "idle", text_to_speak: str = ""):
                 }}
                 
                 if (text && text.length > 0 && 'speechSynthesis' in window) {{
+                    // Cancel any previous speech before starting new
+                    window.speechSynthesis.cancel();
                     showVideo();
-                    var u = new SpeechSynthesisUtterance(text);
-                    u.lang = 'zh-CN';
-                    u.rate = 0.9;
-                    u.onend = u.onerror = function() {{ showPoster(); }};
-                    window.speechSynthesis.speak(u);
+                    // Small delay to let cancel take effect
+                    setTimeout(function() {{
+                        var u = new SpeechSynthesisUtterance(text);
+                        u.lang = 'zh-CN';
+                        u.rate = 0.9;
+                        u.onend = u.onerror = function() {{ showPoster(); }};
+                        window.speechSynthesis.speak(u);
+                    }}, 100);
                 }} else {{
+                    // Cancel leftover speech from previous renders
+                    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
                     showPoster();
                 }}
             }})();

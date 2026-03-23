@@ -62,18 +62,21 @@ class AdaptiveInterviewEngine:
         
         if followup_count >= self.followup_limit:
             return False, f"已达到追问上限（{self.followup_limit}次）"
-        
-        # 如果分数太低且有缺失点，可以追问
-        if evaluation_score < 0.6 and len(missing_points) > 0:
-            # 检查是否已经问过相同的问题
+
+        # Only follow up when there are meaningful missing points (at least 2)
+        if len(missing_points) < 2:
+            return False, "缺失点不足，无需追问"
+
+        # Low score with substantial gaps — follow up to probe deeper
+        if evaluation_score < 0.45 and followup_count < 1:
             if self._has_similar_followup(asked_question_id, missing_points[0]):
                 return False, "已问过类似问题"
-            return True, "分数较低且有缺失点，适合追问"
-        
-        # 如果分数在0.6-0.7之间，有缺失点，且追问次数<1，可以追问一次
-        if 0.6 <= evaluation_score < 0.7 and len(missing_points) > 0 and followup_count < 1:
-            return True, "分数中等，首次追问以深入了解"
-        
+            return True, "分数较低且有明显知识缺口，追问以深入了解"
+
+        # Moderate score with gaps — follow up only on first attempt
+        if 0.45 <= evaluation_score < 0.6 and followup_count < 1:
+            return True, "分数中等，首次追问以确认理解深度"
+
         return False, "分数达标或无需追问"
     
     def should_end_interview(self) -> Tuple[bool, str]:
