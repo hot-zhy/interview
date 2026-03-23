@@ -96,20 +96,48 @@ def clear_accumulated_expressions():
     st.session_state[SESSION_KEY] = []
 
 
-def render_expression_video(session_id: int):
-    # WebRTC P2P video needs TURN servers + camera — unavailable on cloud.
-    import os
-    _disabled = os.environ.get("DISABLE_WEBRTC", "").lower() in ("1", "true", "yes")
-    if not _disabled:
-        try:
-            _val = st.secrets.get("DISABLE_WEBRTC", "")
-            _disabled = str(_val).lower() in ("1", "true", "yes")
-        except Exception:
-            pass
-    if _disabled:
-        st.caption("表情分析在云端部署中暂不可用（本地运行时可用）")
-        return
+def _build_ice_config() -> dict:
+    """Build RTC configuration with STUN + optional TURN servers.
 
+    TURN is required on Streamlit Cloud (both sides behind NAT).
+    Set these in Streamlit Secrets or .env:
+        TURN_URL      = "turn:a]turn.metered.ca:443?transport=tcp"
+        TURN_USERNAME = "your_username"
+        TURN_PASSWORD = "your_credential"
+    Free TURN credentials: https://www.metered.ca/stun-turn (500 MB/month free)
+    """
+    import os
+
+    ice_servers = [{"urls": ["stun:stun.l.google.com:19302"]}]
+
+    turn_url = ""
+    turn_user = ""
+    turn_pass = ""
+
+    # Try st.secrets first, then env vars
+    try:
+        turn_url = st.secrets.get("TURN_URL", "")
+        turn_user = st.secrets.get("TURN_USERNAME", "")
+        turn_pass = st.secrets.get("TURN_PASSWORD", "")
+    except Exception:
+        pass
+
+    if not turn_url:
+        turn_url = os.environ.get("TURN_URL", "")
+        turn_user = os.environ.get("TURN_USERNAME", "")
+        turn_pass = os.environ.get("TURN_PASSWORD", "")
+
+    if turn_url:
+        ice_servers.append({
+            "urls": [turn_url],
+            "username": turn_user,
+            "credential": turn_pass,
+        })
+
+    return {"iceServers": ice_servers}
+
+
+def render_expression_video(session_id: int):
     fq = _ensure_frame_queue()
     _start_worker()
 
@@ -143,11 +171,12 @@ def render_expression_video(session_id: int):
 
     from app.i18n import t
     st.caption(t("interview.expression_caption"))
+    rtc_config = _build_ice_config()
     ctx = webrtc_streamer(
         key=f"expression_video_{session_id}",
         video_frame_callback=video_frame_callback,
         media_stream_constraints={"video": True, "audio": False},
-        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+        rtc_configuration=rtc_config,
     )
 
     _sync_to_session_state()
