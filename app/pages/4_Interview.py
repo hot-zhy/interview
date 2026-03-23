@@ -91,16 +91,26 @@ def _inject_interview_styles():
 def _render_chat_bubbles(turns):
     """Render chat history as styled bubbles."""
     for turn in turns:
+        content = turn["content"]
         if turn["role"] == "interviewer":
-            st.markdown(
-                f'<div class="chat-role">{t("interview.interviewer")}</div>'
-                f'<div class="chat-bubble interviewer">{turn["content"]}</div>',
-                unsafe_allow_html=True,
-            )
+            # Detect analysis turns (thinking log)
+            if content.startswith("📊 **AI 评估报告**"):
+                st.markdown(
+                    f'<div class="chat-role">{t("interview.interviewer")} · 评估</div>'
+                    f'<div class="chat-bubble interviewer" style="background:linear-gradient(135deg,#f0f4ff 0%,#e8ecff 100%);color:#334155;font-size:13px;border-left:3px solid #6366f1">'
+                    f'{content}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="chat-role">{t("interview.interviewer")}</div>'
+                    f'<div class="chat-bubble interviewer">{content}</div>',
+                    unsafe_allow_html=True,
+                )
         else:
             st.markdown(
                 f'<div class="chat-role right">You</div>'
-                f'<div class="chat-bubble candidate">{turn["content"]}</div>',
+                f'<div class="chat-bubble candidate">{content}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -252,41 +262,7 @@ def main():
             st.info(t("interview.interview_ended"))
             return
 
-        # ── Pending analysis result (shown persistently after answer submission) ──
-        if st.session_state.get("_pending_result"):
-            _pr = st.session_state["_pending_result"]
-            ev = _pr.get("evaluation", {})
-            score = ev.get("overall_score", 0)
-            dims = ev.get("scores", {})
-            dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
-
-            st.markdown("---")
-            st.success(f"**AI 评估完成** — 综合得分 **{score:.0%}**")
-            if dims:
-                dcols = st.columns(5)
-                for i, (k, label) in enumerate(dim_labels.items()):
-                    dcols[i].metric(label, f"{dims.get(k, 0):.0%}")
-            fb = ev.get("feedback", "")
-            if fb:
-                st.info(fb[:400])
-            missing = ev.get("missing_points", [])
-            if missing:
-                st.caption("**缺失知识点:** " + " · ".join(missing[:5]))
-            if _pr.get("followup"):
-                st.warning(f"**AI 追问:** {_pr.get('interviewer_message', '')[:150]}")
-
-            if st.button("继续下一题 →", type="primary", use_container_width=True, key="continue_btn"):
-                with st.spinner("正在加载下一题..."):
-                    st.session_state["_last_eval"] = ev
-                    st.session_state["_last_was_followup"] = _pr.get("followup", False)
-                    st.session_state["_last_followup_reason"] = _pr.get("followup_reason", "")
-                    st.session_state["_pending_result"] = None
-                    clear_accumulated_expressions()
-                    st.session_state.avatar_state = "idle"
-                    st.rerun()
-            return  # Don't show answer input while analysis is displayed
-
-        # ── Normal answer input ──
+        # ── Answer input ──
         answer_mode = st.radio(
             "", [t("interview.text_answer"), t("interview.voice_answer")],
             horizontal=True, key="answer_mode", label_visibility="collapsed",
@@ -307,49 +283,21 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-
-                    # ── Live analysis display (stays visible, no rerun) ──
-                    import time as _ui_time
-                    analysis_container = st.container()
-
-                    with analysis_container:
-                        with st.status("AI 面试官正在分析...", expanded=True) as status:
-                            _t0 = _ui_time.time()
-                            st.write("🔍 **Step 1** — 提交回答，LLM 正在评估...")
-                            result = submit_answer(
-                                db, session_id, answer_text.strip(),
-                                answer_type="text", expression_data=expr_data,
-                            )
-                            _t1 = _ui_time.time()
-
-                            if "error" not in result:
-                                ev = result.get("evaluation", {})
-                                score = ev.get("overall_score", 0)
-                                dims = ev.get("scores", {})
-                                st.write(f"✅ 评估完成 ({_t1 - _t0:.1f}s)")
-                                st.write(f"**综合得分: {score:.0%}**")
-                                if dims:
-                                    parts = " | ".join(f"{k[:4]}={v:.0%}" for k, v in dims.items())
-                                    st.write(f"分项: {parts}")
-                                fb = ev.get("feedback", "")
-                                if fb:
-                                    st.write(f"💬 {fb[:200]}")
-                                if result.get("followup"):
-                                    st.write(f"🔄 **Step 2** — AI 追问: _{result.get('interviewer_message', '')[:100]}_")
-                                else:
-                                    st.write("📊 **Step 2** — 自适应难度调整，选择下一题...")
-                                    nq = result.get("next_question", "")
-                                    if nq:
-                                        st.write(f"📋 下一题: _{nq[:80]}_")
-                                status.update(label=f"✅ 分析完成 ({_t1 - _t0:.1f}s)", state="complete")
-                            else:
-                                status.update(label="❌ 评估失败", state="error")
-
+                    with st.spinner("AI 面试官正在分析你的回答..."):
+                        result = submit_answer(
+                            db, session_id, answer_text.strip(),
+                            answer_type="text", expression_data=expr_data,
+                        )
                     if "error" in result:
                         st.error(result["error"])
                     else:
-                        # Store and show persistent result card below
-                        st.session_state["_pending_result"] = result
+                        ev = result.get("evaluation", {})
+                        if ev:
+                            st.session_state["_last_eval"] = ev
+                        st.session_state["_last_was_followup"] = result.get("followup", False)
+                        clear_accumulated_expressions()
+                        st.session_state.avatar_state = "idle"
+                        st.rerun()
         else:
             st.caption(t('interview.audio_tip'))
             wav_audio_data = st_audiorec()
@@ -373,51 +321,23 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-                        with st.status("AI 面试官正在分析语音回答...", expanded=True) as status:
-                            import time as _ui_time
-                            _t0 = _ui_time.time()
-                            st.write("🎤 **Step 1** — 语音识别 + LLM 评估...")
+                        with st.spinner("AI 面试官正在分析语音回答..."):
                             result = submit_answer(
                                 db, session_id, answer_text=None,
                                 answer_type="audio", audio_data=audio_data,
                                 expression_data=expr_data,
                             )
-                            _t1 = _ui_time.time()
-                            if "error" not in result:
-                                ev = result.get("evaluation", {})
-                                score = ev.get("overall_score", 0)
-                                st.write(f"✅ 评估完成 ({_t1 - _t0:.1f}s) — 综合得分 **{score:.0%}**")
-                                st.write("📊 **Step 2** — 自适应调整 + 选题")
-                                status.update(label=f"✅ 完成 ({_t1 - _t0:.1f}s)", state="complete")
-                            else:
-                                status.update(label="❌ 处理失败", state="error")
                         if "error" in result:
                             st.error(result["error"])
                         else:
-                            st.session_state["_pending_result"] = result
+                            ev = result.get("evaluation", {})
+                            if ev:
+                                st.session_state["_last_eval"] = ev
+                            clear_accumulated_expressions()
                             st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
+                            st.session_state.avatar_state = "idle"
+                            st.rerun()
             st.session_state.avatar_state = "listening"
-
-    # Show last evaluation feedback (if available)
-    last_eval = st.session_state.get("_last_eval")
-    if last_eval and session.status == "active":
-        with col_main:
-            with st.expander("📊 上一题评估反馈", expanded=False):
-                score = last_eval.get("overall_score", 0)
-                cols = st.columns(6)
-                cols[0].metric("综合", f"{score:.0%}")
-                for i, (dim, label) in enumerate([
-                    ("correctness", "正确"), ("depth", "深度"), ("clarity", "清晰"),
-                    ("practicality", "实用"), ("tradeoffs", "权衡")
-                ]):
-                    val = last_eval.get("scores", {}).get(dim, 0)
-                    cols[i + 1].metric(label, f"{val:.0%}")
-                fb = last_eval.get("feedback", "")
-                if fb:
-                    st.caption(fb[:200])
-                missing = last_eval.get("missing_points", [])
-                if missing:
-                    st.caption("缺失点: " + " · ".join(missing[:3]))
 
     # Sidebar info with adaptive difficulty
     current_difficulty = session.level
