@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from app.components.secrets_bridge import bridge_secrets; bridge_secrets()
 
 import streamlit as st
 import pandas as pd
