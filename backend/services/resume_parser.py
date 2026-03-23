@@ -49,58 +49,88 @@ def parse_resume(file_path: str, filename: str) -> Dict[str, Any]:
 def extract_text_from_image(file_path: str) -> str:
     """Extract text from an image file (resume screenshot / photo).
 
-    Strategy:
-    1. Try PyMuPDF (fitz) — convert image to single-page PDF, then extract text.
-       This works well for images that are scans of text-rich documents.
-    2. If PyMuPDF yields very little text, fall back to a simple keyword scan
-       of the raw OCR output (if pytesseract is available).
+    Strategy (most accurate first):
+    1. ZhipuAI vision model — send image to LLM, get structured text back.
+       Most accurate for Chinese + English resumes.
+    2. pytesseract OCR (if installed).
+    3. PyMuPDF as last resort.
     """
-    text = ""
-
-    # Approach 1: PyMuPDF (always available via requirements.txt)
-    try:
-        import fitz  # PyMuPDF
-        doc = fitz.open(file_path)
-        for page in doc:
-            text += page.get_text() or ""
-        doc.close()
-    except Exception:
-        pass
-
-    if text.strip():
+    # Strategy 1: LLM vision (most accurate)
+    text = _extract_text_with_llm_vision(file_path)
+    if text and len(text.strip()) > 20:
         return text
 
-    # Approach 2: If the image was opened as-is by fitz (raster), build a
-    # temporary single-page PDF from the image and try again.
-    try:
-        import fitz
-        img_doc = fitz.open()
-        img_page = img_doc.new_page(width=595, height=842)  # A4
-        rect = img_page.rect
-        img_page.insert_image(rect, filename=file_path)
-        pdf_bytes = img_doc.convert_to_pdf()
-        img_doc.close()
-
-        pdf_doc = fitz.open("pdf", pdf_bytes)
-        for page in pdf_doc:
-            text += page.get_text() or ""
-        pdf_doc.close()
-    except Exception:
-        pass
-
-    if text.strip():
-        return text
-
-    # Approach 3: pytesseract (optional dependency)
+    # Strategy 2: pytesseract OCR
     try:
         from PIL import Image
         import pytesseract
         img = Image.open(file_path)
         text = pytesseract.image_to_string(img, lang="chi_sim+eng")
+        if text and len(text.strip()) > 20:
+            return text
     except Exception:
         pass
 
-    return text
+    # Strategy 3: PyMuPDF
+    try:
+        import fitz
+        doc = fitz.open(file_path)
+        parts = []
+        for page in doc:
+            parts.append(page.get_text() or "")
+        doc.close()
+        text = "\n".join(parts)
+        if text.strip():
+            return text
+    except Exception:
+        pass
+
+    return text or ""
+
+
+def _extract_text_with_llm_vision(file_path: str) -> Optional[str]:
+    """Use ZhipuAI vision model to extract text from a resume image."""
+    from backend.core.config import settings
+    if not settings.zhipuai_api_key:
+        return None
+
+    try:
+        import base64
+        with open(file_path, "rb") as f:
+            img_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        # Detect mime type
+        lower = file_path.lower()
+        if lower.endswith(".png"):
+            mime = "image/png"
+        elif lower.endswith((".jpg", ".jpeg")):
+            mime = "image/jpeg"
+        elif lower.endswith(".webp"):
+            mime = "image/webp"
+        else:
+            mime = "image/jpeg"
+
+        import zhipuai
+        client = zhipuai.ZhipuAI(api_key=settings.zhipuai_api_key)
+
+        response = client.chat.completions.create(
+            model="glm-4v-flash",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}"}},
+                    {"type": "text", "text": (
+                        "这是一份简历图片。请完整提取图片中的所有文字内容，"
+                        "保持原始格式和换行。只输出提取到的文字，不要添加任何额外说明。"
+                    )},
+                ],
+            }],
+            temperature=0.1,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[resume_parser] LLM vision OCR failed: {e}")
+        return None
 
 
 def extract_text_from_pdf(file_path: str) -> str:
