@@ -213,31 +213,31 @@ def _generate_feedback(
     
     # Overall assessment
     if correctness >= 0.8:
-        feedback_parts.append("✅ 回答基本正确，覆盖了主要知识点。")
+        feedback_parts.append("回答基本正确，覆盖了主要知识点。")
     elif correctness >= 0.6:
-        feedback_parts.append("⚠️ 回答部分正确，但存在一些遗漏。")
+        feedback_parts.append("回答部分正确，但存在一些遗漏。")
     else:
-        feedback_parts.append("❌ 回答不够准确，需要补充更多内容。")
+        feedback_parts.append("回答不够准确，需要补充更多内容。")
     
     # Depth
     if depth < 0.6:
-        feedback_parts.append("💡 建议深入阐述原理和机制，增加技术深度。")
+        feedback_parts.append("建议深入阐述原理和机制，增加技术深度。")
     
     # Clarity
     if clarity < 0.6:
-        feedback_parts.append("📝 建议使用更清晰的结构（如分点说明），便于理解。")
+        feedback_parts.append("建议使用更清晰的结构（如分点说明），便于理解。")
     
     # Practicality
     if practicality < 0.6:
-        feedback_parts.append("🔧 建议补充实际应用场景或代码示例。")
+        feedback_parts.append("建议补充实际应用场景或代码示例。")
     
     # Tradeoffs
     if tradeoffs < 0.5:
-        feedback_parts.append("⚖️ 建议讨论优缺点、适用场景和权衡取舍。")
+        feedback_parts.append("建议讨论优缺点、适用场景和权衡取舍。")
     
     # Missing points
     if missing_points:
-        feedback_parts.append(f"\n📌 缺失的关键点：\n" + "\n".join([f"- {mp}" for mp in missing_points[:3]]))
+        feedback_parts.append(f"\n缺失的关键点：\n" + "\n".join([f"- {mp}" for mp in missing_points[:3]]))
     
     return "\n".join(feedback_parts) if feedback_parts else "回答较为完整，继续保持！"
 

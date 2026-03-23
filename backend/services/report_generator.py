@@ -34,6 +34,8 @@ def generate_report(db: Session, session_id: int) -> Dict:
         return {
             "summary_json": {
                 "overall_score": 0.0,
+                "dimension_scores": {},
+                "per_question_scores": [],
                 "overall_summary": None,
                 "strengths": [],
                 "weaknesses": [],
@@ -53,6 +55,10 @@ def generate_report(db: Session, session_id: int) -> Dict:
     # Analyze strengths and weaknesses (rule-based baseline)
     strengths, weaknesses = _analyze_performance(evaluations)
     avg_scores = _get_avg_scores(evaluations)
+    
+    # Per-dimension averages and per-question scores for charts
+    dimension_scores = {k: round(v, 2) for k, v in avg_scores.items()}
+    per_question_scores = _get_per_question_scores(evaluations)
     
     # Collect missing knowledge
     missing_knowledge = _collect_missing_knowledge(evaluations)
@@ -92,6 +98,8 @@ def generate_report(db: Session, session_id: int) -> Dict:
     
     summary: Dict[str, Any] = {
         "overall_score": round(overall_score, 2),
+        "dimension_scores": dimension_scores,
+        "per_question_scores": per_question_scores,
         "overall_summary": overall_summary,
         "strengths": strengths,
         "weaknesses": weaknesses,
@@ -110,6 +118,23 @@ def generate_report(db: Session, session_id: int) -> Dict:
         "summary_json": summary,
         "markdown": markdown
     }
+
+
+def _get_per_question_scores(evaluations: List[Evaluation]) -> List[Dict[str, Any]]:
+    """Get scores per question for charting (round index, dimension scores, overall)."""
+    result = []
+    for i, eval_obj in enumerate(evaluations):
+        scores = eval_obj.scores_json or {}
+        result.append({
+            "round": i + 1,
+            "correctness": round(scores.get("correctness", 0), 2),
+            "depth": round(scores.get("depth", 0), 2),
+            "clarity": round(scores.get("clarity", 0), 2),
+            "practicality": round(scores.get("practicality", 0), 2),
+            "tradeoffs": round(scores.get("tradeoffs", 0), 2),
+            "overall": round(eval_obj.overall_score, 2),
+        })
+    return result
 
 
 def _get_avg_scores(evaluations: List[Evaluation]) -> Dict[str, float]:
@@ -353,21 +378,38 @@ def _generate_markdown(
 - **综合得分**: {summary['overall_score']:.2f} / 1.0
 
 """
+    # Add dimension scores table
+    dim_scores = summary.get("dimension_scores", {})
+    if dim_scores:
+        dim_labels = {
+            "correctness": "正确性",
+            "depth": "深度",
+            "clarity": "清晰度",
+            "practicality": "实用性",
+            "tradeoffs": "权衡分析"
+        }
+        md += "\n### 各维度得分\n\n| 维度 | 得分 |\n|------|------|\n"
+        for key in ["correctness", "depth", "clarity", "practicality", "tradeoffs"]:
+            val = dim_scores.get(key, 0)
+            label = dim_labels.get(key, key)
+            md += f"| {label} | {val:.2f} |\n"
+        md += "\n"
+
     if summary.get("overall_summary"):
         md += f"\n**综合总结**: {summary['overall_summary']}\n"
     md += "\n---\n\n## 综合评分\n\n### 优势\n\n"
     
     for strength in summary.get('strengths', []):
-        md += f"- ✅ {strength}\n"
+        md += f"- {strength}\n"
     
     md += "\n### 待改进\n\n"
     for weakness in summary.get('weaknesses', []):
-        md += f"- ⚠️ {weakness}\n"
+        md += f"- {weakness}\n"
     
     md += "\n---\n\n## 缺失知识点\n\n"
     if summary['missing_knowledge']:
         for knowledge in summary['missing_knowledge']:
-            md += f"- 📌 {knowledge}\n"
+            md += f"- {knowledge}\n"
     else:
         md += "- 无显著缺失知识点\n"
     
@@ -385,7 +427,7 @@ def _generate_markdown(
         if speech_summary.get("recommendations"):
             md += "\n**改进建议**:\n"
             for rec in speech_summary["recommendations"]:
-                md += f"- 💡 {rec}\n"
+                md += f"- {rec}\n"
     else:
         md += f"- {speech_summary.get('message', '本次面试未使用语音输入')}\n"
     
@@ -403,7 +445,7 @@ def _generate_markdown(
     
     md += "\n---\n\n## 学习建议\n\n"
     for plan in summary['learning_plan']:
-        md += f"- 📚 {plan}\n"
+        md += f"- {plan}\n"
     
     md += "\n---\n\n## 推荐题单\n\n"
     detail_list = summary.get("recommended_questions_detail", [])

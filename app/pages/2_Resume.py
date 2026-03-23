@@ -18,7 +18,7 @@ from app.components.sidebar import render_sidebar
 from app.i18n import t
 import json
 
-st.set_page_config(page_title="Resume", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Resume", layout="wide")
 
 # Inject global styles
 inject_global_styles()
@@ -33,7 +33,7 @@ def main():
     render_sidebar()
     check_auth()
     
-    st.title(f"📄 {t('resume.title')}")
+    st.title(t('resume.title'))
     st.caption(t("resume.subtitle"))
     st.markdown("---")
     
@@ -42,7 +42,7 @@ def main():
     
     resumes = db.query(Resume).filter(Resume.user_id == user_id).order_by(Resume.created_at.desc()).all()
     
-    st.subheader(f"📤 {t('resume.upload')}")
+    st.subheader(t('resume.upload'))
     uploaded_file = st.file_uploader(
         t("resume.select_file"),
         type=["pdf", "docx", "doc"],
@@ -88,13 +88,13 @@ def main():
     st.markdown("---")
     
     # Display resumes
-    st.subheader("📋 我的简历")
+    st.subheader("我的简历")
     
     if not resumes:
-        st.info("📭 暂无简历，请在上方上传一份 PDF 或 DOCX 格式的简历")
+        st.info("暂无简历，请在上方上传一份 PDF 或 DOCX 格式的简历")
     else:
         for resume in resumes:
-            with st.expander(f"📄 {resume.filename} · 上传于 {resume.created_at.strftime('%Y-%m-%d %H:%M')}", expanded=False):
+            with st.expander(f"{resume.filename} · 上传于 {resume.created_at.strftime('%Y-%m-%d %H:%M')}", expanded=False):
                 # Display parsed data
                 if resume.parsed_json:
                     parsed = resume.parsed_json
@@ -156,7 +156,7 @@ def main():
                     st.info("该简历尚未解析")
                 
                 # Delete button
-                if st.button("🗑️ 删除简历", key=f"delete_{resume.id}", type="secondary"):
+                if st.button("删除简历", key=f"delete_{resume.id}", type="secondary"):
                     db.delete(resume)
                     db.commit()
                     st.success("已删除")

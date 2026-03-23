@@ -1,0 +1,55 @@
+% Single-Turn Decision Loop of the Interview Agent
+% Use with: \input{figures/single_turn_loop.tex}
+
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.5cm,
+    step/.style={rectangle, draw, rounded corners=3pt, minimum height=0.75cm, text centered, font=\small, text width=2.8cm},
+    decision/.style={diamond, draw, fill=red!10, aspect=2.2, inner sep=1pt, font=\small, text width=1.8cm, text centered},
+    arr/.style={->, >=stealth, thick},
+    lbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+]
+
+% === Left column: Input and Judging ===
+\node[step, fill=cyan!15] (input) {Candidate response $y_t$};
+\node[step, fill=green!12, below=of input] (rule) {Rule-based Judge\\{\scriptsize 5-dim scores $S_{\text{rule}}$}};
+\node[decision, below=0.9cm of rule] (llmavail) {LLM\\avail?};
+\node[step, fill=green!20, below left=0.9cm and 0.2cm of llmavail] (llm) {LLM Judge\\{\scriptsize scores + $\eta_t$}};
+\node[decision, below=0.9cm of llm] (valid) {Valid?};
+
+% === Middle column: Memory and State ===
+\node[step, fill=orange!18, right=3.5cm of valid] (memup) {Update Memory $m_t$\\{\scriptsize append scores, gaps,}\\{\scriptsize coverage, hints}};
+\node[step, fill=orange!28, below=of memup] (stateup) {Compute State $s_t$\\{\scriptsize $(d_t, C_t, \mathcal{M}_t, R, E_t, B_t)$}};
+
+% === Right column: Controller Decisions ===
+\node[decision, below=0.9cm of stateup] (termq) {Termi-\\nate?};
+\node[decision, right=1.8cm of termq] (followq) {Follow\\up?};
+
+% === Outcomes ===
+\node[step, fill=violet!15, below=0.9cm of termq] (stop) {\textit{terminate}\\{\scriptsize generate report}};
+\node[step, fill=violet!15, below=0.9cm of followq] (fu) {\textit{follow-up}\\{\scriptsize probe misconception}};
+\node[step, fill=violet!15, right=1.8cm of followq] (next) {\textit{ask-next}\\{\scriptsize update $d_{t+1}$, select $q_{t+1}$}};
+
+% === Merge / Fallback ===
+\node[step, fill=yellow!15, below right=0.9cm and 0.2cm of llmavail] (fallback) {Fallback to\\$S_{\text{rule}}$};
+
+% ===== Arrows =====
+\draw[arr] (input) -- (rule);
+\draw[arr] (rule) -- (llmavail);
+\draw[arr] (llmavail) -- node[lbl, left] {yes} (llm);
+\draw[arr] (llmavail) -- node[lbl, right] {no} (fallback);
+\draw[arr] (llm) -- (valid);
+\draw[arr] (valid.east) -- node[lbl, above] {yes} ++(1.5,0) |- (memup.west);
+\draw[arr] (valid.south) -- node[lbl, left] {no} ++(0,-0.6) -| (fallback.south);
+\draw[arr] (fallback.east) -| ([xshift=-0.4cm]memup.west) -- (memup.west);
+\draw[arr] (memup) -- (stateup);
+\draw[arr] (stateup) -- (termq);
+\draw[arr] (termq) -- node[lbl, left] {yes} (stop);
+\draw[arr] (termq) -- node[lbl, above] {no} (followq);
+\draw[arr] (followq) -- node[lbl, left] {yes} (fu);
+\draw[arr] (followq) -- node[lbl, above] {no} (next);
+
+% Next turn arrow (loop back)
+\draw[arr, blue!60, thick, dashed] (next.north) -- ++(0,1) -| node[lbl, above, pos=0.3] {\scriptsize next turn $t{+}1$} ([xshift=0.5cm]input.east) -- (input.east);
+\draw[arr, blue!60, thick, dashed] (fu.west) -- ++(-0.8,0) |- node[lbl, left, pos=0.25] {} ([yshift=-0.15cm]input.south west) -- (input.south);
+
+\end{tikzpicture}

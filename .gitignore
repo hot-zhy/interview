@@ -25,6 +25,7 @@ wheels/
 
 # Environment
 .env
+.env.docker
 .venv
 
 # Database
@@ -44,8 +45,8 @@ data/*.db
 .DS_Store
 Thumbs.db
 
-# Streamlit
-.streamlit/
+# Streamlit secrets (config.toml is needed for deployment, so only ignore secrets)
+.streamlit/secrets.toml
 
 # Logs
 *.log

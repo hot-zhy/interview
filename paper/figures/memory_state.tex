@@ -1,0 +1,62 @@
+% Composition and Update of Persistent Interview Memory
+% Use with: \input{figures/memory_state.tex}
+
+\begin{tikzpicture}[
+    node distance=0.5cm and 0.6cm,
+    slot/.style={rectangle, draw, rounded corners=2pt, minimum height=0.6cm, text centered, font=\scriptsize, text width=2.4cm},
+    mem/.style={slot, fill=orange!15},
+    inp/.style={slot, fill=cyan!12},
+    outp/.style={slot, fill=violet!12},
+    arr/.style={->, >=stealth, thick},
+    darr/.style={->, >=stealth, thick, dashed, gray!60},
+]
+
+% === Memory box ===
+\node[draw, rounded corners=6pt, fill=orange!5, minimum width=11cm, minimum height=5.8cm, label={[font=\small\bfseries]above:Interview Memory $m_t$}] (membox) {};
+
+% === Memory slots (2 columns inside membox) ===
+\node[mem] (h) at ([xshift=-2cm, yshift=1.8cm]membox.center) {Interaction History $\mathcal{H}_t$\\{\tiny $(q_i, y_i, e_i)$ triples}};
+\node[mem, below=of h] (s) {Score History $\mathcal{S}_t$\\{\tiny $\{s_1, \ldots, s_t\}$}};
+\node[mem, below=of s] (d) {Difficulty Trajectory $\mathcal{D}_t$\\{\tiny $\{d_1, \ldots, d_t\}$}};
+\node[mem, below=of d] (c) {Coverage Trace $\mathcal{C}_t$\\{\tiny chapters visited}};
+
+\node[mem] (m) at ([xshift=2cm, yshift=1.8cm]membox.center) {Missing Concepts $\mathcal{M}_t$\\{\tiny accumulated gaps}};
+\node[mem, below=of m] (r) {Resume Prior $R$\\{\tiny skills, experience}};
+\node[mem, below=of r] (f) {Follow-up Trace $\mathcal{F}_t$\\{\tiny decisions \& outcomes}};
+\node[mem, below=of f] (e) {Evaluator Hints $\mathcal{E}_t$\\{\tiny $\{\eta_1, \ldots, \eta_t\}$}};
+
+% === Input: Observation ===
+\node[inp, left=1.5cm of membox.west, yshift=1.2cm] (obs) {Observation $o_t$\\{\tiny response + eval}};
+
+% === Output: State ===
+\node[outp, right=1.5cm of membox.east, yshift=0.5cm] (state) {State $s_t$\\{\tiny compressed}};
+
+% === Output: Controller ===
+\node[outp, right=1.5cm of membox.east, yshift=-1.0cm] (ctrl) {Controller $\pi(a_t|s_t)$};
+
+% === Arrows: Observation updates memory ===
+\draw[arr] (obs.east) -- ++(0.5,0) |- (h.west);
+\draw[arr] (obs.east) -- ++(0.5,0) |- (s.west);
+\draw[arr] (obs.east) -- ++(0.5,0) |- (d.west);
+\draw[arr] (obs.east) -- ++(0.5,0) |- (c.west);
+\draw[arr] (obs.east) -- ++(0.3,0) |- ([yshift=0.05cm]m.west);
+
+% === Arrows: Memory -> State (compress) ===
+\draw[arr, blue!60] (h.east) -- ++(0.3,0) |- (state.west);
+\draw[arr, blue!60] (s.east) -- ++(0.3,0) |- (state.west);
+\draw[arr, blue!60] (m.east) -- ++(0.5,0) |- (state.west);
+\draw[arr, blue!60] (r.east) -- ++(0.5,0) |- (state.west);
+\draw[arr, blue!60] (e.east) -- ++(0.5,0) |- (state.west);
+
+% State -> Controller
+\draw[arr] (state) -- (ctrl);
+
+% === Feedback loop annotation ===
+\node[inp, below=1.2cm of membox.south, xshift=-2cm] (feedback) {Feedback from tools\\{\tiny scores, $M^{\text{new}}$, $\eta_t$}};
+\draw[arr, red!60, thick] (feedback.north) -- ++(0,0.4) -| ([xshift=-0.3cm]c.south);
+\draw[arr, red!60, thick] (feedback.north) -- ++(0,0.4) -| ([xshift=0.3cm]f.south);
+
+% Update label
+\node[font=\scriptsize\itshape, gray] at ([yshift=-0.7cm]membox.south) {$m_{t+1} = \textsc{Update}(m_t, o_t)$};
+
+\end{tikzpicture}

@@ -16,7 +16,7 @@ from app.components.styles import inject_global_styles
 from app.components.sidebar import render_sidebar
 from app.i18n import t
 
-st.set_page_config(page_title="Admin", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="Admin", layout="wide")
 
 # Inject global styles
 inject_global_styles()
@@ -34,12 +34,12 @@ def main():
     with st.spinner(t("common.loading")):
         db = next(get_db())
     
-    st.title(f"⚙️ {t('app.admin')}")
+    st.title(t('app.admin'))
     st.caption("System stats, interview records, question bank overview")
     st.markdown("---")
     
     # Statistics
-    st.subheader("📊 系统统计")
+    st.subheader("系统统计")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -48,15 +48,15 @@ def main():
     question_count = db.query(QuestionBank).count()
     session_count = db.query(InterviewSession).count()
     
-    col1.metric("👤 用户数", user_count)
-    col2.metric("📄 简历数", resume_count)
-    col3.metric("📚 题目数", question_count)
-    col4.metric("💼 面试数", session_count)
+    col1.metric("用户数", user_count)
+    col2.metric("简历数", resume_count)
+    col3.metric("题目数", question_count)
+    col4.metric("面试数", session_count)
     
     st.markdown("---")
     
     # Interview records
-    st.subheader("📋 面试记录")
+    st.subheader("面试记录")
     
     sessions = db.query(InterviewSession).order_by(InterviewSession.started_at.desc()).limit(20).all()
     
@@ -80,12 +80,12 @@ def main():
                     if avg_score:
                         st.metric("平均得分", f"{avg_score:.2f}")
     else:
-        st.info("📭 暂无面试记录")
+        st.info("暂无面试记录")
     
     st.markdown("---")
     
     # Question bank statistics
-    st.subheader("📚 题库统计")
+    st.subheader("题库统计")
     
     if question_count > 0:
         # By chapter

@@ -6,8 +6,8 @@ from typing import Optional
 class Settings(BaseSettings):
     """Application settings."""
     
-    # Database
-    database_url: str = "mysql+pymysql://root:password@localhost:3306/interview_db?charset=utf8mb4"
+    # Database (default: SQLite for easy deployment; override with MySQL in .env)
+    database_url: str = "sqlite:///data/interview.db"
     
     # Security
     secret_key: str = "your-secret-key-change-in-production"
@@ -74,6 +74,14 @@ class Settings(BaseSettings):
     min_rounds_ratio: float = 0.5   # 最少轮次 = total_rounds * min_rounds_ratio
     max_rounds_ratio: float = 1.2   # 最多轮次 = total_rounds * max_rounds_ratio（可略超用户设置）
     max_rounds_cap: int = 20        # 轮次绝对上限
+
+    # Agentic framework feature flags (all default OFF to preserve legacy behaviour)
+    enable_agent_controller: bool = False
+    enable_memory_state: bool = False
+    enable_tool_routing: bool = False
+    enable_multi_judge: bool = False
+    enable_followup_planner: bool = False
+    enable_agent_tracing: bool = False
     
     class Config:
         env_file = ".env"

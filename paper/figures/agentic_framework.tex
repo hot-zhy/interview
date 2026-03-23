@@ -1,0 +1,83 @@
+% Overall Memory-Aware Agentic Interview Framework
+% Use with: \input{figures/agentic_framework.tex}
+
+\begin{tikzpicture}[
+    node distance=0.9cm and 1.2cm,
+    block/.style={rectangle, draw, rounded corners=3pt, minimum height=0.85cm, text centered, font=\small},
+    obs/.style={block, fill=cyan!18, text width=2.2cm},
+    mem/.style={block, fill=orange!18, text width=2.6cm},
+    ctrl/.style={block, fill=red!15, text width=2.4cm},
+    tool/.style={block, fill=green!15, text width=2.0cm, minimum height=0.7cm, font=\scriptsize},
+    act/.style={block, fill=violet!15, text width=2.2cm},
+    fb/.style={block, fill=yellow!20, text width=2.2cm},
+    arr/.style={->, >=stealth, thick},
+    darr/.style={->, >=stealth, thick, dashed, gray!70},
+    lbl/.style={font=\scriptsize, midway, fill=white, inner sep=1pt},
+]
+
+% === Row 1: Observation ===
+\node[obs] (obs) {Observation $o_t$\\{\scriptsize $(q_t, y_t, e_t)$}};
+
+% === Row 2: Memory ===
+\node[mem, below=of obs] (mem) {Interview Memory $m_t$\\{\scriptsize scores, gaps, coverage,}\\{\scriptsize resume, hints, follow-ups}};
+
+% === Row 3: State ===
+\node[block, fill=orange!30, text width=2.6cm, below=of mem] (state) {State $s_t$\\{\scriptsize $(d_t, C_t, \mathcal{M}_t, R, E_t, B_t)$}};
+
+% === Row 4: Controller ===
+\node[ctrl, below=of state] (ctrl) {Planner / Controller\\{\scriptsize $\pi(a_t \mid s_t)$}};
+
+% === Row 5: Tool Router ===
+\node[block, fill=gray!15, text width=2.4cm, below=of ctrl, font=\small] (router) {Tool Router};
+
+% === Tools (fanned below router) ===
+\node[tool, below left=0.7cm and 2.6cm of router] (t1) {Rule-based\\Scorer};
+\node[tool, right=0.25cm of t1] (t2) {LLM\\Judge};
+\node[tool, right=0.25cm of t2] (t3) {Validator\\/ Critic};
+\node[tool, right=0.25cm of t3] (t4) {Follow-up\\Generator};
+\node[tool, right=0.25cm of t4] (t5) {Resume\\Parser};
+\node[tool, right=0.25cm of t5] (t6) {Report\\Synthesizer};
+
+% === Actions (right of controller) ===
+\node[act, right=2.8cm of ctrl] (askn) {\textit{ask-next}};
+\node[act, below=0.35cm of askn] (foll) {\textit{follow-up}};
+\node[act, below=0.35cm of foll] (term) {\textit{terminate}};
+
+% Action space label
+\node[above=0.12cm of askn, font=\small\bfseries] {Action $a_t$};
+
+% === Feedback (left of memory) ===
+\node[fb, left=2.8cm of mem] (fb) {Feedback\\{\scriptsize scores, missing pts,}\\{\scriptsize next-direction $\eta_t$}};
+
+% ===== Arrows =====
+% Observation -> Memory
+\draw[arr] (obs) -- node[lbl, right] {update} (mem);
+% Memory -> State
+\draw[arr] (mem) -- node[lbl, right] {compress} (state);
+% State -> Controller
+\draw[arr] (state) -- (ctrl);
+% Controller -> Router
+\draw[arr] (ctrl) -- (router);
+% Controller -> Actions
+\draw[arr] (ctrl.east) -- (askn.west);
+\draw[arr] (ctrl.east) -- (foll.west);
+\draw[arr] (ctrl.east) -- (term.west);
+
+% Router -> Tools
+\foreach \t in {t1,t2,t3,t4,t5,t6}
+    \draw[arr, thin] (router.south) -- (\t.north);
+
+% Feedback -> Memory (the loop)
+\draw[arr, blue!60, thick] (fb) -- node[lbl, above] {$m_{t+1}$} (mem);
+
+% Tools -> Feedback (close the loop)
+\draw[darr] (t3.south) -- ++(0,-0.5) -| ([xshift=-0.5cm]fb.south) -- (fb.south);
+
+% Candidate input to observation
+\node[block, fill=cyan!8, text width=1.6cm, above=0.6cm of obs, font=\scriptsize] (cand) {Candidate\\Response $y_t$};
+\draw[arr] (cand) -- (obs);
+
+% Loop annotation
+\draw[arr, blue!60, thick, dashed] (fb.north) -- ++(0,1.4) -| node[lbl, above, pos=0.25] {\scriptsize feedback loop} (obs.west);
+
+\end{tikzpicture}

@@ -15,7 +15,7 @@ from app.components.styles import inject_global_styles
 from app.components.sidebar import render_sidebar
 from app.i18n import t
 
-st.set_page_config(page_title="Login/Register", page_icon="🔐")
+st.set_page_config(page_title="Login/Register")
 
 # Inject global styles
 inject_global_styles()
@@ -59,14 +59,14 @@ def login_user(db: Session, email: str, password: str) -> tuple[bool, str, int]:
 
 def main():
     render_sidebar()
-    st.title(f"🔐 {t('auth.title')}")
+    st.title(t('auth.title'))
     st.caption(t("auth.first_use"))
     st.markdown("---")
     
     col_left, col_center, col_right = st.columns([1, 2, 1])
     
     with col_center:
-        tab1, tab2 = st.tabs([f"📥 {t('auth.login_tab')}", f"📝 {t('auth.register_tab')}"])
+        tab1, tab2 = st.tabs([t('auth.login_tab'), t('auth.register_tab')])
         
         with tab1:
             st.subheader(t("auth.login_header"))

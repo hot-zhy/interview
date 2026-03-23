@@ -13,13 +13,11 @@ from backend.services.question_bank_loader import import_questions_from_excel
 from backend.core.logging import logger
 from app.components.auth_utils import init_session_state, check_auth
 from app.components.auth_loader import load_auth_on_page_load
-
 from app.components.styles import inject_global_styles
 from app.components.sidebar import render_sidebar
 from app.i18n import t
 
-
-st.set_page_config(page_title="Question Bank", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Question Bank", layout="wide")
 
 # Inject global styles
 inject_global_styles()
@@ -31,11 +29,10 @@ load_auth_on_page_load()
 init_session_state()
 
 def main():
-
     render_sidebar()
     check_auth()
     
-    st.title(f"📚 {t('question_bank.title')}")
+    st.title(t('question_bank.title'))
     st.caption(t("question_bank.subtitle"))
     st.markdown("---")
     
@@ -43,14 +40,14 @@ def main():
         db = next(get_db())
     
     # Load from fixed file path
-    st.subheader("📥 题库加载")
+    st.subheader("题库加载")
     
     # Fixed file path
     question_file_path = "data/question.xlsx"
     file_exists = os.path.exists(question_file_path)
     
     if file_exists:
-        st.success(f"✅ 找到题库文件: `{question_file_path}`")
+        st.success(f"找到题库文件: `{question_file_path}`")
         
         col1, col2 = st.columns([3, 1])
         with col1:
@@ -89,9 +86,9 @@ def main():
                     verify_db.close()
                     
                     if verify_count > 0:
-                        st.success(f"✅ 验证成功：当前数据库中的题目总数: {verify_count}")
+                        st.success(f"验证成功：当前数据库中的题目总数: {verify_count}")
                     else:
-                        st.warning(f"⚠️ 警告：导入报告成功，但数据库中题目数为 0。请检查导入结果。")
+                        st.warning("警告：导入报告成功，但数据库中题目数为 0。请检查导入结果。")
                         if result.created == 0 and result.updated == 0:
                             st.error("没有题目被创建或更新，请检查 Excel 文件格式和内容。")
                     
@@ -110,7 +107,7 @@ def main():
                     except:
                         pass
     else:
-        st.warning(f"⚠️ 题库文件不存在: `{question_file_path}`")
+        st.warning(f"题库文件不存在: `{question_file_path}`")
         st.info("""
         **请按以下步骤操作：**
         1. 在项目根目录创建 `data` 文件夹（如果不存在）
@@ -136,7 +133,7 @@ def main():
     st.markdown("---")
     
     # Statistics
-    st.subheader("📊 题库统计")
+    st.subheader("题库统计")
     
     # Create a fresh session to ensure we see latest data
     try:
@@ -173,7 +170,7 @@ def main():
         
         # Browse questions
         st.markdown("---")
-        st.subheader("🔍 浏览题目")
+        st.subheader("浏览题目")
         
         # Filters
         col1, col2 = st.columns(2)

@@ -19,7 +19,7 @@ def render_speech_input(key: str = "speech_input"):
             transition: all 0.3s;
             font-weight: bold;
             margin-right: 10px;
-        ">🎤 点击说话</button>
+        ">点击说话</button>
         <span id="speech-status-{key}" style="font-size: 12px; color: #666;"></span>
     </div>
     
@@ -63,7 +63,7 @@ def render_speech_input(key: str = "speech_input"):
             
             if (!SpeechRecognition) {{
                 console.warn('Speech recognition not supported in this browser');
-                statusDiv.textContent = '⚠️ 浏览器不支持语音识别（请使用 Chrome 或 Edge）';
+                statusDiv.textContent = '浏览器不支持语音识别（请使用 Chrome 或 Edge）';
                 statusDiv.style.color = '#ff6b6b';
                 micButton.disabled = true;
                 micButton.style.opacity = '0.5';
@@ -151,14 +151,14 @@ def render_speech_input(key: str = "speech_input"):
                 const statusDiv = document.getElementById('speech-status-{key}');
                 
                 if (micButton) {{
-                    micButton.innerHTML = '🛑 停止录音';
+                    micButton.innerHTML = '停止录音';
                     micButton.style.background = '#ff6b6b';
                     micButton.style.color = 'white';
                     micButton.style.borderColor = '#ff6b6b';
                 }}
                 
                 if (statusDiv) {{
-                    statusDiv.textContent = '🎤 正在聆听...';
+                    statusDiv.textContent = '正在聆听...';
                     statusDiv.style.color = '#ff6b6b';
                 }}
                 
@@ -168,7 +168,7 @@ def render_speech_input(key: str = "speech_input"):
                     console.error('Error starting recognition:', e);
                     isListening = false;
                     if (statusDiv) {{
-                        statusDiv.textContent = '⚠️ 启动失败: ' + e.message;
+                        statusDiv.textContent = '启动失败: ' + e.message;
                         statusDiv.style.color = '#ff6b6b';
                     }}
                 }}
@@ -190,7 +190,7 @@ def render_speech_input(key: str = "speech_input"):
                 const statusDiv = document.getElementById('speech-status-{key}');
                 
                 if (micButton) {{
-                    micButton.innerHTML = '🎤 点击说话';
+                    micButton.innerHTML = '点击说话';
                     micButton.style.background = 'white';
                     micButton.style.color = '#667eea';
                     micButton.style.borderColor = '#667eea';
@@ -201,7 +201,7 @@ def render_speech_input(key: str = "speech_input"):
                 console.log('Speech recognition started');
                 const statusDiv = document.getElementById('speech-status-{key}');
                 if (statusDiv) {{
-                    statusDiv.textContent = '🎤 正在聆听...';
+                    statusDiv.textContent = '正在聆听...';
                     statusDiv.style.color = '#ff6b6b';
                 }}
             }};
@@ -265,11 +265,11 @@ def render_speech_input(key: str = "speech_input"):
                 
                 let errorMsg = '';
                 if (event.error === 'no-speech') {{
-                    errorMsg = '⚠️ 未检测到语音，请重试';
+                    errorMsg = '未检测到语音，请重试';
                 }} else if (event.error === 'not-allowed') {{
-                    errorMsg = '⚠️ 请允许麦克风权限';
+                    errorMsg = '请允许麦克风权限';
                 }} else {{
-                    errorMsg = '⚠️ 识别出错: ' + event.error;
+                    errorMsg = '识别出错: ' + event.error;
                 }}
                 
                 statusDiv.textContent = errorMsg;
@@ -305,7 +305,7 @@ def render_speech_input(key: str = "speech_input"):
                     }}
                     
                     if (statusDiv) {{
-                        statusDiv.textContent = '✅ 识别完成';
+                        statusDiv.textContent = '识别完成';
                         statusDiv.style.color = '#51cf66';
                         setTimeout(() => {{
                             statusDiv.textContent = '';

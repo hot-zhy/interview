@@ -27,7 +27,7 @@ def render_audio_submit(key: str = "audio_submit"):
                 cursor: pointer;
                 transition: all 0.3s;
                 font-weight: bold;
-            ">🎤 开始录音</button>
+            ">开始录音</button>
             <span id="recording-status-{key}" style="font-size: 12px; color: #666;"></span>
             <span id="recording-time-{key}" style="font-size: 12px; color: #ff6b6b; font-weight: bold; min-width: 50px;"></span>
         </div>
@@ -60,7 +60,7 @@ def render_audio_submit(key: str = "audio_submit"):
         
         // Check if browser supports MediaRecorder
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {{
-            statusSpan.textContent = '⚠️ 浏览器不支持录音功能（请使用 Chrome 或 Edge）';
+            statusSpan.textContent = '浏览器不支持录音功能（请使用 Chrome 或 Edge）';
             statusSpan.style.color = '#ff6b6b';
             recordButton.disabled = true;
             recordButton.style.opacity = '0.5';
@@ -117,9 +117,9 @@ def render_audio_submit(key: str = "audio_submit"):
                             sessionStorage.setItem('audio_data_{key}', JSON.stringify(audioData));
                             console.log('Audio recorded and stored, duration:', duration, 's');
                             
-                            statusSpan.textContent = '✅ 录音已保存';
+                            statusSpan.textContent = '录音已保存';
                             statusSpan.style.color = '#51cf66';
-                            submitStatus.textContent = '✅ 录音完成，可以点击"提交回答"按钮';
+                            submitStatus.textContent = '录音完成，可以点击"提交回答"按钮';
                             submitStatus.style.color = '#51cf66';
                             
                             // Send data to Streamlit via postMessage
@@ -145,11 +145,11 @@ def render_audio_submit(key: str = "audio_submit"):
                     isRecording = true;
                     recordingStartTime = Date.now();
                     
-                    recordButton.innerHTML = '🛑 停止录音';
+                    recordButton.innerHTML = '停止录音';
                     recordButton.style.background = '#ff6b6b';
                     recordButton.style.color = 'white';
                     recordButton.style.borderColor = '#ff6b6b';
-                    statusSpan.textContent = '🎤 正在录音...';
+                    statusSpan.textContent = '正在录音...';
                     statusSpan.style.color = '#ff6b6b';
                     timeSpan.textContent = '00:00';
                     
@@ -163,7 +163,7 @@ def render_audio_submit(key: str = "audio_submit"):
                 }})
                 .catch(function(error) {{
                     console.error('Error accessing microphone:', error);
-                    statusSpan.textContent = '⚠️ 无法访问麦克风: ' + error.message;
+                    statusSpan.textContent = '无法访问麦克风: ' + error.message;
                     statusSpan.style.color = '#ff6b6b';
                 }});
         }}
@@ -178,7 +178,7 @@ def render_audio_submit(key: str = "audio_submit"):
                     recordingTimer = null;
                 }}
                 
-                recordButton.innerHTML = '🎤 开始录音';
+                recordButton.innerHTML = '开始录音';
                 recordButton.style.background = 'white';
                 recordButton.style.color = '#667eea';
                 recordButton.style.borderColor = '#667eea';

@@ -31,7 +31,7 @@ def show_evaluation(evaluation: dict):
     scores = evaluation.get("scores", {})
     overall = evaluation.get("overall_score", 0.0)
     
-    st.markdown("### 📊 评价结果")
+    st.markdown("### 评价结果")
     
     # Create a table for scores
     score_data = {
@@ -76,13 +76,13 @@ def show_evaluation(evaluation: dict):
     st.table(df_scores)
     
     # Feedback
-    st.markdown("#### 💬 反馈")
+    st.markdown("#### 反馈")
     st.info(evaluation.get("feedback", "无反馈"))
     
     # Missing points
     missing = evaluation.get("missing_points", [])
     if missing:
-        st.markdown("#### 📌 缺失知识点")
+        st.markdown("#### 缺失知识点")
         for point in missing[:5]:
             st.text(f"- {point}")
 

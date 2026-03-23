@@ -30,8 +30,8 @@ def check_auth():
     init_session_state()
     if not st.session_state.authenticated:
         from app.i18n import t
-        st.warning(f"🔒 {t('common.login_required')}")
-        st.page_link("pages/1_Auth.py", label=t("common.go_login"), icon="🔐")
+        st.warning(t('common.login_required'))
+        st.page_link("pages/1_Auth.py", label=t("common.go_login"))
         st.stop()
 
 

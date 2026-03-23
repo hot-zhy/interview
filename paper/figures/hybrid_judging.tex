@@ -1,0 +1,98 @@
+% Reliability-Constrained Hybrid Judging with Optional Multi-Judge Aggregation
+% Use with: \input{figures/hybrid_judging.tex}
+
+\begin{tikzpicture}[
+    node distance=0.7cm and 1.0cm,
+    block/.style={rectangle, draw, rounded corners=3pt, minimum height=0.7cm, text centered, font=\small, text width=2.6cm},
+    decision/.style={diamond, draw, fill=red!10, aspect=2, inner sep=1pt, font=\small, text width=1.6cm, text centered},
+    arr/.style={->, >=stealth, thick},
+    lbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+]
+
+% === Input ===
+\node[block, fill=cyan!15] (input) {Input\\{\scriptsize $q$, $a^*$, $y$}};
+
+% === Rule-based Judge (always runs) ===
+\node[block, fill=green!15, below=of input] (rule) {Rule-based Judge\\{\scriptsize deterministic $S_{\text{rule}}$}};
+
+% === LLM availability check ===
+\node[decision, below=0.8cm of rule] (llmcheck) {LLM\\avail?};
+
+% === LLM Judge branch ===
+\node[block, fill=blue!15, below left=0.9cm and 1.5cm of llmcheck] (llmj) {LLM Judge\\{\scriptsize rubric + schema}};
+
+% === Multi-judge check ===
+\node[decision, below=0.8cm of llmj] (multij) {$J > 1$?};
+
+% === Multi-judge ===
+\node[block, fill=blue!25, below=0.8cm of multij] (agg) {Run $J$ judges\\{\scriptsize aggregate by mean}\\{\scriptsize merge missing pts}};
+
+% === CoT check ===
+\node[block, fill=blue!10, left=0.8cm of llmj, text width=2.0cm] (cot) {CoT reasoning\\{\scriptsize (if enabled)}};
+
+% === Validator ===
+\node[block, fill=yellow!25, below right=0.9cm and 1.5cm of llmcheck] (val) {Validator / Critic\\{\scriptsize schema + range}};
+
+% === Validation decision ===
+\node[decision, below=0.8cm of val] (valcheck) {Valid?};
+
+% === Combine ===
+\node[block, fill=orange!20, below=3.2cm of llmcheck] (combine) {Combine\\{\scriptsize $S_{\text{rule}}$ + $S_{\text{llm}}$}};
+
+% === Fallback ===
+\node[block, fill=red!12, right=1.0cm of val] (fallback) {Fallback\\{\scriptsize use $S_{\text{rule}}$ only}};
+
+% === Output ===
+\node[block, fill=violet!15, below=0.8cm of combine] (output) {Output\\{\scriptsize scores, feedback,}\\{\scriptsize $\eta_t$, provenance}};
+
+% === To Memory ===
+\node[block, fill=orange!15, below=0.7cm of output, text width=2.6cm] (tomem) {$\rightarrow$ Interview Memory};
+
+% ===== Arrows =====
+\draw[arr] (input) -- (rule);
+\draw[arr] (rule) -- (llmcheck);
+
+% LLM available -> LLM Judge
+\draw[arr] (llmcheck.south west) -- node[lbl, left] {yes} (llmj.north east);
+% LLM unavailable -> Fallback via validator area
+\draw[arr] (llmcheck.south east) -- node[lbl, right] {no} (val.north west);
+% but actually if LLM unavailable, go straight to fallback
+\draw[arr] (llmcheck.east) -| node[lbl, above, pos=0.3] {no} (fallback.north);
+
+% CoT
+\draw[arr, dashed, gray] (llmj.west) -- (cot.east);
+
+% LLM Judge -> Multi-judge check
+\draw[arr] (llmj) -- (multij);
+
+% Multi-judge yes -> aggregate
+\draw[arr] (multij) -- node[lbl, left] {yes} (agg);
+% Multi-judge no -> validator
+\draw[arr] (multij.east) -| node[lbl, above, pos=0.3] {no} (val.north);
+
+% Aggregate -> validator
+\draw[arr] (agg.east) -| (val.north west);
+
+% Validator -> validation check
+\draw[arr] (val) -- (valcheck);
+
+% Valid -> combine
+\draw[arr] (valcheck.west) -| node[lbl, above, pos=0.3] {yes} (combine.east);
+% Invalid -> fallback
+\draw[arr] (valcheck.east) -| node[lbl, above, pos=0.3] {no} (fallback.south);
+
+% Fallback -> combine (with rule-only provenance)
+\draw[arr] (fallback.south) |- (combine.east);
+
+% Rule also feeds combine directly
+\draw[arr, dashed, gray] (rule.west) -| ([xshift=-1cm]combine.west) -- (combine.west);
+
+% Combine -> Output
+\draw[arr] (combine) -- (output);
+% Output -> Memory
+\draw[arr] (output) -- (tomem);
+
+% Provenance labels
+\node[font=\tiny, gray, right] at (combine.south east) {provenance: hybrid / rule};
+
+\end{tikzpicture}

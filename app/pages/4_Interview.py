@@ -9,6 +9,7 @@ from backend.db.models import InterviewSession, Resume
 from backend.services.interview_engine import (
     create_session, start_interview, submit_answer, get_session_turns
 )
+from backend.services.resume_track_matcher import check_resume_track_match
 from backend.core.config import settings
 from app.components.avatar import render_avatar
 from app.components.auth_utils import init_session_state, check_auth
@@ -21,7 +22,7 @@ from app.i18n import t
 import base64
 import json
 
-st.set_page_config(page_title="Interview", page_icon="💼", layout="wide")
+st.set_page_config(page_title="Interview", layout="wide")
 inject_global_styles()
 load_auth_on_page_load()
 init_session_state()
@@ -91,13 +92,13 @@ def _render_chat_bubbles(turns):
     for turn in turns:
         if turn["role"] == "interviewer":
             st.markdown(
-                f'<div class="chat-role">🤖 {t("interview.interviewer")}</div>'
+                f'<div class="chat-role">{t("interview.interviewer")}</div>'
                 f'<div class="chat-bubble interviewer">{turn["content"]}</div>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                f'<div class="chat-role right">👤 You</div>'
+                f'<div class="chat-role right">You</div>'
                 f'<div class="chat-bubble candidate">{turn["content"]}</div>',
                 unsafe_allow_html=True,
             )
@@ -118,7 +119,7 @@ def main():
 
     # ── Setup section (only when no active session) ──
     if not st.session_state.current_session_id:
-        st.title(f"💼 {t('interview.title')}")
+        st.title(t('interview.title'))
         st.caption(t("interview.subtitle"))
         st.markdown("---")
 
@@ -152,7 +153,16 @@ def main():
             st.warning(t("interview.upload_resume_first"))
             use_resume = False
 
-        if st.button(f"🚀 {t('interview.start_interview')}", use_container_width=True, type="primary"):
+        if st.button(t('interview.start_interview'), use_container_width=True, type="primary"):
+            # 若使用简历，先校验简历与岗位方向是否匹配
+            if use_resume and resume_id:
+                resume = db.query(Resume).filter(Resume.id == resume_id).first()
+                if resume:
+                    skills = (resume.parsed_json or {}).get("skills") or []
+                    matched, _ = check_resume_track_match(skills, track)
+                    if not matched:
+                        st.error(t("interview.resume_track_mismatch"))
+                        return
             try:
                 with st.spinner(t("interview.preparing")):
                     session = create_session(
@@ -183,11 +193,11 @@ def main():
     remain = max(session.total_rounds - session.current_round, 0)
     st.markdown(f"""
     <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:8px;">
-        <div style="font-size:1.15rem; font-weight:700; color:#1e293b;">🎙️ {session.track}</div>
+        <div style="font-size:1.15rem; font-weight:700; color:#1e293b;">{session.track}</div>
         <div style="display:flex; gap:18px; font-size:0.85rem; color:#64748b;">
-            <span>📊 {t("interview.round")} <b style="color:#1e293b;">{session.current_round}/{session.total_rounds}</b></span>
-            <span>⚡ {t("interview.difficulty")} <b style="color:#1e293b;">{session.level}</b></span>
-            <span>⏳ <b style="color:#1e293b;">{remain}</b></span>
+            <span>{t("interview.round")} <b style="color:#1e293b;">{session.current_round}/{session.total_rounds}</b></span>
+            <span>{t("interview.difficulty")} <b style="color:#1e293b;">{session.level}</b></span>
+            <span><b style="color:#1e293b;">{remain}</b> left</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -245,7 +255,7 @@ def main():
             if answer_text:
                 st.session_state.avatar_state = "listening"
 
-            if st.button(f"📤 {t('interview.submit')}", use_container_width=True, type="primary"):
+            if st.button(t('interview.submit'), use_container_width=True, type="primary"):
                 if not answer_text or not answer_text.strip():
                     st.warning(t("interview.please_input"))
                 else:
@@ -263,13 +273,13 @@ def main():
                         st.session_state.avatar_state = "idle"
                         st.rerun()
         else:
-            st.caption(f"💡 {t('interview.audio_tip')}")
+            st.caption(t('interview.audio_tip'))
             wav_audio_data = st_audiorec()
             if wav_audio_data is not None:
                 import hashlib
                 MIN_AUDIO_BYTES = 8000
                 if len(wav_audio_data) < MIN_AUDIO_BYTES:
-                    st.warning(f"⚠️ {t('interview.audio_too_short')}")
+                    st.warning(t('interview.audio_too_short'))
                 else:
                     h = hashlib.sha256(wav_audio_data).hexdigest()
                     already_submitted = (
@@ -301,18 +311,18 @@ def main():
             st.session_state.avatar_state = "listening"
 
     with st.sidebar:
-        st.markdown(f"### 📋 {t('interview.session_info')}")
+        st.markdown(f"### {t('interview.session_info')}")
         st.text(f"{t('interview.direction')}: {session.track}")
         st.text(f"{t('interview.difficulty')}: {session.level}")
         st.text(f"{t('interview.status')}: {session.status}")
         st.text(f"{t('interview.rounds_count')}: {session.current_round}/{session.total_rounds}")
         st.markdown("---")
-        if st.button(f"⏹ {t('interview.end_interview')}", use_container_width=True, type="secondary"):
+        if st.button(t('interview.end_interview'), use_container_width=True, type="secondary"):
             from backend.services.interview_engine import end_interview
             end_interview(db, session_id)
             st.session_state.current_session_id = None
             st.rerun()
-        if st.button(f"↩ {t('interview.exit_session')}", use_container_width=True):
+        if st.button(t('interview.exit_session'), use_container_width=True):
             st.session_state.current_session_id = None
             st.rerun()
 

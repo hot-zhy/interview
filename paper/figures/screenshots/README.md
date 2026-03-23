@@ -4,9 +4,13 @@ Place the following screenshot files in this directory to include them in the pa
 
 | File | Description |
 |------|-------------|
-| `ui_home.png` | Home page with navigation and Chinese/English language switcher |
+| `ui_interview_setup.png` | Interview setup: track selection, difficulty, rounds, resume selection |
 | `ui_interview.png` | Interview page with avatar, chat area, and real-time expression video |
-| `ui_report.png` | Report page with scores, strengths, weaknesses, and learning plan |
+| `ui_resume.png` | Resume upload and parsed structured data (skills, experience) |
+| `ui_report.png` | Report page with multi-dimensional scores, charts, strengths, weaknesses |
+| `report_dimension_bar.png` | Report: bar chart of five-dimensional scores |
+| `report_radar.png` | Report: radar chart of five-dimensional scores |
+| `report_trend.png` | Report: line chart of score progression across questions |
 
 ## How to Capture
 

@@ -121,6 +121,14 @@ def submit_answer(
             - {"imageData": base64_str}: legacy single-photo mode
             - {"analyses": [...]}: real-time video mode, pre-computed analyses from video stream
     """
+    # --- Agentic controller gate (feature flag) ---
+    from backend.core.config import settings as _cfg
+    if getattr(_cfg, "enable_agent_controller", False):
+        return _submit_answer_agentic(
+            db, session_id, answer_text, answer_type, audio_data, expression_data
+        )
+    # --- End agentic gate; legacy path below ---
+
     session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
     if not session or session.status != "active":
         return {"error": "面试会话不存在或已结束"}
@@ -477,4 +485,178 @@ def get_session_turns(db: Session, session_id: int) -> List[Dict]:
         }
         for turn in turns
     ]
+
+
+# ======================================================================
+# Agentic controller path (gated by enable_agent_controller feature flag)
+# ======================================================================
+
+def _submit_answer_agentic(
+    db: Session,
+    session_id: int,
+    answer_text: Optional[str] = None,
+    answer_type: str = "text",
+    audio_data: Optional[Dict] = None,
+    expression_data: Optional[Dict] = None,
+) -> Dict:
+    """Agentic version of submit_answer.
+
+    Delegates core logic to AgentController while preserving the same
+    DB writes (InterviewTurn, AskedQuestion, Evaluation) and return
+    format so the Streamlit UI remains unaffected.
+    """
+    session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
+    if not session or session.status != "active":
+        return {"error": "面试会话不存在或已结束"}
+
+    # --- Pre-processing (identical to legacy) ---
+    audio_analysis = None
+    expression_analysis = None
+
+    if expression_data:
+        if expression_data.get("analyses"):
+            analyses = expression_data["analyses"]
+            if analyses:
+                latest = {k: v for k, v in analyses[-1].items() if not k.startswith("_")}
+                expression_analysis = latest
+            existing_history = session.expression_history_json or []
+            for a in analyses:
+                clean = {k: v for k, v in a.items() if not k.startswith("_")}
+                existing_history.append(clean)
+            session.expression_history_json = existing_history[-100:]
+        elif expression_data.get("imageData"):
+            expression_analysis = analyze_expression(expression_data["imageData"], enforce_detection=False)
+
+    if answer_type == "audio":
+        if not audio_data:
+            return {"error": "音频数据为空"}
+        processed_result = process_audio_answer(audio_data)
+        answer_text = processed_result["text"]
+        audio_analysis = processed_result["audio_analysis"]
+        display_content = _normalize_candidate_display_content(answer_text if answer_text else "")
+        candidate_turn = InterviewTurn(session_id=session_id, role="candidate", content=display_content)
+        db.add(candidate_turn)
+        db.flush()
+    else:
+        if not answer_text or not answer_text.strip():
+            return {"error": "回答内容为空"}
+        candidate_turn = InterviewTurn(session_id=session_id, role="candidate", content=answer_text)
+        db.add(candidate_turn)
+        db.flush()
+
+    # Current asked question
+    asked_q = db.query(AskedQuestion).filter(
+        AskedQuestion.session_id == session_id
+    ).order_by(AskedQuestion.created_at.desc()).first()
+    if not asked_q:
+        return {"error": "未找到当前题目"}
+
+    # --- Agent controller ---
+    from backend.agent.controller import AgentController
+
+    agent = AgentController(db, session)
+    agent_result = agent.process_answer(
+        answer_text=answer_text or "",
+        asked_question=asked_q,
+        audio_analysis=audio_analysis,
+        expression_analysis=expression_analysis,
+    )
+
+    evaluation_result = agent_result.get("evaluation", {})
+
+    # --- Save evaluation (same upsert pattern as legacy) ---
+    from sqlalchemy.exc import IntegrityError as _IntegrityError
+
+    db.expire_all()
+    existing_eval = db.query(Evaluation).filter(Evaluation.asked_question_id == asked_q.id).first()
+
+    eval_fields = dict(
+        answer_text=answer_text or "",
+        scores_json=evaluation_result.get("scores", {}),
+        overall_score=evaluation_result.get("overall_score", 0.0),
+        feedback_text=evaluation_result.get("feedback", ""),
+        missing_points_json=evaluation_result.get("missing_points"),
+        next_direction=evaluation_result.get("next_direction"),
+        speech_analysis_json=audio_analysis,
+        expression_analysis_json=expression_analysis,
+    )
+
+    if existing_eval:
+        for k, v in eval_fields.items():
+            setattr(existing_eval, k, v)
+    else:
+        try:
+            evaluation = Evaluation(asked_question_id=asked_q.id, **eval_fields)
+            db.add(evaluation)
+            db.flush()
+        except _IntegrityError:
+            db.rollback()
+            existing_eval = db.query(Evaluation).filter(Evaluation.asked_question_id == asked_q.id).first()
+            if existing_eval:
+                for k, v in eval_fields.items():
+                    setattr(existing_eval, k, v)
+            else:
+                raise
+    db.flush()
+
+    # --- Dispatch agent action ---
+    agent_action = agent_result.get("_agent_action", "terminate")
+
+    if agent_action == "terminate":
+        return end_interview(db, session_id)
+
+    if agent_action == "follow_up":
+        followup_content = agent_result.get("followup_text", "")
+        interviewer_turn = InterviewTurn(
+            session_id=session_id, role="interviewer", content=followup_content
+        )
+        db.add(interviewer_turn)
+        session.current_round += 1
+        db.commit()
+        return {
+            "evaluation": evaluation_result,
+            "followup": True,
+            "interviewer_message": followup_content,
+            "round": session.current_round,
+            "followup_reason": agent_result.get("_agent_reason", ""),
+        }
+
+    # ask_next
+    next_q_obj = agent_result.get("next_question_obj")
+    if not next_q_obj:
+        return end_interview(db, session_id)
+
+    new_diff = agent_result.get("new_difficulty", session.level)
+    next_asked_q = AskedQuestion(
+        session_id=session_id,
+        qbank_id=next_q_obj.id,
+        topic=next_q_obj.chapter,
+        difficulty=new_diff,
+        question_text=next_q_obj.question,
+        correct_answer_text=next_q_obj.correct_answer,
+    )
+    db.add(next_asked_q)
+
+    last_score = evaluation_result.get("overall_score")
+    was_followup = agent.memory.followup_counts.get(str(asked_q.id), 0) > 0
+    next_content = get_next_question_phrase(
+        question=next_q_obj.question,
+        last_score=last_score,
+        after_followup=was_followup,
+        next_chapter=next_q_obj.chapter,
+    )
+    interviewer_turn = InterviewTurn(
+        session_id=session_id, role="interviewer", content=next_content
+    )
+    db.add(interviewer_turn)
+    session.current_round += 1
+    db.commit()
+
+    return {
+        "evaluation": evaluation_result,
+        "followup": False,
+        "next_question": next_q_obj.question,
+        "interviewer_message": interviewer_turn.content,
+        "round": session.current_round,
+    }
 
