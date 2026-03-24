@@ -33,14 +33,14 @@ def render_avatar(state: str = "idle", text_to_speak: str = ""):
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{ display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
-            .avatar-container {{ display: flex; flex-direction: column; align-items: center; padding: 16px; }}
+            .avatar-container {{ display: flex; flex-direction: column; align-items: center; padding: 8px; }}
             .avatar-frame {{
                 position: relative;
-                width: 220px; height: 220px;
+                width: 140px; height: 140px;
                 border-radius: 50%;
                 overflow: hidden;
-                box-shadow: 0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08);
-                border: 4px solid rgba(255,255,255,0.95);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+                border: 3px solid rgba(255,255,255,0.95);
                 background: #e2e8f0;
             }}
             .avatar-frame.speaking {{ animation: frame-speak 1.5s ease-in-out infinite; }}
@@ -53,10 +53,10 @@ def render_avatar(state: str = "idle", text_to_speak: str = ""):
             .avatar-poster {{ display: none; }}
             .avatar-frame.show-poster .avatar-video {{ display: none; }}
             .avatar-frame.show-poster .avatar-poster {{ display: block; }}
-            .status-badge {{ display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 8px 18px; background: #fff; border-radius: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); font-size: 13px; color: #475569; font-weight: 500; }}
-            .status-dot {{ width: 8px; height: 8px; border-radius: 50%; background: {'#22c55e' if state == 'speaking' else '#6366f1' if state == 'listening' else '#94a3b8'}; }}
+            .status-badge {{ display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 14px; background: #fff; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-size: 11px; color: #475569; font-weight: 500; }}
+            .status-dot {{ width: 6px; height: 6px; border-radius: 50%; background: {'#22c55e' if state == 'speaking' else '#6366f1' if state == 'listening' else '#94a3b8'}; }}
             .status-dot.pulse {{ animation: dot-pulse 1.2s ease-in-out infinite; }}
-            .avatar-title {{ margin-top: 6px; font-size: 14px; color: #64748b; font-weight: 500; }}
+            .avatar-title {{ margin-top: 4px; font-size: 12px; color: #64748b; font-weight: 500; }}
             @keyframes frame-speak {{ 0%,100% {{ transform: scale(1); }} 50% {{ transform: scale(1.03); }} }}
             @keyframes frame-idle {{ 0%,100% {{ transform: scale(1); }} 50% {{ transform: scale(1.02); }} }}
             @keyframes dot-pulse {{ 0%,100% {{ opacity:1; transform:scale(1); }} 50% {{ opacity:0.6; transform:scale(1.3); }} }}
@@ -124,5 +124,5 @@ def render_avatar(state: str = "idle", text_to_speak: str = ""):
     </body>
     </html>
     """
-    components.html(html, height=340)
+    components.html(html, height=220)
 

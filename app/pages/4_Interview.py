@@ -22,6 +22,10 @@ from app.components.sidebar import render_sidebar
 from app.i18n import t
 import base64
 import json
+import html
+import time
+import hashlib
+import streamlit.components.v1 as st_components
 
 st.set_page_config(page_title="Interview", layout="wide")
 inject_global_styles()
@@ -32,14 +36,22 @@ init_session_state()
 def _inject_interview_styles():
     st.markdown("""
     <style>
+    /* Lock viewport — no page-level scrolling during interview */
+    section.main > div.block-container {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0 !important;
+        max-height: 100vh;
+        overflow: hidden;
+    }
+
     /* Chat bubble styles */
     .chat-bubble {
-        padding: 12px 16px;
-        border-radius: 16px;
-        margin: 6px 0;
-        max-width: 88%;
-        line-height: 1.6;
-        font-size: 0.95rem;
+        padding: 10px 14px;
+        border-radius: 14px;
+        margin: 4px 0;
+        max-width: 90%;
+        line-height: 1.55;
+        font-size: 0.9rem;
         word-wrap: break-word;
     }
     .chat-bubble.interviewer {
@@ -48,6 +60,18 @@ def _inject_interview_styles():
         border-bottom-left-radius: 4px;
         margin-right: auto;
         box-shadow: 0 2px 8px rgba(99,102,241,0.2);
+    }
+    .chat-bubble.interviewer.thinking {
+        background: #eef2ff;
+        color: #3730a3;
+        border: 1px solid #c7d2fe;
+        box-shadow: none;
+    }
+    .chat-bubble.interviewer.eval {
+        background: #ecfeff;
+        color: #155e75;
+        border: 1px solid #a5f3fc;
+        box-shadow: none;
     }
     .chat-bubble.candidate {
         background: #ffffff;
@@ -58,196 +82,268 @@ def _inject_interview_styles():
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
     .chat-role {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #94a3b8;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
         font-weight: 600;
     }
     .chat-role.right { text-align: right; }
-
-    /* Answer input area pinned at bottom */
-    .answer-area {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 16px;
-        margin-top: 8px;
-        box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+    .typing-cursor {
+        animation: blink 1s steps(1, end) infinite;
+        margin-left: 2px;
     }
-
-    /* Side panel card */
-    .side-panel-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 12px;
-        margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    @keyframes blink {
+        50% { opacity: 0; }
     }
-
-    /* Thinking bubble */
-    .chat-bubble.thinking {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        color: #475569;
-        border-bottom-left-radius: 4px;
-        margin-right: auto;
-        font-size: 0.85rem;
-        border: 1px solid #cbd5e1;
-    }
-    .thinking-header {
-        font-weight: 600;
-        color: #6366f1;
-        margin-bottom: 6px;
-        font-size: 0.8rem;
-    }
-    .thinking-step {
-        padding: 2px 0;
-        color: #64748b;
-    }
-    .thinking-step.done { color: #22c55e; }
-    .thinking-step.active {
-        color: #6366f1;
-        font-weight: 500;
-    }
-
-    /* Eval result bubble */
-    .chat-bubble.eval-result {
-        background: #f0fdf4;
-        color: #1e293b;
-        border: 1px solid #bbf7d0;
-        border-bottom-left-radius: 4px;
-        margin-right: auto;
-    }
-    .eval-scores { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
-    .eval-dim { text-align: center; }
-    .eval-dim .label { font-size: 0.7rem; color: #64748b; }
-    .eval-dim .value { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
     </style>
     """, unsafe_allow_html=True)
 
 
-def _render_chat_bubbles(turns):
-    """Render chat history as styled bubbles."""
-    for turn in turns:
-        if turn["role"] == "interviewer":
-            st.markdown(
-                f'<div class="chat-role">{t("interview.interviewer")}</div>'
-                f'<div class="chat-bubble interviewer">{turn["content"]}</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                f'<div class="chat-role right">You</div>'
-                f'<div class="chat-bubble candidate">{turn["content"]}</div>',
-                unsafe_allow_html=True,
-            )
-
-
-def _do_submit_with_thinking(col_main, db, session_id, answer_text, answer_type, expr_data, audio_data):
-    """Submit answer and show thinking process with typewriter effect."""
-    import time
-
-    with col_main:
-        # Thinking area below the chat
-        thinking_box = st.container()
-
-    with thinking_box:
-        st.markdown(
-            f'<div class="chat-role">{t("interview.interviewer")} · 思考中</div>',
-            unsafe_allow_html=True,
-        )
-        msg_placeholder = st.empty()
-
-        # Step 1: Show analyzing
-        _typewriter(msg_placeholder, "🔍 正在分析你的回答，请稍候...")
-        time.sleep(0.3)
-
-    # Call backend (blocking)
-    result = submit_answer(
-        db, session_id,
-        answer_text=answer_text if answer_type == "text" else None,
-        answer_type=answer_type,
-        audio_data=audio_data,
-        expression_data=expr_data,
-    )
-
-    if "error" in result:
-        st.error(result["error"])
-        return
-
-    ev = result.get("evaluation", {})
-
-    with thinking_box:
-        # Step 2: Show evaluation result with typewriter
-        if ev:
-            score = ev.get("overall_score", 0)
-            scores = ev.get("scores", {})
-            feedback = ev.get("feedback", "")
-            dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
-
-            # Build eval text progressively
-            eval_lines = [f"📊 **评估完成** · 综合得分 **{score:.0%}**"]
-            dims_text = " | ".join(f"{lbl} {scores.get(k, 0):.0%}" for k, lbl in dim_labels.items())
-            eval_lines.append(dims_text)
-            if feedback:
-                eval_lines.append(f"💬 {feedback[:200]}")
-
-            missing = ev.get("missing_points", [])
-            if missing:
-                eval_lines.append("📌 缺失: " + " · ".join(missing[:3]))
-
-            # Typewriter each line
-            full_text = ""
-            for line in eval_lines:
-                full_text += line + "\n\n"
-                _typewriter(msg_placeholder, full_text.strip(), delay=0.02)
-                time.sleep(0.3)
-
-        # Step 3: Show next action
-        if result.get("followup"):
-            full_text += "\n\n🤔 发现知识缺口，正在生成追问..."
-        else:
-            full_text += "\n\n📋 正在选择下一个最佳问题..."
-        _typewriter(msg_placeholder, full_text.strip(), delay=0.02)
-        time.sleep(0.5)
-
-        full_text += "\n\n✅ 完成"
-        _typewriter(msg_placeholder, full_text.strip(), delay=0.02)
-
-    # Store state
-    if ev:
-        st.session_state["_last_eval"] = ev
-    st.session_state["_last_was_followup"] = result.get("followup", False)
-    st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
-    if answer_type == "audio":
-        st.session_state["_audio_submitted_round"] = result.get("round", 0)
-    clear_accumulated_expressions()
-    st.session_state.avatar_state = "idle"
-    time.sleep(1.0)
-    st.rerun()
-
-
-def _typewriter(placeholder, text: str, delay: float = 0.015):
-    """Render text with typewriter animation using progressive markdown updates."""
-    import time
-    displayed = ""
-    for char in text:
-        displayed += char
-        placeholder.markdown(
-            f'<div class="chat-bubble thinking">{displayed}▌</div>',
-            unsafe_allow_html=True,
-        )
-        if char in ("。", "！", "？", "\n", "|"):
-            time.sleep(delay * 3)
-        elif char == " ":
-            time.sleep(delay * 0.5)
-        else:
-            time.sleep(delay)
-    # Final render without cursor
-    placeholder.markdown(
-        f'<div class="chat-bubble thinking">{text}</div>',
+def _render_interviewer_bubble(content: str):
+    safe = html.escape(content).replace("\n", "<br>")
+    st.markdown(
+        f'<div class="chat-role">{t("interview.interviewer")}</div>'
+        f'<div class="chat-bubble interviewer">{safe}</div>',
         unsafe_allow_html=True,
     )
+
+
+def _candidate_html(content: str) -> str:
+    safe = html.escape(content).replace("\n", "<br>")
+    return (
+        '<div class="chat-role right">You</div>'
+        f'<div class="chat-bubble candidate">{safe}</div>'
+    )
+
+
+def _render_candidate_bubble(content: str):
+    st.markdown(_candidate_html(content), unsafe_allow_html=True)
+
+
+def _render_eval_bubble(content: str):
+    safe = html.escape(content).replace("\n", "<br>")
+    st.markdown(
+        '<div class="chat-role">面试官 · 评估结果</div>'
+        f'<div class="chat-bubble interviewer eval">{safe}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _get_thinking_logs(session_id: int):
+    """Get persisted UI-only thinking logs for a session."""
+    store = st.session_state.setdefault("_thinking_logs", {})
+    key = str(session_id)
+    if key not in store:
+        store[key] = []
+    logs = store[key]
+    normalized = []
+    for idx, item in enumerate(logs):
+        if isinstance(item, dict) and "kind" in item:
+            normalized.append(item)
+        elif isinstance(item, dict) and "content" in item:
+            normalized.append(
+                {
+                    "kind": "thinking",
+                    "content": item.get("content", ""),
+                    "anchor_candidate_idx": 999999,
+                    "stage": f"legacy_{idx}",
+                    "submit_token": f"legacy_{idx}",
+                    "order": idx,
+                }
+            )
+    store[key] = normalized
+    return store[key]
+
+
+def _thinking_html(content: str, live: bool = False) -> str:
+    safe = html.escape(content).replace("\n", "<br>")
+    cursor = '<span class="typing-cursor">▋</span>' if live else ""
+    return (
+        '<div class="chat-role">面试官 · 思考中</div>'
+        f'<div class="chat-bubble interviewer thinking">{safe}{cursor}</div>'
+    )
+
+
+def _get_event_order_counter(session_id: int) -> int:
+    key = str(session_id)
+    counters = st.session_state.setdefault("_thinking_order_counter", {})
+    if key not in counters:
+        counters[key] = len(_get_thinking_logs(session_id))
+    counters[key] += 1
+    return counters[key]
+
+
+def _append_chat_event(
+    session_id: int,
+    *,
+    kind: str,
+    content: str,
+    anchor_candidate_idx: int,
+    submit_token: str,
+    stage: str,
+):
+    seen = _get_thinking_stage_seen(session_id)
+    stage_key = f"{submit_token}:{stage}"
+    if seen.get(stage_key):
+        return
+    _get_thinking_logs(session_id).append(
+        {
+            "kind": kind,
+            "content": content,
+            "anchor_candidate_idx": anchor_candidate_idx,
+            "submit_token": submit_token,
+            "stage": stage,
+            "order": _get_event_order_counter(session_id),
+        }
+    )
+    seen[stage_key] = True
+
+
+def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""):
+    logs = sorted(_get_thinking_logs(session_id), key=lambda x: x.get("order", 0))
+    events_by_anchor = {}
+    for item in logs:
+        anchor = int(item.get("anchor_candidate_idx", 999999))
+        events_by_anchor.setdefault(anchor, []).append(item)
+
+    def _render_events(anchor_idx: int):
+        for event in events_by_anchor.get(anchor_idx, []):
+            if event.get("kind") == "evaluation":
+                _render_eval_bubble(event.get("content", ""))
+            else:
+                st.markdown(_thinking_html(event.get("content", "")), unsafe_allow_html=True)
+
+    candidate_idx = 0
+    for turn in turns:
+        if turn["role"] == "interviewer":
+            _render_interviewer_bubble(turn["content"])
+        else:
+            _render_candidate_bubble(turn["content"])
+            candidate_idx += 1
+            _render_events(candidate_idx)
+
+    if optimistic_candidate:
+        _render_candidate_bubble(optimistic_candidate)
+        candidate_idx += 1
+        _render_events(candidate_idx)
+
+    remaining = sorted(k for k in events_by_anchor.keys() if k > candidate_idx)
+    for key in remaining:
+        _render_events(key)
+
+
+def _get_thinking_stage_seen(session_id: int):
+    """Get stage de-dup cache for a session."""
+    store = st.session_state.setdefault("_thinking_stage_seen", {})
+    key = str(session_id)
+    if key not in store:
+        store[key] = {}
+    return store[key]
+
+
+def _show_thinking_stage(
+    session_id: int,
+    placeholder,
+    submit_token: str,
+    anchor_candidate_idx: int,
+    stage: str,
+    content: str,
+    delay: float = 0.008,
+):
+    """Render typewriter thinking and persist once per submit stage."""
+    _typewriter_thinking(placeholder, content, delay=delay)
+    _append_chat_event(
+        session_id,
+        kind="thinking",
+        content=content,
+        anchor_candidate_idx=anchor_candidate_idx,
+        submit_token=submit_token,
+        stage=stage,
+    )
+
+
+def _eval_html(content: str, live: bool = False) -> str:
+    safe = html.escape(content).replace("\n", "<br>")
+    cursor = '<span class="typing-cursor">▋</span>' if live else ""
+    return (
+        '<div class="chat-role">面试官 · 评估结果</div>'
+        f'<div class="chat-bubble interviewer eval">{safe}{cursor}</div>'
+    )
+
+
+def _show_eval_stage(
+    session_id: int,
+    placeholder,
+    submit_token: str,
+    anchor_candidate_idx: int,
+    stage: str,
+    content: str,
+    delay: float = 0.006,
+):
+    """Typewriter eval bubble and persist."""
+    if not content:
+        return
+    step = 2 if len(content) > 80 else 1
+    for i in range(step, len(content) + 1, step):
+        placeholder.markdown(_eval_html(content[:i], live=True), unsafe_allow_html=True)
+        time.sleep(delay)
+    placeholder.markdown(_eval_html(content, live=False), unsafe_allow_html=True)
+    _append_chat_event(
+        session_id,
+        kind="evaluation",
+        content=content,
+        anchor_candidate_idx=anchor_candidate_idx,
+        submit_token=submit_token,
+        stage=stage,
+    )
+
+
+def _typewriter_thinking(placeholder, content: str, delay: float = 0.008):
+    if not content:
+        return
+    step = 2 if len(content) > 80 else 1
+    for i in range(step, len(content) + 1, step):
+        placeholder.markdown(_thinking_html(content[:i], live=True), unsafe_allow_html=True)
+        time.sleep(delay)
+    placeholder.markdown(_thinking_html(content, live=False), unsafe_allow_html=True)
+
+
+def _build_thinking_summary(result: dict) -> str:
+    ev = result.get("evaluation", {}) or {}
+    score = float(ev.get("overall_score", 0.0) or 0.0)
+    missing = ev.get("missing_points", []) or []
+    feedback = (ev.get("feedback", "") or "").strip()
+    decision = "我会继续追问，针对你还不够扎实的点深入确认。" if result.get("followup") else "我会切换到下一题，继续扩展你的能力覆盖。"
+    lines = [
+        "我先快速拆解你这道题的回答：",
+        f"- 语义匹配与关键点覆盖已完成，当前综合评估约 {score:.0%}。",
+        f"- 识别到待补强点 {len(missing)} 个，已用于下一步提问策略。",
+        f"- 决策：{decision}",
+    ]
+    if feedback:
+        lines.append(f"- 评语摘要：{feedback[:100]}")
+    return "\n".join(lines)
+
+
+def _build_eval_summary(result: dict) -> str:
+    ev = result.get("evaluation", {}) or {}
+    scores = ev.get("scores", {}) or {}
+    missing = ev.get("missing_points", []) or []
+    lines = [
+        f"综合评分：{float(ev.get('overall_score', 0.0) or 0.0):.0%}",
+        "维度评分："
+        f" 正确 {float(scores.get('correctness', 0.0)):.0%}"
+        f" / 深度 {float(scores.get('depth', 0.0)):.0%}"
+        f" / 清晰 {float(scores.get('clarity', 0.0)):.0%}"
+        f" / 实用 {float(scores.get('practicality', 0.0)):.0%}"
+        f" / 权衡 {float(scores.get('tradeoffs', 0.0)):.0%}",
+    ]
+    feedback = (ev.get("feedback", "") or "").strip()
+    if feedback:
+        lines.append(f"反馈：{feedback[:140]}")
+    if missing:
+        lines.append("待补强点：" + " · ".join(missing[:3]))
+    return "\n".join(lines)
 
 
 def main():
@@ -338,9 +434,9 @@ def main():
     progress_ratio = session.current_round / session.total_rounds if session.total_rounds else 0
     remain = max(session.total_rounds - session.current_round, 0)
     st.markdown(f"""
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:8px;">
-        <div style="font-size:1.15rem; font-weight:700; color:#1e293b;">{session.track}</div>
-        <div style="display:flex; gap:18px; font-size:0.85rem; color:#64748b;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:2px;">
+        <div style="font-size:1rem; font-weight:700; color:#1e293b;">{session.track}</div>
+        <div style="display:flex; gap:14px; font-size:0.8rem; color:#64748b;">
             <span>{t("interview.round")} <b style="color:#1e293b;">{session.current_round}/{session.total_rounds}</b></span>
             <span>{t("interview.difficulty")} <b style="color:#1e293b;">{session.level}</b></span>
             <span><b style="color:#1e293b;">{remain}</b> left</span>
@@ -360,6 +456,18 @@ def main():
 
     # ── Main layout: [avatar+video] | [chat+answer] ──
     turns = get_session_turns(db, session_id)
+    candidate_turns = [turn for turn in turns if turn.get("role") == "candidate"]
+    candidate_count = len(candidate_turns)
+    pending_candidate_state = st.session_state.get("_pending_candidate_message", {})
+    optimistic_candidate = ""
+    if pending_candidate_state.get("session_id") == session_id:
+        pending_content = (pending_candidate_state.get("content") or "").strip()
+        if pending_content:
+            db_has_pending = any((turn.get("content") or "").strip() == pending_content for turn in candidate_turns)
+            if db_has_pending:
+                st.session_state["_pending_candidate_message"] = {}
+            else:
+                optimistic_candidate = pending_content
     last_interviewer = next((turn for turn in reversed(turns) if turn["role"] == "interviewer"), None)
     text_to_speak = ""
     if last_interviewer:
@@ -368,7 +476,7 @@ def main():
             text_to_speak = last_interviewer["content"]
             st.session_state["_avatar_last_spoken_id"] = last_interviewer.get("id")
 
-    col_side, col_main = st.columns([1, 2.5])
+    col_side, col_main = st.columns([1, 3])
 
     # Left panel: avatar + expression
     with col_side:
@@ -378,9 +486,31 @@ def main():
     # Right panel: unified chat + answer
     with col_main:
         # Chat history
-        chat_container = st.container(height=420)
+        chat_container = st.container(height=400)
         with chat_container:
-            _render_chat_bubbles(turns)
+            _render_chat_timeline(turns, session_id, optimistic_candidate=optimistic_candidate)
+            live_candidate_placeholder = st.empty()
+            live_thinking_placeholder = st.empty()
+            st_components.html(
+                """<script>
+                requestAnimationFrame(function(){
+                    var f=window.frameElement;if(!f)return;
+                    // Find the scrollable chat wrapper
+                    var p=f.closest('[data-testid="stVerticalBlockBorderWrapper"]');
+                    if(!p)p=f.parentElement;
+                    while(p&&p.scrollHeight<=p.clientHeight)p=p.parentElement;
+                    if(p){
+                        // Dynamic height: viewport minus header(~90px) + input area(~200px) + margins(~30px)
+                        var targetH=window.innerHeight-320;
+                        if(targetH<250)targetH=250;
+                        p.style.maxHeight=targetH+'px';
+                        p.style.height=targetH+'px';
+                        p.scrollTop=p.scrollHeight;
+                    }
+                });
+                </script>""",
+                height=0,
+            )
 
         # Follow-up indicator
         if st.session_state.get("_last_was_followup"):
@@ -404,7 +534,7 @@ def main():
 
         if answer_mode == t("interview.text_answer"):
             answer_text = st.text_area(
-                "", height=120, key="answer_input",
+                "", height=90, key=f"answer_input_{session.current_round}",
                 placeholder=t("interview.answer_placeholder"),
                 label_visibility="collapsed",
             )
@@ -417,15 +547,89 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-                    _do_submit_with_thinking(
-                        col_main, db, session_id, answer_text.strip(),
-                        "text", expr_data, None,
+                    answer_clean = answer_text.strip()
+                    st.session_state["_pending_candidate_message"] = {
+                        "session_id": session_id,
+                        "content": answer_clean,
+                    }
+                    live_candidate_placeholder.markdown(_candidate_html(answer_clean), unsafe_allow_html=True)
+                    submit_token = f"r{session.current_round}:text:{hashlib.sha256(answer_clean.encode('utf-8')).hexdigest()[:10]}"
+                    anchor_candidate_idx = candidate_count + 1
+                    _show_thinking_stage(
+                        session_id,
+                        live_thinking_placeholder,
+                        submit_token,
+                        anchor_candidate_idx,
+                        "received",
+                        "收到你的回答，我正在分析关键点覆盖、表达深度和策略方向...",
                     )
+                    _show_thinking_stage(
+                        session_id,
+                        live_thinking_placeholder,
+                        submit_token,
+                        anchor_candidate_idx,
+                        "llm_eval",
+                        "正在进行大模型动态评估：语义理解、关键点覆盖、逻辑结构和可落地性。",
+                        delay=0.006,
+                    )
+                    result = submit_answer(
+                        db, session_id, answer_clean,
+                        answer_type="text", expression_data=expr_data,
+                    )
+                    if "error" in result:
+                        _show_thinking_stage(
+                            session_id,
+                            live_thinking_placeholder,
+                            submit_token,
+                            anchor_candidate_idx,
+                            "error",
+                            "分析过程中出现异常，请你再提交一次，我会继续。",
+                            delay=0.006,
+                        )
+                        st.session_state["_pending_candidate_message"] = {}
+                        st.error(result["error"])
+                    else:
+                        _show_thinking_stage(
+                            session_id,
+                            live_thinking_placeholder,
+                            submit_token,
+                            anchor_candidate_idx,
+                            "next_loading",
+                            "分析完成，正在组织下一题，请稍等...",
+                            delay=0.006,
+                        )
+                        _show_thinking_stage(
+                            session_id,
+                            live_thinking_placeholder,
+                            submit_token,
+                            anchor_candidate_idx,
+                            "thinking_summary",
+                            _build_thinking_summary(result),
+                            delay=0.005,
+                        )
+                        _show_eval_stage(
+                            session_id,
+                            live_thinking_placeholder,
+                            submit_token,
+                            anchor_candidate_idx,
+                            "evaluation_summary",
+                            _build_eval_summary(result),
+                            delay=0.004,
+                        )
+                        time.sleep(0.3)
+                        ev = result.get("evaluation", {})
+                        if ev:
+                            st.session_state["_last_eval"] = ev
+                        st.session_state["_pending_candidate_message"] = {}
+                        st.session_state["_last_was_followup"] = result.get("followup", False)
+                        st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
+                        clear_accumulated_expressions()
+                        st.session_state.avatar_state = "idle"
+                        st.rerun()
         else:
             st.caption(t('interview.audio_tip'))
             wav_audio_data = st_audiorec()
             if wav_audio_data is not None:
-                import hashlib
                 MIN_AUDIO_BYTES = 8000
                 if len(wav_audio_data) < MIN_AUDIO_BYTES:
                     st.warning(t('interview.audio_too_short'))
@@ -444,32 +648,88 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-                        _do_submit_with_thinking(
-                            col_main, db, session_id, None,
-                            "audio", expr_data, audio_data,
+                        audio_pending_text = "（语音回答已提交）"
+                        st.session_state["_pending_candidate_message"] = {
+                            "session_id": session_id,
+                            "content": audio_pending_text,
+                        }
+                        live_candidate_placeholder.markdown(_candidate_html(audio_pending_text), unsafe_allow_html=True)
+                        submit_token = f"r{session.current_round}:audio:{h[:10]}"
+                        anchor_candidate_idx = candidate_count + 1
+                        _show_thinking_stage(
+                            session_id,
+                            live_thinking_placeholder,
+                            submit_token,
+                            anchor_candidate_idx,
+                            "received",
+                            "语音已收到，我正在识别内容并进行回答分析...",
                         )
+                        _show_thinking_stage(
+                            session_id,
+                            live_thinking_placeholder,
+                            submit_token,
+                            anchor_candidate_idx,
+                            "llm_eval",
+                            "正在进行大模型动态评估：语义理解、关键点覆盖、逻辑结构和可落地性。",
+                            delay=0.006,
+                        )
+                        result = submit_answer(
+                            db, session_id, answer_text=None,
+                            answer_type="audio", audio_data=audio_data,
+                            expression_data=expr_data,
+                        )
+                        if "error" in result:
+                            _show_thinking_stage(
+                                session_id,
+                                live_thinking_placeholder,
+                                submit_token,
+                                anchor_candidate_idx,
+                                "error",
+                                "语音分析中遇到一点问题，请再试一次。",
+                                delay=0.006,
+                            )
+                            st.session_state["_pending_candidate_message"] = {}
+                            st.error(result["error"])
+                        else:
+                            _show_thinking_stage(
+                                session_id,
+                                live_thinking_placeholder,
+                                submit_token,
+                                anchor_candidate_idx,
+                                "next_loading",
+                                "分析完成，正在组织下一题，请稍等...",
+                                delay=0.006,
+                            )
+                            _show_thinking_stage(
+                                session_id,
+                                live_thinking_placeholder,
+                                submit_token,
+                                anchor_candidate_idx,
+                                "thinking_summary",
+                                _build_thinking_summary(result),
+                                delay=0.005,
+                            )
+                            _show_eval_stage(
+                                session_id,
+                                live_thinking_placeholder,
+                                submit_token,
+                                anchor_candidate_idx,
+                                "evaluation_summary",
+                                _build_eval_summary(result),
+                                delay=0.004,
+                            )
+                            time.sleep(0.3)
+                            ev = result.get("evaluation", {})
+                            if ev:
+                                st.session_state["_last_eval"] = ev
+                            st.session_state["_pending_candidate_message"] = {}
+                            st.session_state["_last_was_followup"] = result.get("followup", False)
+                            st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
+                            clear_accumulated_expressions()
+                            st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
+                            st.session_state.avatar_state = "idle"
+                            st.rerun()
             st.session_state.avatar_state = "listening"
-
-    # Show last evaluation feedback (if available)
-    last_eval = st.session_state.get("_last_eval")
-    if last_eval and session.status == "active":
-        with col_main:
-            with st.expander("📊 上一题评估反馈", expanded=False):
-                score = last_eval.get("overall_score", 0)
-                cols = st.columns(6)
-                cols[0].metric("综合", f"{score:.0%}")
-                for i, (dim, label) in enumerate([
-                    ("correctness", "正确"), ("depth", "深度"), ("clarity", "清晰"),
-                    ("practicality", "实用"), ("tradeoffs", "权衡")
-                ]):
-                    val = last_eval.get("scores", {}).get(dim, 0)
-                    cols[i + 1].metric(label, f"{val:.0%}")
-                fb = last_eval.get("feedback", "")
-                if fb:
-                    st.caption(fb[:200])
-                missing = last_eval.get("missing_points", [])
-                if missing:
-                    st.caption("缺失点: " + " · ".join(missing[:3]))
 
     # Sidebar info with adaptive difficulty
     current_difficulty = session.level

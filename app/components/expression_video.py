@@ -39,7 +39,7 @@ def render_expression_video(session_id: int):
 
     frame_b64 = video_capture(
         interval_ms=_CAPTURE_INTERVAL_MS,
-        height=200,
+        height=140,
         key=f"expr_vid_{session_id}",
     )
 
