@@ -143,60 +143,109 @@ def _render_chat_bubbles(turns):
             )
 
 
-def _render_thinking_start():
-    """Render the interviewer thinking header."""
-    st.markdown(
-        f'<div class="chat-role">{t("interview.interviewer")} · 思考中</div>',
-        unsafe_allow_html=True,
+def _do_submit_with_thinking(col_main, db, session_id, answer_text, answer_type, expr_data, audio_data):
+    """Submit answer and show thinking process with typewriter effect."""
+    import time
+
+    with col_main:
+        # Thinking area below the chat
+        thinking_box = st.container()
+
+    with thinking_box:
+        st.markdown(
+            f'<div class="chat-role">{t("interview.interviewer")} · 思考中</div>',
+            unsafe_allow_html=True,
+        )
+        msg_placeholder = st.empty()
+
+        # Step 1: Show analyzing
+        _typewriter(msg_placeholder, "🔍 正在分析你的回答，请稍候...")
+        time.sleep(0.3)
+
+    # Call backend (blocking)
+    result = submit_answer(
+        db, session_id,
+        answer_text=answer_text if answer_type == "text" else None,
+        answer_type=answer_type,
+        audio_data=audio_data,
+        expression_data=expr_data,
     )
 
+    if "error" in result:
+        st.error(result["error"])
+        return
 
-def _update_thinking(placeholder, message: str, step: int = 1, done: bool = False):
-    """Update the thinking bubble with current step."""
-    steps = [
-        ("分析回答内容", step >= 1),
-        ("AI 评估打分", step >= 2),
-        ("决策下一步行动", step >= 3),
-        ("完成", step >= 4),
-    ]
-    steps_html = ""
-    for label, is_done in steps:
-        if is_done and not (label == "完成" and not done):
-            steps_html += f'<div class="thinking-step done">✓ {label}</div>'
-        elif not is_done:
-            active = steps.index((label, is_done)) == step - 1
-            if active:
-                steps_html += f'<div class="thinking-step active">⟳ {label}...</div>'
+    ev = result.get("evaluation", {})
 
+    with thinking_box:
+        # Step 2: Show evaluation result with typewriter
+        if ev:
+            score = ev.get("overall_score", 0)
+            scores = ev.get("scores", {})
+            feedback = ev.get("feedback", "")
+            dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
+
+            # Build eval text progressively
+            eval_lines = [f"📊 **评估完成** · 综合得分 **{score:.0%}**"]
+            dims_text = " | ".join(f"{lbl} {scores.get(k, 0):.0%}" for k, lbl in dim_labels.items())
+            eval_lines.append(dims_text)
+            if feedback:
+                eval_lines.append(f"💬 {feedback[:200]}")
+
+            missing = ev.get("missing_points", [])
+            if missing:
+                eval_lines.append("📌 缺失: " + " · ".join(missing[:3]))
+
+            # Typewriter each line
+            full_text = ""
+            for line in eval_lines:
+                full_text += line + "\n\n"
+                _typewriter(msg_placeholder, full_text.strip(), delay=0.02)
+                time.sleep(0.3)
+
+        # Step 3: Show next action
+        if result.get("followup"):
+            full_text += "\n\n🤔 发现知识缺口，正在生成追问..."
+        else:
+            full_text += "\n\n📋 正在选择下一个最佳问题..."
+        _typewriter(msg_placeholder, full_text.strip(), delay=0.02)
+        time.sleep(0.5)
+
+        full_text += "\n\n✅ 完成"
+        _typewriter(msg_placeholder, full_text.strip(), delay=0.02)
+
+    # Store state
+    if ev:
+        st.session_state["_last_eval"] = ev
+    st.session_state["_last_was_followup"] = result.get("followup", False)
+    st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
+    if answer_type == "audio":
+        st.session_state["_audio_submitted_round"] = result.get("round", 0)
+    clear_accumulated_expressions()
+    st.session_state.avatar_state = "idle"
+    time.sleep(1.0)
+    st.rerun()
+
+
+def _typewriter(placeholder, text: str, delay: float = 0.015):
+    """Render text with typewriter animation using progressive markdown updates."""
+    import time
+    displayed = ""
+    for char in text:
+        displayed += char
+        placeholder.markdown(
+            f'<div class="chat-bubble thinking">{displayed}▌</div>',
+            unsafe_allow_html=True,
+        )
+        if char in ("。", "！", "？", "\n", "|"):
+            time.sleep(delay * 3)
+        elif char == " ":
+            time.sleep(delay * 0.5)
+        else:
+            time.sleep(delay)
+    # Final render without cursor
     placeholder.markdown(
-        f'<div class="chat-bubble thinking">'
-        f'<div class="thinking-header">🧠 {message}</div>'
-        f'{steps_html}'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-
-def _render_eval_bubble(ev: dict):
-    """Render evaluation result as a chat bubble inside the conversation."""
-    score = ev.get("overall_score", 0)
-    scores = ev.get("scores", {})
-    feedback = ev.get("feedback", "")
-
-    dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
-    dims_html = ""
-    for key, label in dim_labels.items():
-        val = scores.get(key, 0)
-        dims_html += f'<div class="eval-dim"><div class="label">{label}</div><div class="value">{val:.0%}</div></div>'
-
-    fb_short = feedback[:150] + "..." if len(feedback) > 150 else feedback
-
-    st.markdown(
-        f'<div class="chat-bubble eval-result">'
-        f'<div style="font-weight:600;color:#16a34a;margin-bottom:4px">📊 评估结果 · 综合 {score:.0%}</div>'
-        f'<div class="eval-scores">{dims_html}</div>'
-        f'<div style="font-size:0.82rem;color:#475569;margin-top:4px">{fb_short}</div>'
-        f'</div>',
+        f'<div class="chat-bubble thinking">{text}</div>',
         unsafe_allow_html=True,
     )
 
@@ -368,40 +417,10 @@ def main():
                 else:
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
-
-                    # Show thinking process in the chat area
-                    with chat_container:
-                        _render_thinking_start()
-                        thinking_placeholder = st.empty()
-                        _update_thinking(thinking_placeholder, "🔍 正在分析你的回答...", step=1)
-
-                    result = submit_answer(
-                        db, session_id, answer_text.strip(),
-                        answer_type="text", expression_data=expr_data,
+                    _do_submit_with_thinking(
+                        col_main, db, session_id, answer_text.strip(),
+                        "text", expr_data, None,
                     )
-
-                    if "error" in result:
-                        st.error(result["error"])
-                    else:
-                        ev = result.get("evaluation", {})
-                        with chat_container:
-                            if ev:
-                                _update_thinking(thinking_placeholder, "📊 评估完成，计算自适应难度...", step=2)
-                                _render_eval_bubble(ev)
-                            if result.get("followup"):
-                                _update_thinking(thinking_placeholder, "🤔 发现知识缺口，生成追问...", step=3)
-                            else:
-                                _update_thinking(thinking_placeholder, "📋 选择下一个最佳问题...", step=3)
-                            _update_thinking(thinking_placeholder, "✅ 分析完成", step=4, done=True)
-
-                        if ev:
-                            st.session_state["_last_eval"] = ev
-                        st.session_state["_last_was_followup"] = result.get("followup", False)
-                        st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
-                        clear_accumulated_expressions()
-                        st.session_state.avatar_state = "idle"
-                        import time; time.sleep(1.5)
-                        st.rerun()
         else:
             st.caption(t('interview.audio_tip'))
             wav_audio_data = st_audiorec()
@@ -425,38 +444,10 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-
-                        with chat_container:
-                            _render_thinking_start()
-                            thinking_placeholder = st.empty()
-                            _update_thinking(thinking_placeholder, "🎤 识别语音内容...", step=1)
-
-                        result = submit_answer(
-                            db, session_id, answer_text=None,
-                            answer_type="audio", audio_data=audio_data,
-                            expression_data=expr_data,
+                        _do_submit_with_thinking(
+                            col_main, db, session_id, None,
+                            "audio", expr_data, audio_data,
                         )
-
-                        if "error" in result:
-                            st.error(result["error"])
-                        else:
-                            ev = result.get("evaluation", {})
-                            with chat_container:
-                                if ev:
-                                    _update_thinking(thinking_placeholder, "📊 评估完成", step=2)
-                                    _render_eval_bubble(ev)
-                                _update_thinking(thinking_placeholder, "📋 选择下一个问题...", step=3)
-                                _update_thinking(thinking_placeholder, "✅ 分析完成", step=4, done=True)
-
-                            if ev:
-                                st.session_state["_last_eval"] = ev
-                            st.session_state["_last_was_followup"] = result.get("followup", False)
-                            st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
-                            clear_accumulated_expressions()
-                            st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
-                            st.session_state.avatar_state = "idle"
-                            import time; time.sleep(1.5)
-                            st.rerun()
             st.session_state.avatar_state = "listening"
 
     # Show last evaluation feedback (if available)
