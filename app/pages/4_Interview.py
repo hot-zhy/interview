@@ -85,155 +85,50 @@ def _inject_interview_styles():
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
-    /* AI thinking bubble (like ChatGPT reasoning) */
-    .thinking-bubble {
-        max-width: 85%;
-        padding: 10px 16px;
-        margin: 6px 0;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%);
-        border: 1px dashed #a5b4fc;
+    /* Thinking bubble */
+    .chat-bubble.thinking {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        color: #475569;
+        border-bottom-left-radius: 4px;
+        margin-right: auto;
         font-size: 0.85rem;
-        color: #4338ca;
-        line-height: 1.5;
+        border: 1px solid #cbd5e1;
     }
-    .thinking-bubble .step {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 2px 0;
-    }
-    .thinking-bubble .step.active {
+    .thinking-header {
         font-weight: 600;
-    }
-    .thinking-bubble .step.done {
-        color: #16a34a;
-    }
-    .thinking-label {
-        font-size: 0.7rem;
         color: #6366f1;
-        font-weight: 700;
-        margin-bottom: 4px;
-        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        font-size: 0.8rem;
+    }
+    .thinking-step {
+        padding: 2px 0;
+        color: #64748b;
+    }
+    .thinking-step.done { color: #22c55e; }
+    .thinking-step.active {
+        color: #6366f1;
+        font-weight: 500;
     }
 
-    /* Eval result card in chat */
-    .eval-card {
-        max-width: 85%;
-        padding: 12px 16px;
-        margin: 6px 0;
-        border-radius: 12px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        font-size: 0.85rem;
-    }
-    .eval-card .score-row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin: 6px 0;
-    }
-    .eval-card .score-item {
-        text-align: center;
-        min-width: 48px;
-    }
-    .eval-card .score-item .val {
-        font-size: 1.1rem;
-        font-weight: 700;
+    /* Eval result bubble */
+    .chat-bubble.eval-result {
+        background: #f0fdf4;
         color: #1e293b;
+        border: 1px solid #bbf7d0;
+        border-bottom-left-radius: 4px;
+        margin-right: auto;
     }
-    .eval-card .score-item .lbl {
-        font-size: 0.65rem;
-        color: #94a3b8;
-    }
-    .eval-card .feedback {
-        margin-top: 8px;
-        font-size: 0.8rem;
-        color: #475569;
-        line-height: 1.4;
-    }
+    .eval-scores { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+    .eval-dim { text-align: center; }
+    .eval-dim .label { font-size: 0.7rem; color: #64748b; }
+    .eval-dim .value { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
     </style>
     """, unsafe_allow_html=True)
 
 
-def _show_thinking(placeholder, message: str, step: int = 1):
-    """Show a ChatGPT-style thinking indicator inside the chat area."""
-    steps_html = ""
-    all_steps = [
-        ("🔍", "分析回答内容，提取知识点"),
-        ("🤖", "AI 评估回答质量（5维度评分）"),
-        ("📊", "计算自适应难度，更新面试状态"),
-        ("📋", "智能选择下一个问题"),
-    ]
-    for i, (icon, text) in enumerate(all_steps):
-        if i < step:
-            steps_html += f'<div class="step done">{icon} ✓ {text}</div>'
-        elif i == step:
-            steps_html += f'<div class="step active">{icon} ⏳ {text}...</div>'
-        else:
-            steps_html += f'<div class="step">{icon} {text}</div>'
-
-    placeholder.markdown(
-        f'<div class="thinking-label">💭 AI 思考中</div>'
-        f'<div class="thinking-bubble">{steps_html}</div>',
-        unsafe_allow_html=True,
-    )
-
-
-def _render_eval_block(ev: dict) -> str:
-    """Build HTML for thinking trace + evaluation card (persisted in chat)."""
-    scores = ev.get("scores", {})
-    overall = ev.get("overall_score", 0)
-    feedback = ev.get("feedback", "")
-    missing = ev.get("missing_points", [])
-    provenance = ev.get("_provenance", "")
-    prov_tag = "AI评估" if provenance == "llm" else "规则评估" if provenance == "rule" else "混合评估"
-
-    # Thinking trace (completed)
-    thinking = (
-        '<div class="thinking-label">💭 AI 分析过程</div>'
-        '<div class="thinking-bubble">'
-        '<div class="step done">🔍 ✓ 分析回答内容，提取知识点</div>'
-        '<div class="step done">🤖 ✓ AI 评估回答质量（5维度评分）</div>'
-        '<div class="step done">📊 ✓ 计算自适应难度，更新面试状态</div>'
-        '<div class="step done">📋 ✓ 智能选择下一个问题</div>'
-        '</div>'
-    )
-
-    # Score card
-    dims = [("综合", overall), ("正确", scores.get("correctness", 0)),
-            ("深度", scores.get("depth", 0)), ("清晰", scores.get("clarity", 0)),
-            ("实用", scores.get("practicality", 0)), ("权衡", scores.get("tradeoffs", 0))]
-
-    items = "".join(
-        f'<div class="score-item"><div class="val">{v:.0%}</div><div class="lbl">{k}</div></div>'
-        for k, v in dims
-    )
-
-    fb_text = feedback[:200] + ("..." if len(feedback) > 200 else "")
-    fb_html = f'<div class="feedback">{fb_text}</div>' if feedback else ""
-
-    missing_html = ""
-    if missing:
-        tags = " · ".join(m[:30] for m in missing[:3])
-        missing_html = f'<div class="feedback" style="color:#e11d48;margin-top:4px">缺失: {tags}</div>'
-
-    card = (
-        f'<div class="thinking-label">📊 {prov_tag}</div>'
-        f'<div class="eval-card">'
-        f'<div class="score-row">{items}</div>'
-        f'{fb_html}{missing_html}'
-        f'</div>'
-    )
-
-    return thinking + card
-
-
 def _render_chat_bubbles(turns):
-    """Render chat history as styled bubbles, with thinking/eval cards interleaved."""
-    eval_history = st.session_state.get("_eval_history", {})
-
-    for i, turn in enumerate(turns):
+    """Render chat history as styled bubbles."""
+    for turn in turns:
         if turn["role"] == "interviewer":
             st.markdown(
                 f'<div class="chat-role">{t("interview.interviewer")}</div>'
@@ -246,11 +141,64 @@ def _render_chat_bubbles(turns):
                 f'<div class="chat-bubble candidate">{turn["content"]}</div>',
                 unsafe_allow_html=True,
             )
-            # Show thinking trace + eval card after each candidate answer
-            turn_id = str(turn.get("id", i))
-            ev = eval_history.get(turn_id)
-            if ev:
-                st.markdown(_render_eval_block(ev), unsafe_allow_html=True)
+
+
+def _render_thinking_start():
+    """Render the interviewer thinking header."""
+    st.markdown(
+        f'<div class="chat-role">{t("interview.interviewer")} · 思考中</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _update_thinking(placeholder, message: str, step: int = 1, done: bool = False):
+    """Update the thinking bubble with current step."""
+    steps = [
+        ("分析回答内容", step >= 1),
+        ("AI 评估打分", step >= 2),
+        ("决策下一步行动", step >= 3),
+        ("完成", step >= 4),
+    ]
+    steps_html = ""
+    for label, is_done in steps:
+        if is_done and not (label == "完成" and not done):
+            steps_html += f'<div class="thinking-step done">✓ {label}</div>'
+        elif not is_done:
+            active = steps.index((label, is_done)) == step - 1
+            if active:
+                steps_html += f'<div class="thinking-step active">⟳ {label}...</div>'
+
+    placeholder.markdown(
+        f'<div class="chat-bubble thinking">'
+        f'<div class="thinking-header">🧠 {message}</div>'
+        f'{steps_html}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_eval_bubble(ev: dict):
+    """Render evaluation result as a chat bubble inside the conversation."""
+    score = ev.get("overall_score", 0)
+    scores = ev.get("scores", {})
+    feedback = ev.get("feedback", "")
+
+    dim_labels = {"correctness": "正确", "depth": "深度", "clarity": "清晰", "practicality": "实用", "tradeoffs": "权衡"}
+    dims_html = ""
+    for key, label in dim_labels.items():
+        val = scores.get(key, 0)
+        dims_html += f'<div class="eval-dim"><div class="label">{label}</div><div class="value">{val:.0%}</div></div>'
+
+    fb_short = feedback[:150] + "..." if len(feedback) > 150 else feedback
+
+    st.markdown(
+        f'<div class="chat-bubble eval-result">'
+        f'<div style="font-weight:600;color:#16a34a;margin-bottom:4px">📊 评估结果 · 综合 {score:.0%}</div>'
+        f'<div class="eval-scores">{dims_html}</div>'
+        f'<div style="font-size:0.82rem;color:#475569;margin-top:4px">{fb_short}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def main():
@@ -421,27 +369,38 @@ def main():
                     accumulated = get_accumulated_expressions()
                     expr_data = {"analyses": accumulated} if accumulated else None
 
-                    with st.spinner("💭 AI 正在分析你的回答..."):
-                        result = submit_answer(
-                            db, session_id, answer_text.strip(),
-                            answer_type="text", expression_data=expr_data,
-                        )
+                    # Show thinking process in the chat area
+                    with chat_container:
+                        _render_thinking_start()
+                        thinking_placeholder = st.empty()
+                        _update_thinking(thinking_placeholder, "🔍 正在分析你的回答...", step=1)
+
+                    result = submit_answer(
+                        db, session_id, answer_text.strip(),
+                        answer_type="text", expression_data=expr_data,
+                    )
 
                     if "error" in result:
                         st.error(result["error"])
                     else:
                         ev = result.get("evaluation", {})
+                        with chat_container:
+                            if ev:
+                                _update_thinking(thinking_placeholder, "📊 评估完成，计算自适应难度...", step=2)
+                                _render_eval_bubble(ev)
+                            if result.get("followup"):
+                                _update_thinking(thinking_placeholder, "🤔 发现知识缺口，生成追问...", step=3)
+                            else:
+                                _update_thinking(thinking_placeholder, "📋 选择下一个最佳问题...", step=3)
+                            _update_thinking(thinking_placeholder, "✅ 分析完成", step=4, done=True)
+
                         if ev:
                             st.session_state["_last_eval"] = ev
-                            candidate_turns = [t for t in get_session_turns(db, session_id) if t["role"] == "candidate"]
-                            if candidate_turns:
-                                if "_eval_history" not in st.session_state:
-                                    st.session_state["_eval_history"] = {}
-                                st.session_state["_eval_history"][str(candidate_turns[-1]["id"])] = ev
                         st.session_state["_last_was_followup"] = result.get("followup", False)
                         st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
                         clear_accumulated_expressions()
                         st.session_state.avatar_state = "idle"
+                        import time; time.sleep(1.5)
                         st.rerun()
         else:
             st.caption(t('interview.audio_tip'))
@@ -466,30 +425,60 @@ def main():
                         }
                         accumulated = get_accumulated_expressions()
                         expr_data = {"analyses": accumulated} if accumulated else None
-                        with st.spinner("💭 AI 正在识别语音并分析..."):
-                            result = submit_answer(
-                                db, session_id, answer_text=None,
-                                answer_type="audio", audio_data=audio_data,
-                                expression_data=expr_data,
-                            )
+
+                        with chat_container:
+                            _render_thinking_start()
+                            thinking_placeholder = st.empty()
+                            _update_thinking(thinking_placeholder, "🎤 识别语音内容...", step=1)
+
+                        result = submit_answer(
+                            db, session_id, answer_text=None,
+                            answer_type="audio", audio_data=audio_data,
+                            expression_data=expr_data,
+                        )
+
                         if "error" in result:
                             st.error(result["error"])
                         else:
                             ev = result.get("evaluation", {})
+                            with chat_container:
+                                if ev:
+                                    _update_thinking(thinking_placeholder, "📊 评估完成", step=2)
+                                    _render_eval_bubble(ev)
+                                _update_thinking(thinking_placeholder, "📋 选择下一个问题...", step=3)
+                                _update_thinking(thinking_placeholder, "✅ 分析完成", step=4, done=True)
+
                             if ev:
                                 st.session_state["_last_eval"] = ev
-                                candidate_turns = [t for t in get_session_turns(db, session_id) if t["role"] == "candidate"]
-                                if candidate_turns:
-                                    if "_eval_history" not in st.session_state:
-                                        st.session_state["_eval_history"] = {}
-                                    st.session_state["_eval_history"][str(candidate_turns[-1]["id"])] = ev
                             st.session_state["_last_was_followup"] = result.get("followup", False)
                             st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
                             clear_accumulated_expressions()
                             st.session_state["_audio_submitted_round"] = result.get("round", session.current_round + 1)
                             st.session_state.avatar_state = "idle"
+                            import time; time.sleep(1.5)
                             st.rerun()
             st.session_state.avatar_state = "listening"
+
+    # Show last evaluation feedback (if available)
+    last_eval = st.session_state.get("_last_eval")
+    if last_eval and session.status == "active":
+        with col_main:
+            with st.expander("📊 上一题评估反馈", expanded=False):
+                score = last_eval.get("overall_score", 0)
+                cols = st.columns(6)
+                cols[0].metric("综合", f"{score:.0%}")
+                for i, (dim, label) in enumerate([
+                    ("correctness", "正确"), ("depth", "深度"), ("clarity", "清晰"),
+                    ("practicality", "实用"), ("tradeoffs", "权衡")
+                ]):
+                    val = last_eval.get("scores", {}).get(dim, 0)
+                    cols[i + 1].metric(label, f"{val:.0%}")
+                fb = last_eval.get("feedback", "")
+                if fb:
+                    st.caption(fb[:200])
+                missing = last_eval.get("missing_points", [])
+                if missing:
+                    st.caption("缺失点: " + " · ".join(missing[:3]))
 
     # Sidebar info with adaptive difficulty
     current_difficulty = session.level
