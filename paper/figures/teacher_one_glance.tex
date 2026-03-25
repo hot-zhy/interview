@@ -1,0 +1,46 @@
+% One-glance overview for advisor presentation
+% Use with: \input{figures/teacher_one_glance.tex}
+
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.0cm,
+    step/.style={rectangle, draw, rounded corners=3pt, minimum height=0.95cm, text centered, font=\small, text width=2.45cm},
+    mini/.style={rectangle, draw, rounded corners=2pt, minimum height=0.62cm, text centered, font=\scriptsize, text width=2.45cm},
+    arr/.style={->, >=stealth, thick},
+    note/.style={rectangle, draw, rounded corners=3pt, fill=yellow!18, text width=3.0cm, align=left, font=\scriptsize}
+]
+
+% Main pipeline
+\node[step, fill=cyan!18] (in) {Input\\Resume + Q/A + Voice/Video};
+\node[step, fill=orange!18, right=of in] (state) {Memory + State\\$m_t \rightarrow s_t$};
+\node[step, fill=red!15, right=of state] (ctrl) {Agent Controller\\choose action};
+\node[step, fill=green!16, right=of ctrl] (tool) {Tool Router\\judge / planner / follow-up};
+\node[step, fill=violet!16, right=of tool] (act) {Action\\ask-next / follow-up / terminate};
+\node[step, fill=blue!14, right=of act] (out) {Output\\next question + report};
+
+\draw[arr] (in) -- (state);
+\draw[arr] (state) -- (ctrl);
+\draw[arr] (ctrl) -- (tool);
+\draw[arr] (tool) -- (act);
+\draw[arr] (act) -- (out);
+\draw[arr, dashed, blue!70] (out.north) to[bend left=35] node[above, font=\scriptsize] {feedback update} (state.north);
+
+% RQ mapping row
+\node[mini, fill=orange!10, below=0.9cm of state] (rq1) {RQ1: Adaptive Control\\difficulty + termination};
+\node[mini, fill=green!10, below=0.9cm of tool] (rq2) {RQ2: State-Aware Selection\\gap + resume + coverage};
+\node[mini, fill=red!10, below=0.9cm of out] (rq3) {RQ3: Hybrid Judging\\rule + LLM + fallback};
+
+\draw[arr, thin] (state.south) -- (rq1.north);
+\draw[arr, thin] (tool.south) -- (rq2.north);
+\draw[arr, thin] (out.south) -- (rq3.north);
+
+% Reliability note
+\node[note, above=0.3cm of tool, xshift=2.55cm] (rel) {
+\textbf{Reliability Constraint}\\
+- validator check\\
+- auto fallback\\
+- provenance logging
+};
+\draw[arr, thin] (rel.west) -- (tool.north east);
+
+\end{tikzpicture}
+
