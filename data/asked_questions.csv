@@ -1,435 +1,1228 @@
 session_id,round,question_id,difficulty,chapter,priority_used
-1,1,61,2,基础概念与常识,P1
-1,2,22,2,异常,P1
-1,3,52,2,Spring,P3
-1,4,1,2,String,P1
-1,5,3,3,String,P1
-1,6,53,3,Spring,P1
-2,1,45,4,集合,P2
-2,2,1,4,String,P3
-2,3,25,4,泛型,P1
-2,4,31,4,注解,P1
-2,5,36,4,SPI,P2
-2,6,45,4,集合,P1
-3,1,37,4,I/O,P3
-3,2,59,5,系统设计,P3
-3,3,6,4,基本语法,P1
-3,4,7,4,基本数据类型,P1
-4,1,38,4,I/O,P2
-4,2,34,4,SPI,P2
-4,3,27,5,泛型,P3
-4,4,60,5,系统设计,P1
-4,5,22,5,异常,P2
-4,6,52,5,Spring,P3
-5,1,31,3,注解,P1
-5,2,32,3,注解,P2
-5,3,31,4,注解,P3
-5,4,62,4,基础概念与常识,P1
-5,5,54,3,Spring,P2
-5,6,42,3,序列化和反序列化,P2
-6,1,34,3,SPI,P1
-6,2,7,3,基本数据类型,P1
-6,3,42,2,序列化和反序列化,P1
-6,4,45,3,集合,P2
-6,5,3,3,String,P3
-6,6,27,4,泛型,P2
-6,7,17,4,面向对象基础,P1
-6,8,27,4,泛型,P1
-7,1,49,4,JVM,P3
-7,2,51,5,JVM,P1
-7,3,54,4,Spring,P1
-7,4,46,4,并发,P1
-7,5,28,4,反射,P1
-7,6,7,5,基本数据类型,P3
-7,7,9,5,基本数据类型,P1
-8,1,15,3,方法,P2
-8,2,17,3,面向对象基础,P3
-8,3,40,3,序列化和反序列化,P3
-8,4,21,3,Object,P2
-8,5,62,4,基础概念与常识,P2
-8,6,43,4,集合,P1
-8,7,3,4,String,P3
-8,8,1,3,String,P3
-9,1,61,4,基础概念与常识,P1
-9,2,31,3,注解,P3
-9,3,46,4,并发,P3
-9,4,56,5,数据库,P1
-9,5,40,5,序列化和反序列化,P1
-10,1,12,2,变量,P2
-10,2,45,2,集合,P1
-10,3,61,2,基础概念与常识,P1
-10,4,31,2,注解,P1
-10,5,43,3,集合,P2
-10,6,22,3,异常,P2
-11,1,52,4,Spring,P1
-11,2,52,4,Spring,P1
-11,3,22,4,异常,P2
-11,4,20,4,Object,P1
-12,1,17,2,面向对象基础,P1
-12,2,26,2,泛型,P2
-12,3,54,2,Spring,P3
-12,4,20,2,Object,P1
-12,5,57,2,数据库,P3
-12,6,4,2,基本语法,P3
-13,1,48,4,并发,P3
-13,2,7,5,基本数据类型,P1
-13,3,23,5,异常,P1
-13,4,55,5,数据库,P3
-13,5,58,5,系统设计,P2
-14,1,57,2,数据库,P3
-14,2,21,2,Object,P3
-14,3,37,2,I/O,P3
-14,4,44,2,集合,P1
-15,1,2,4,String,P3
-15,2,10,4,变量,P3
-15,3,14,4,方法,P1
-16,1,23,2,异常,P2
-16,2,30,3,反射,P3
-16,3,53,3,Spring,P3
-16,4,25,2,泛型,P1
-17,1,52,3,Spring,P2
-17,2,31,2,注解,P3
-17,3,27,2,泛型,P2
-17,4,9,1,基本数据类型,P2
-17,5,4,1,基本语法,P2
-17,6,62,1,基础概念与常识,P1
-17,7,54,1,Spring,P2
-18,1,52,2,Spring,P1
-18,2,15,3,方法,P1
-18,3,57,3,数据库,P1
-19,1,40,3,序列化和反序列化,P1
-19,2,34,2,SPI,P3
-19,3,36,1,SPI,P2
-19,4,13,1,方法,P1
-19,5,17,1,面向对象基础,P1
-19,6,42,1,序列化和反序列化,P3
-20,1,23,2,异常,P1
-20,2,11,2,变量,P1
-20,3,22,2,异常,P2
-20,4,22,1,异常,P3
-20,5,25,1,泛型,P2
-20,6,39,2,I/O,P3
-20,7,11,1,变量,P1
-20,8,25,1,泛型,P1
-21,1,59,3,系统设计,P2
-21,2,32,3,注解,P3
-21,3,11,3,变量,P3
-21,4,40,2,序列化和反序列化,P3
-21,5,54,2,Spring,P3
-21,6,20,2,Object,P2
-22,1,9,2,基本数据类型,P2
-22,2,12,2,变量,P2
-22,3,41,2,序列化和反序列化,P2
-22,4,52,2,Spring,P1
-22,5,39,2,I/O,P3
-22,6,60,2,系统设计,P2
-22,7,2,2,String,P2
-22,8,60,3,系统设计,P2
-23,1,44,2,集合,P2
-23,2,50,2,JVM,P3
-23,3,30,1,反射,P3
-23,4,31,1,注解,P1
-24,1,28,3,反射,P1
-24,2,23,2,异常,P3
-24,3,8,2,基本数据类型,P2
-24,4,55,2,数据库,P3
-24,5,47,2,并发,P1
-24,6,1,3,String,P2
-24,7,50,4,JVM,P1
-25,1,52,2,Spring,P1
-25,2,45,2,集合,P3
-25,3,59,2,系统设计,P2
-25,4,50,2,JVM,P3
-25,5,18,2,面向对象基础,P2
-25,6,24,2,异常,P2
-25,7,50,2,JVM,P3
-26,1,23,4,异常,P2
-26,2,23,4,异常,P2
-26,3,7,5,基本数据类型,P1
-26,4,15,5,方法,P1
-26,5,33,5,注解,P2
-26,6,20,5,Object,P2
-26,7,57,5,数据库,P1
-26,8,56,5,数据库,P2
-27,1,2,2,String,P2
-27,2,42,2,序列化和反序列化,P3
-27,3,58,2,系统设计,P2
-27,4,46,2,并发,P2
-27,5,39,3,I/O,P1
-27,6,15,3,方法,P3
-27,7,57,3,数据库,P3
-28,1,1,3,String,P3
-28,2,43,3,集合,P1
-28,3,20,3,Object,P2
-28,4,26,3,泛型,P2
-28,5,46,3,并发,P3
-28,6,34,3,SPI,P3
-29,1,9,2,基本数据类型,P1
-29,2,22,2,异常,P1
-29,3,22,2,异常,P2
-29,4,55,2,数据库,P2
-30,1,26,4,泛型,P1
-30,2,10,4,变量,P2
-30,3,30,3,反射,P3
-31,1,38,3,I/O,P3
-31,2,61,4,基础概念与常识,P1
-31,3,30,4,反射,P3
-31,4,55,4,数据库,P2
-31,5,34,4,SPI,P3
-31,6,2,4,String,P2
-31,7,62,4,基础概念与常识,P3
-32,1,14,4,方法,P1
-32,2,62,4,基础概念与常识,P3
-32,3,53,4,Spring,P2
-32,4,56,4,数据库,P2
-32,5,8,4,基本数据类型,P2
-33,1,23,2,异常,P3
-33,2,38,2,I/O,P1
-33,3,31,2,注解,P2
-33,4,32,2,注解,P3
-33,5,27,2,泛型,P1
-33,6,19,2,Object,P1
-33,7,48,2,并发,P1
-34,1,48,4,并发,P3
-34,2,1,4,String,P2
-34,3,23,5,异常,P3
-34,4,48,5,并发,P3
-34,5,53,5,Spring,P2
-35,1,44,3,集合,P2
-35,2,20,2,Object,P1
-35,3,16,2,面向对象基础,P1
-35,4,27,2,泛型,P3
-35,5,51,2,JVM,P2
-36,1,10,3,变量,P2
-36,2,28,2,反射,P3
-36,3,25,2,泛型,P1
-36,4,15,2,方法,P2
-36,5,56,1,数据库,P2
-37,1,47,4,并发,P2
-37,2,26,3,泛型,P1
-37,3,38,3,I/O,P1
-37,4,4,3,基本语法,P1
-37,5,28,3,反射,P1
-38,1,12,2,变量,P2
-38,2,58,2,系统设计,P3
-38,3,30,2,反射,P2
-38,4,6,3,基本语法,P3
-38,5,61,2,基础概念与常识,P2
-38,6,16,2,面向对象基础,P1
-38,7,16,2,面向对象基础,P2
-39,1,45,3,集合,P3
-39,2,4,3,基本语法,P2
-39,3,43,3,集合,P3
-39,4,63,3,基础概念与常识,P3
-39,5,20,3,Object,P1
-40,1,52,3,Spring,P3
-40,2,13,3,方法,P1
-40,3,60,3,系统设计,P3
-41,1,29,4,反射,P1
-41,2,30,4,反射,P2
-41,3,51,4,JVM,P2
-41,4,58,4,系统设计,P2
-41,5,59,4,系统设计,P1
-41,6,57,5,数据库,P1
-42,1,27,2,泛型,P1
-42,2,17,2,面向对象基础,P3
-42,3,25,2,泛型,P3
-42,4,46,2,并发,P2
-43,1,35,4,SPI,P2
-43,2,17,3,面向对象基础,P2
-43,3,30,3,反射,P2
-43,4,52,3,Spring,P2
-43,5,31,3,注解,P2
-44,1,49,2,JVM,P3
-44,2,44,2,集合,P1
-44,3,59,2,系统设计,P3
-44,4,4,2,基本语法,P2
-44,5,29,2,反射,P3
-44,6,3,2,String,P3
-44,7,17,2,面向对象基础,P3
-45,1,3,4,String,P2
-45,2,43,3,集合,P3
-45,3,48,3,并发,P2
-45,4,26,3,泛型,P2
-46,1,46,3,并发,P2
-46,2,37,3,I/O,P3
-46,3,13,3,方法,P2
-46,4,41,3,序列化和反序列化,P3
-46,5,30,2,反射,P2
-46,6,57,2,数据库,P2
-47,1,14,2,方法,P3
-47,2,33,2,注解,P3
-47,3,21,2,Object,P1
-47,4,23,2,异常,P1
-48,1,33,2,注解,P2
-48,2,38,2,I/O,P3
-48,3,61,2,基础概念与常识,P2
-48,4,15,2,方法,P3
-48,5,43,1,集合,P3
-48,6,3,1,String,P1
-48,7,61,1,基础概念与常识,P1
-49,1,47,4,并发,P2
-49,2,39,4,I/O,P1
-49,3,53,4,Spring,P2
-49,4,48,4,并发,P1
-49,5,24,4,异常,P3
-50,1,28,2,反射,P3
-50,2,63,1,基础概念与常识,P1
-50,3,28,1,反射,P1
-50,4,29,1,反射,P2
-50,5,24,1,异常,P2
-50,6,16,1,面向对象基础,P1
-50,7,60,1,系统设计,P1
-51,1,48,4,并发,P1
-51,2,26,5,泛型,P2
-51,3,44,5,集合,P3
-51,4,8,5,基本数据类型,P2
-51,5,30,5,反射,P2
-51,6,44,5,集合,P1
-52,1,38,2,I/O,P1
-52,2,36,3,SPI,P2
-52,3,28,3,反射,P3
-52,4,57,2,数据库,P3
-52,5,60,2,系统设计,P2
-52,6,28,2,反射,P3
-52,7,24,2,异常,P1
-53,1,59,4,系统设计,P3
-53,2,15,4,方法,P1
-53,3,61,4,基础概念与常识,P2
-53,4,6,4,基本语法,P2
-53,5,8,4,基本数据类型,P2
-53,6,16,4,面向对象基础,P1
-53,7,36,4,SPI,P3
-54,1,25,4,泛型,P2
-54,2,47,4,并发,P3
-54,3,11,4,变量,P1
-54,4,39,3,I/O,P2
-54,5,2,3,String,P3
-54,6,27,3,泛型,P2
-55,1,62,2,基础概念与常识,P1
-55,2,46,2,并发,P3
-55,3,53,2,Spring,P3
-55,4,62,1,基础概念与常识,P3
-56,1,30,3,反射,P2
-56,2,5,2,基本语法,P2
-56,3,52,1,Spring,P2
-57,1,44,4,集合,P3
-57,2,53,4,Spring,P3
-57,3,14,4,方法,P3
-57,4,59,4,系统设计,P2
-57,5,20,4,Object,P2
-57,6,34,4,SPI,P3
-58,1,36,4,SPI,P3
-58,2,25,4,泛型,P1
-58,3,43,4,集合,P3
-58,4,58,5,系统设计,P1
-58,5,22,5,异常,P3
-58,6,21,5,Object,P1
-58,7,23,5,异常,P1
-59,1,58,3,系统设计,P2
-59,2,13,3,方法,P3
-59,3,12,2,变量,P1
-60,1,13,4,方法,P2
-60,2,24,4,异常,P2
-60,3,4,4,基本语法,P3
-60,4,12,4,变量,P1
-60,5,36,4,SPI,P3
-60,6,24,5,异常,P1
-61,1,50,2,JVM,P2
-61,2,1,2,String,P2
-61,3,42,2,序列化和反序列化,P1
-61,4,43,2,集合,P1
-61,5,7,1,基本数据类型,P2
-61,6,57,1,数据库,P3
-61,7,50,2,JVM,P2
-62,1,51,4,JVM,P2
-62,2,12,5,变量,P3
-62,3,54,5,Spring,P1
-63,1,41,4,序列化和反序列化,P1
-63,2,44,4,集合,P2
-63,3,32,4,注解,P2
-63,4,34,4,SPI,P3
-64,1,46,3,并发,P1
-64,2,8,3,基本数据类型,P1
-64,3,34,3,SPI,P3
-64,4,53,4,Spring,P3
-65,1,11,4,变量,P2
-65,2,42,4,序列化和反序列化,P1
-65,3,59,4,系统设计,P2
-65,4,19,5,Object,P3
-66,1,46,2,并发,P1
-66,2,34,3,SPI,P2
-66,3,42,3,序列化和反序列化,P3
-66,4,63,3,基础概念与常识,P1
-67,1,60,2,系统设计,P3
-67,2,27,1,泛型,P2
-67,3,34,1,SPI,P1
-67,4,57,1,数据库,P2
-67,5,61,2,基础概念与常识,P1
-67,6,20,2,Object,P2
-67,7,17,2,面向对象基础,P2
-68,1,33,4,注解,P3
-68,2,13,3,方法,P3
-68,3,26,2,泛型,P3
-69,1,41,4,序列化和反序列化,P3
-69,2,25,4,泛型,P3
-69,3,11,4,变量,P3
-69,4,48,4,并发,P3
-69,5,39,3,I/O,P1
-70,1,1,2,String,P2
-70,2,14,2,方法,P2
-70,3,48,1,并发,P2
-70,4,54,1,Spring,P1
-70,5,34,1,SPI,P2
-70,6,5,1,基本语法,P1
-71,1,43,4,集合,P2
-71,2,56,4,数据库,P3
-71,3,28,4,反射,P2
-72,1,2,2,String,P1
-72,2,59,2,系统设计,P3
-72,3,8,2,基本数据类型,P1
-72,4,39,3,I/O,P1
-72,5,31,3,注解,P2
-72,6,9,3,基本数据类型,P3
-73,1,12,4,变量,P3
-73,2,36,4,SPI,P3
-73,3,22,4,异常,P1
-73,4,58,3,系统设计,P3
-73,5,47,4,并发,P3
-73,6,45,4,集合,P3
-74,1,63,3,基础概念与常识,P3
-74,2,31,4,注解,P2
-74,3,62,4,基础概念与常识,P2
-74,4,36,4,SPI,P1
-74,5,4,4,基本语法,P2
-74,6,9,4,基本数据类型,P1
-75,1,60,2,系统设计,P3
-75,2,54,3,Spring,P1
-75,3,57,3,数据库,P1
-75,4,49,3,JVM,P1
-75,5,33,3,注解,P1
-76,1,51,4,JVM,P1
-76,2,44,5,集合,P3
-76,3,17,5,面向对象基础,P2
-76,4,38,5,I/O,P2
-76,5,6,5,基本语法,P3
-77,1,31,4,注解,P2
-77,2,38,5,I/O,P2
-77,3,58,5,系统设计,P2
-77,4,14,5,方法,P2
-77,5,37,5,I/O,P3
-77,6,8,5,基本数据类型,P3
-78,1,39,4,I/O,P2
-78,2,49,4,JVM,P3
-78,3,50,4,JVM,P1
-78,4,20,3,Object,P2
-78,5,13,2,方法,P2
-79,1,12,2,变量,P3
-79,2,49,2,JVM,P3
-79,3,15,3,方法,P2
-79,4,58,2,系统设计,P3
-79,5,41,2,序列化和反序列化,P3
-79,6,45,2,集合,P2
-80,1,43,3,集合,P3
-80,2,20,3,Object,P3
-80,3,44,3,集合,P2
+1,11,PAPER_Q_0032,4,System Design,
+1,11,PAPER_Q_0120,3,System Design,
+1,11,PAPER_Q_0113,2,System Design,
+1,11,PAPER_Q_0027,3,Concurrency,
+1,11,PAPER_Q_0129,2,Database,
+1,11,PAPER_Q_0021,2,Spring,
+1,11,PAPER_Q_0001,3,JVM,
+1,11,PAPER_Q_0057,3,Concurrency,
+1,11,PAPER_Q_0129,2,Database,
+1,11,PAPER_Q_0031,3,Collections,
+2,9,PAPER_Q_0090,4,JVM,
+2,9,PAPER_Q_0027,3,Concurrency,
+2,9,PAPER_Q_0031,3,Collections,
+2,9,PAPER_Q_0085,3,JVM,
+2,9,PAPER_Q_0136,3,System Design,
+2,9,PAPER_Q_0013,2,Spring,
+2,9,PAPER_Q_0009,4,Database,
+2,9,PAPER_Q_0128,2,System Design,
+3,9,PAPER_Q_0128,2,System Design,
+3,9,PAPER_Q_0021,2,Spring,
+3,9,PAPER_Q_0113,2,System Design,
+3,9,PAPER_Q_0085,3,JVM,
+3,9,PAPER_Q_0057,3,Concurrency,
+3,9,PAPER_Q_0128,2,System Design,
+3,9,PAPER_Q_0035,3,Java Basics,
+3,9,PAPER_Q_0021,2,Spring,
+4,10,PAPER_Q_0119,4,Caching,
+4,10,PAPER_Q_0113,2,System Design,
+4,10,PAPER_Q_0013,2,Spring,
+4,10,PAPER_Q_0133,2,Spring,
+4,10,PAPER_Q_0128,2,System Design,
+4,10,PAPER_Q_0126,3,Caching,
+4,10,PAPER_Q_0124,2,Caching,
+4,10,PAPER_Q_0007,2,System Design,
+4,10,PAPER_Q_0021,2,Spring,
+5,8,PAPER_Q_0022,3,Concurrency,
+5,8,PAPER_Q_0027,3,Concurrency,
+5,8,PAPER_Q_0038,3,Locks,
+5,8,PAPER_Q_0043,2,Threading,
+5,8,PAPER_Q_0067,3,Thread Pool,
+5,8,PAPER_Q_0047,3,Memory Model,
+5,8,PAPER_Q_0057,3,Concurrency,
+6,8,PAPER_Q_0113,2,System Design,
+6,8,PAPER_Q_0026,4,Database,
+6,8,PAPER_Q_0136,3,System Design,
+6,8,PAPER_Q_0001,3,JVM,
+6,8,PAPER_Q_0021,2,Spring,
+6,8,PAPER_Q_0022,3,Concurrency,
+6,8,PAPER_Q_0129,2,Database,
+7,11,PAPER_Q_0120,3,System Design,
+7,11,PAPER_Q_0107,1,Spring,
+7,11,PAPER_Q_0013,2,Spring,
+7,11,PAPER_Q_0007,2,System Design,
+7,11,PAPER_Q_0130,1,Microservices,
+7,11,PAPER_Q_0124,2,Caching,
+7,11,PAPER_Q_0131,2,Database,
+7,11,PAPER_Q_0133,2,Spring,
+7,11,PAPER_Q_0138,2,Caching,
+7,11,PAPER_Q_0134,1,Caching,
+8,8,PAPER_Q_0005,1,Java Basics,
+8,8,PAPER_Q_0033,1,JVM,
+8,8,PAPER_Q_0012,1,Database,
+8,8,PAPER_Q_0129,2,Database,
+8,8,PAPER_Q_0019,2,Java Basics,
+8,8,PAPER_Q_0113,2,System Design,
+8,8,PAPER_Q_0133,2,Spring,
+9,12,PAPER_Q_0138,2,Caching,
+9,12,PAPER_Q_0015,2,Spring,
+9,12,PAPER_Q_0134,1,Caching,
+9,12,PAPER_Q_0124,2,Caching,
+9,12,PAPER_Q_0012,1,Database,
+9,12,PAPER_Q_0122,1,Spring,
+9,12,PAPER_Q_0113,2,System Design,
+9,12,PAPER_Q_0134,1,Caching,
+9,12,PAPER_Q_0007,2,System Design,
+9,12,PAPER_Q_0133,2,Spring,
+9,12,PAPER_Q_0122,1,Spring,
+10,10,PAPER_Q_0105,3,Memory,
+10,10,PAPER_Q_0092,3,GC,
+10,10,PAPER_Q_0083,3,Performance,
+10,10,PAPER_Q_0086,4,GC,
+10,10,PAPER_Q_0079,3,Profiling,
+10,10,PAPER_Q_0082,4,Memory,
+10,10,PAPER_Q_0080,3,Profiling,
+10,10,PAPER_Q_0073,4,Memory,
+10,10,PAPER_Q_0093,4,JVM,
+11,10,PAPER_Q_0085,3,JVM,
+11,10,PAPER_Q_0072,3,GC,
+11,10,PAPER_Q_0098,3,Profiling,
+11,10,PAPER_Q_0080,3,Profiling,
+11,10,PAPER_Q_0085,3,JVM,
+11,10,PAPER_Q_0083,3,Performance,
+11,10,PAPER_Q_0001,3,JVM,
+11,10,PAPER_Q_0034,4,JVM,
+11,10,PAPER_Q_0092,3,GC,
+12,4,PAPER_Q_0131,2,Database,
+12,4,PAPER_Q_0113,2,System Design,
+12,4,PAPER_Q_0008,4,Database,
+13,11,PAPER_Q_0008,4,Database,
+13,11,PAPER_Q_0136,3,System Design,
+13,11,PAPER_Q_0022,3,Concurrency,
+13,11,PAPER_Q_0093,4,JVM,
+13,11,PAPER_Q_0008,4,Database,
+13,11,PAPER_Q_0035,3,Java Basics,
+13,11,PAPER_Q_0132,4,System Design,
+13,11,PAPER_Q_0123,4,Spring,
+13,11,PAPER_Q_0032,4,System Design,
+13,11,PAPER_Q_0106,4,Spring,
+14,12,PAPER_Q_0035,3,Java Basics,
+14,12,PAPER_Q_0034,4,JVM,
+14,12,PAPER_Q_0058,4,Concurrency,
+14,12,PAPER_Q_0031,3,Collections,
+14,12,PAPER_Q_0015,2,Spring,
+14,12,PAPER_Q_0001,3,JVM,
+14,12,PAPER_Q_0027,3,Concurrency,
+14,12,PAPER_Q_0031,3,Collections,
+14,12,PAPER_Q_0058,4,Concurrency,
+14,12,PAPER_Q_0029,4,Collections,
+14,12,PAPER_Q_0106,4,Spring,
+15,9,PAPER_Q_0057,3,Concurrency,
+15,9,PAPER_Q_0010,4,System Design,
+15,9,PAPER_Q_0023,4,Spring,
+15,9,PAPER_Q_0008,4,Database,
+15,9,PAPER_Q_0120,3,System Design,
+15,9,PAPER_Q_0001,3,JVM,
+15,9,PAPER_Q_0057,3,Concurrency,
+15,9,PAPER_Q_0136,3,System Design,
+16,4,PAPER_Q_0135,4,Microservices,
+16,4,PAPER_Q_0128,2,System Design,
+16,4,PAPER_Q_0113,2,System Design,
+17,9,PAPER_Q_0047,3,Memory Model,
+17,9,PAPER_Q_0064,4,Memory Model,
+17,9,PAPER_Q_0067,3,Thread Pool,
+17,9,PAPER_Q_0043,2,Threading,
+17,9,PAPER_Q_0022,3,Concurrency,
+17,9,PAPER_Q_0070,4,Locks,
+17,9,PAPER_Q_0053,3,Thread Pool,
+17,9,PAPER_Q_0047,3,Memory Model,
+18,12,PAPER_Q_0022,3,Concurrency,
+18,12,PAPER_Q_0048,3,Threading,
+18,12,PAPER_Q_0068,3,Threading,
+18,12,PAPER_Q_0049,3,Locks,
+18,12,PAPER_Q_0037,3,Memory Model,
+18,12,PAPER_Q_0057,3,Concurrency,
+18,12,PAPER_Q_0038,3,Locks,
+18,12,PAPER_Q_0048,3,Threading,
+18,12,PAPER_Q_0049,3,Locks,
+18,12,PAPER_Q_0053,3,Thread Pool,
+18,12,PAPER_Q_0027,3,Concurrency,
+19,9,PAPER_Q_0057,3,Concurrency,
+19,9,PAPER_Q_0058,4,Concurrency,
+19,9,PAPER_Q_0027,3,Concurrency,
+19,9,PAPER_Q_0133,2,Spring,
+19,9,PAPER_Q_0128,2,System Design,
+19,9,PAPER_Q_0015,2,Spring,
+19,9,PAPER_Q_0021,2,Spring,
+19,9,PAPER_Q_0001,3,JVM,
+20,10,PAPER_Q_0108,4,Caching,
+20,10,PAPER_Q_0110,3,Microservices,
+20,10,PAPER_Q_0015,2,Spring,
+20,10,PAPER_Q_0013,2,Spring,
+20,10,PAPER_Q_0131,2,Database,
+20,10,PAPER_Q_0113,2,System Design,
+20,10,PAPER_Q_0007,2,System Design,
+20,10,PAPER_Q_0126,3,Caching,
+20,10,PAPER_Q_0124,2,Caching,
+21,9,PAPER_Q_0139,4,Database,
+21,9,PAPER_Q_0133,2,Spring,
+21,9,PAPER_Q_0129,2,Database,
+21,9,PAPER_Q_0001,3,JVM,
+21,9,PAPER_Q_0057,3,Concurrency,
+21,9,PAPER_Q_0133,2,Spring,
+21,9,PAPER_Q_0015,2,Spring,
+21,9,PAPER_Q_0031,3,Collections,
+22,11,PAPER_Q_0057,3,Concurrency,
+22,11,PAPER_Q_0047,3,Memory Model,
+22,11,PAPER_Q_0058,4,Concurrency,
+22,11,PAPER_Q_0069,4,Memory Model,
+22,11,PAPER_Q_0022,3,Concurrency,
+22,11,PAPER_Q_0038,3,Locks,
+22,11,PAPER_Q_0057,3,Concurrency,
+22,11,PAPER_Q_0027,3,Concurrency,
+22,11,PAPER_Q_0068,3,Threading,
+22,11,PAPER_Q_0022,3,Concurrency,
+23,10,PAPER_Q_0069,4,Memory Model,
+23,10,PAPER_Q_0041,4,Memory Model,
+23,10,PAPER_Q_0022,3,Concurrency,
+23,10,PAPER_Q_0068,3,Threading,
+23,10,PAPER_Q_0038,3,Locks,
+23,10,PAPER_Q_0027,3,Concurrency,
+23,10,PAPER_Q_0064,4,Memory Model,
+23,10,PAPER_Q_0049,3,Locks,
+23,10,PAPER_Q_0037,3,Memory Model,
+24,8,PAPER_Q_0008,4,Database,
+24,8,PAPER_Q_0031,3,Collections,
+24,8,PAPER_Q_0001,3,JVM,
+24,8,PAPER_Q_0027,3,Concurrency,
+24,8,PAPER_Q_0007,2,System Design,
+24,8,PAPER_Q_0136,3,System Design,
+24,8,PAPER_Q_0028,4,Concurrency,
+25,11,PAPER_Q_0112,4,Microservices,
+25,11,PAPER_Q_0117,2,Microservices,
+25,11,PAPER_Q_0128,2,System Design,
+25,11,PAPER_Q_0136,3,System Design,
+25,11,PAPER_Q_0138,2,Caching,
+25,11,PAPER_Q_0120,3,System Design,
+25,11,PAPER_Q_0126,3,Caching,
+25,11,PAPER_Q_0136,3,System Design,
+25,11,PAPER_Q_0110,3,Microservices,
+25,11,PAPER_Q_0013,2,Spring,
+26,9,PAPER_Q_0127,4,Microservices,
+26,9,PAPER_Q_0128,2,System Design,
+26,9,PAPER_Q_0021,2,Spring,
+26,9,PAPER_Q_0120,3,System Design,
+26,9,PAPER_Q_0129,2,Database,
+26,9,PAPER_Q_0015,2,Spring,
+26,9,PAPER_Q_0124,2,Caching,
+26,9,PAPER_Q_0133,2,Spring,
+27,8,PAPER_Q_0119,4,Caching,
+27,8,PAPER_Q_0118,3,Microservices,
+27,8,PAPER_Q_0021,2,Spring,
+27,8,PAPER_Q_0110,3,Microservices,
+27,8,PAPER_Q_0128,2,System Design,
+27,8,PAPER_Q_0138,2,Caching,
+27,8,PAPER_Q_0127,4,Microservices,
+28,9,PAPER_Q_0007,2,System Design,
+28,9,PAPER_Q_0010,4,System Design,
+28,9,PAPER_Q_0120,3,System Design,
+28,9,PAPER_Q_0127,4,Microservices,
+28,9,PAPER_Q_0109,4,Spring,
+28,9,PAPER_Q_0126,3,Caching,
+28,9,PAPER_Q_0106,4,Spring,
+28,9,PAPER_Q_0112,4,Microservices,
+29,8,PAPER_Q_0128,2,System Design,
+29,8,PAPER_Q_0136,3,System Design,
+29,8,PAPER_Q_0007,2,System Design,
+29,8,PAPER_Q_0117,2,Microservices,
+29,8,PAPER_Q_0021,2,Spring,
+29,8,PAPER_Q_0120,3,System Design,
+29,8,PAPER_Q_0110,3,Microservices,
+30,11,PAPER_Q_0093,4,JVM,
+30,11,PAPER_Q_0057,3,Concurrency,
+30,11,PAPER_Q_0019,2,Java Basics,
+30,11,PAPER_Q_0021,2,Spring,
+30,11,PAPER_Q_0015,2,Spring,
+30,11,PAPER_Q_0022,3,Concurrency,
+30,11,PAPER_Q_0007,2,System Design,
+30,11,PAPER_Q_0026,4,Database,
+30,11,PAPER_Q_0019,2,Java Basics,
+30,11,PAPER_Q_0027,3,Concurrency,
+31,12,PAPER_Q_0086,4,GC,
+31,12,PAPER_Q_0082,4,Memory,
+31,12,PAPER_Q_0072,3,GC,
+31,12,PAPER_Q_0092,3,GC,
+31,12,PAPER_Q_0001,3,JVM,
+31,12,PAPER_Q_0099,4,Profiling,
+31,12,PAPER_Q_0090,4,JVM,
+31,12,PAPER_Q_0072,3,GC,
+31,12,PAPER_Q_0077,5,Performance,
+31,12,PAPER_Q_0071,5,GC,
+31,12,PAPER_Q_0073,4,Memory,
+32,8,PAPER_Q_0032,4,System Design,
+32,8,PAPER_Q_0057,3,Concurrency,
+32,8,PAPER_Q_0120,3,System Design,
+32,8,PAPER_Q_0023,4,Spring,
+32,8,PAPER_Q_0085,3,JVM,
+32,8,PAPER_Q_0010,4,System Design,
+32,8,PAPER_Q_0090,4,JVM,
+33,11,PAPER_Q_0106,4,Spring,
+33,11,PAPER_Q_0118,3,Microservices,
+33,11,PAPER_Q_0032,4,System Design,
+33,11,PAPER_Q_0135,4,Microservices,
+33,11,PAPER_Q_0119,4,Caching,
+33,11,PAPER_Q_0112,4,Microservices,
+33,11,PAPER_Q_0023,4,Spring,
+33,11,PAPER_Q_0109,4,Spring,
+33,11,PAPER_Q_0135,4,Microservices,
+33,11,PAPER_Q_0112,4,Microservices,
+34,5,PAPER_Q_0068,3,Threading,
+34,5,PAPER_Q_0049,3,Locks,
+34,5,PAPER_Q_0067,3,Thread Pool,
+34,5,PAPER_Q_0022,3,Concurrency,
+35,11,PAPER_Q_0062,4,Threading,
+35,11,PAPER_Q_0068,3,Threading,
+35,11,PAPER_Q_0048,3,Threading,
+35,11,PAPER_Q_0067,3,Thread Pool,
+35,11,PAPER_Q_0037,3,Memory Model,
+35,11,PAPER_Q_0038,3,Locks,
+35,11,PAPER_Q_0022,3,Concurrency,
+35,11,PAPER_Q_0048,3,Threading,
+35,11,PAPER_Q_0037,3,Memory Model,
+35,11,PAPER_Q_0053,3,Thread Pool,
+36,5,PAPER_Q_0057,3,Concurrency,
+36,5,PAPER_Q_0022,3,Concurrency,
+36,5,PAPER_Q_0037,3,Memory Model,
+36,5,PAPER_Q_0047,3,Memory Model,
+37,8,PAPER_Q_0039,1,Threading,
+37,8,PAPER_Q_0050,1,Threading,
+37,8,PAPER_Q_0037,3,Memory Model,
+37,8,PAPER_Q_0051,1,Thread Pool,
+37,8,PAPER_Q_0043,2,Threading,
+37,8,PAPER_Q_0050,1,Threading,
+37,8,PAPER_Q_0052,1,Threading,
+38,10,PAPER_Q_0120,3,System Design,
+38,10,PAPER_Q_0015,2,Spring,
+38,10,PAPER_Q_0013,2,Spring,
+38,10,PAPER_Q_0129,2,Database,
+38,10,PAPER_Q_0134,1,Caching,
+38,10,PAPER_Q_0012,1,Database,
+38,10,PAPER_Q_0113,2,System Design,
+38,10,PAPER_Q_0007,2,System Design,
+38,10,PAPER_Q_0015,2,Spring,
+39,8,PAPER_Q_0085,3,JVM,
+39,8,PAPER_Q_0129,2,Database,
+39,8,PAPER_Q_0133,2,Spring,
+39,8,PAPER_Q_0031,3,Collections,
+39,8,PAPER_Q_0012,1,Database,
+39,8,PAPER_Q_0005,1,Java Basics,
+39,8,PAPER_Q_0019,2,Java Basics,
+40,10,PAPER_Q_0053,3,Thread Pool,
+40,10,PAPER_Q_0060,4,Thread Pool,
+40,10,PAPER_Q_0048,3,Threading,
+40,10,PAPER_Q_0043,2,Threading,
+40,10,PAPER_Q_0057,3,Concurrency,
+40,10,PAPER_Q_0049,3,Locks,
+40,10,PAPER_Q_0041,4,Memory Model,
+40,10,PAPER_Q_0068,3,Threading,
+40,10,PAPER_Q_0060,4,Thread Pool,
+41,12,PAPER_Q_0119,4,Caching,
+41,12,PAPER_Q_0110,3,Microservices,
+41,12,PAPER_Q_0131,2,Database,
+41,12,PAPER_Q_0113,2,System Design,
+41,12,PAPER_Q_0032,4,System Design,
+41,12,PAPER_Q_0015,2,Spring,
+41,12,PAPER_Q_0136,3,System Design,
+41,12,PAPER_Q_0117,2,Microservices,
+41,12,PAPER_Q_0009,4,Database,
+41,12,PAPER_Q_0138,2,Caching,
+41,12,PAPER_Q_0133,2,Spring,
+42,8,PAPER_Q_0041,4,Memory Model,
+42,8,PAPER_Q_0047,3,Memory Model,
+42,8,PAPER_Q_0053,3,Thread Pool,
+42,8,PAPER_Q_0038,3,Locks,
+42,8,PAPER_Q_0027,3,Concurrency,
+42,8,PAPER_Q_0047,3,Memory Model,
+42,8,PAPER_Q_0068,3,Threading,
+43,11,PAPER_Q_0019,2,Java Basics,
+43,11,PAPER_Q_0031,3,Collections,
+43,11,PAPER_Q_0023,4,Spring,
+43,11,PAPER_Q_0001,3,JVM,
+43,11,PAPER_Q_0026,4,Database,
+43,11,PAPER_Q_0136,3,System Design,
+43,11,PAPER_Q_0128,2,System Design,
+43,11,PAPER_Q_0007,2,System Design,
+43,11,PAPER_Q_0013,2,Spring,
+43,11,PAPER_Q_0019,2,Java Basics,
+44,8,PAPER_Q_0047,3,Memory Model,
+44,8,PAPER_Q_0067,3,Thread Pool,
+44,8,PAPER_Q_0068,3,Threading,
+44,8,PAPER_Q_0038,3,Locks,
+44,8,PAPER_Q_0047,3,Memory Model,
+44,8,PAPER_Q_0057,3,Concurrency,
+44,8,PAPER_Q_0048,3,Threading,
+45,11,PAPER_Q_0120,3,System Design,
+45,11,PAPER_Q_0117,2,Microservices,
+45,11,PAPER_Q_0128,2,System Design,
+45,11,PAPER_Q_0118,3,Microservices,
+45,11,PAPER_Q_0119,4,Caching,
+45,11,PAPER_Q_0023,4,Spring,
+45,11,PAPER_Q_0120,3,System Design,
+45,11,PAPER_Q_0124,2,Caching,
+45,11,PAPER_Q_0110,3,Microservices,
+45,11,PAPER_Q_0128,2,System Design,
+46,10,PAPER_Q_0013,2,Spring,
+46,10,PAPER_Q_0021,2,Spring,
+46,10,PAPER_Q_0119,4,Caching,
+46,10,PAPER_Q_0117,2,Microservices,
+46,10,PAPER_Q_0128,2,System Design,
+46,10,PAPER_Q_0133,2,Spring,
+46,10,PAPER_Q_0126,3,Caching,
+46,10,PAPER_Q_0117,2,Microservices,
+46,10,PAPER_Q_0118,3,Microservices,
+47,9,PAPER_Q_0069,4,Memory Model,
+47,9,PAPER_Q_0048,3,Threading,
+47,9,PAPER_Q_0022,3,Concurrency,
+47,9,PAPER_Q_0053,3,Thread Pool,
+47,9,PAPER_Q_0049,3,Locks,
+47,9,PAPER_Q_0070,4,Locks,
+47,9,PAPER_Q_0067,3,Thread Pool,
+47,9,PAPER_Q_0048,3,Threading,
+48,9,PAPER_Q_0021,2,Spring,
+48,9,PAPER_Q_0135,4,Microservices,
+48,9,PAPER_Q_0138,2,Caching,
+48,9,PAPER_Q_0131,2,Database,
+48,9,PAPER_Q_0007,2,System Design,
+48,9,PAPER_Q_0013,2,Spring,
+48,9,PAPER_Q_0120,3,System Design,
+48,9,PAPER_Q_0118,3,Microservices,
+49,8,PAPER_Q_0131,2,Database,
+49,8,PAPER_Q_0133,2,Spring,
+49,8,PAPER_Q_0007,2,System Design,
+49,8,PAPER_Q_0026,4,Database,
+49,8,PAPER_Q_0022,3,Concurrency,
+49,8,PAPER_Q_0133,2,Spring,
+49,8,PAPER_Q_0128,2,System Design,
+50,12,PAPER_Q_0029,4,Collections,
+50,12,PAPER_Q_0120,3,System Design,
+50,12,PAPER_Q_0019,2,Java Basics,
+50,12,PAPER_Q_0021,2,Spring,
+50,12,PAPER_Q_0029,4,Collections,
+50,12,PAPER_Q_0136,3,System Design,
+50,12,PAPER_Q_0022,3,Concurrency,
+50,12,PAPER_Q_0001,3,JVM,
+50,12,PAPER_Q_0027,3,Concurrency,
+50,12,PAPER_Q_0131,2,Database,
+50,12,PAPER_Q_0085,3,JVM,
+51,11,PAPER_Q_0108,4,Caching,
+51,11,PAPER_Q_0013,2,Spring,
+51,11,PAPER_Q_0113,2,System Design,
+51,11,PAPER_Q_0021,2,Spring,
+51,11,PAPER_Q_0124,2,Caching,
+51,11,PAPER_Q_0129,2,Database,
+51,11,PAPER_Q_0138,2,Caching,
+51,11,PAPER_Q_0015,2,Spring,
+51,11,PAPER_Q_0124,2,Caching,
+51,11,PAPER_Q_0126,3,Caching,
+52,9,PAPER_Q_0131,2,Database,
+52,9,PAPER_Q_0035,3,Java Basics,
+52,9,PAPER_Q_0023,4,Spring,
+52,9,PAPER_Q_0008,4,Database,
+52,9,PAPER_Q_0010,4,System Design,
+52,9,PAPER_Q_0085,3,JVM,
+52,9,PAPER_Q_0106,4,Spring,
+52,9,PAPER_Q_0009,4,Database,
+53,8,PAPER_Q_0120,3,System Design,
+53,8,PAPER_Q_0113,2,System Design,
+53,8,PAPER_Q_0136,3,System Design,
+53,8,PAPER_Q_0118,3,Microservices,
+53,8,PAPER_Q_0133,2,Spring,
+53,8,PAPER_Q_0113,2,System Design,
+53,8,PAPER_Q_0138,2,Caching,
+54,8,PAPER_Q_0022,3,Concurrency,
+54,8,PAPER_Q_0070,4,Locks,
+54,8,PAPER_Q_0027,3,Concurrency,
+54,8,PAPER_Q_0057,3,Concurrency,
+54,8,PAPER_Q_0047,3,Memory Model,
+54,8,PAPER_Q_0022,3,Concurrency,
+54,8,PAPER_Q_0067,3,Thread Pool,
+55,12,PAPER_Q_0126,3,Caching,
+55,12,PAPER_Q_0124,2,Caching,
+55,12,PAPER_Q_0012,1,Database,
+55,12,PAPER_Q_0134,1,Caching,
+55,12,PAPER_Q_0015,2,Spring,
+55,12,PAPER_Q_0024,1,System Design,
+55,12,PAPER_Q_0122,1,Spring,
+55,12,PAPER_Q_0129,2,Database,
+55,12,PAPER_Q_0133,2,Spring,
+55,12,PAPER_Q_0107,1,Spring,
+55,12,PAPER_Q_0117,2,Microservices,
+56,12,PAPER_Q_0110,3,Microservices,
+56,12,PAPER_Q_0012,1,Database,
+56,12,PAPER_Q_0015,2,Spring,
+56,12,PAPER_Q_0124,2,Caching,
+56,12,PAPER_Q_0134,1,Caching,
+56,12,PAPER_Q_0021,2,Spring,
+56,12,PAPER_Q_0122,1,Spring,
+56,12,PAPER_Q_0107,1,Spring,
+56,12,PAPER_Q_0007,2,System Design,
+56,12,PAPER_Q_0134,1,Caching,
+56,12,PAPER_Q_0138,2,Caching,
+57,12,PAPER_Q_0113,2,System Design,
+57,12,PAPER_Q_0024,1,System Design,
+57,12,PAPER_Q_0107,1,Spring,
+57,12,PAPER_Q_0129,2,Database,
+57,12,PAPER_Q_0133,2,Spring,
+57,12,PAPER_Q_0021,2,Spring,
+57,12,PAPER_Q_0113,2,System Design,
+57,12,PAPER_Q_0122,1,Spring,
+57,12,PAPER_Q_0024,1,System Design,
+57,12,PAPER_Q_0129,2,Database,
+57,12,PAPER_Q_0116,1,Caching,
+58,11,PAPER_Q_0001,3,JVM,
+58,11,PAPER_Q_0107,1,Spring,
+58,11,PAPER_Q_0015,2,Spring,
+58,11,PAPER_Q_0005,1,Java Basics,
+58,11,PAPER_Q_0022,3,Concurrency,
+58,11,PAPER_Q_0128,2,System Design,
+58,11,PAPER_Q_0012,1,Database,
+58,11,PAPER_Q_0015,2,Spring,
+58,11,PAPER_Q_0059,1,Concurrency,
+58,11,PAPER_Q_0133,2,Spring,
+59,8,PAPER_Q_0110,3,Microservices,
+59,8,PAPER_Q_0138,2,Caching,
+59,8,PAPER_Q_0130,1,Microservices,
+59,8,PAPER_Q_0021,2,Spring,
+59,8,PAPER_Q_0013,2,Spring,
+59,8,PAPER_Q_0024,1,System Design,
+59,8,PAPER_Q_0122,1,Spring,
+60,12,PAPER_Q_0019,2,Java Basics,
+60,12,PAPER_Q_0021,2,Spring,
+60,12,PAPER_Q_0129,2,Database,
+60,12,PAPER_Q_0015,2,Spring,
+60,12,PAPER_Q_0013,2,Spring,
+60,12,PAPER_Q_0002,1,Database,
+60,12,PAPER_Q_0133,2,Spring,
+60,12,PAPER_Q_0031,3,Collections,
+60,12,PAPER_Q_0059,1,Concurrency,
+60,12,PAPER_Q_0019,2,Java Basics,
+60,12,PAPER_Q_0024,1,System Design,
+61,10,PAPER_Q_0034,4,JVM,
+61,10,PAPER_Q_0092,3,GC,
+61,10,PAPER_Q_0097,4,Performance,
+61,10,PAPER_Q_0082,4,Memory,
+61,10,PAPER_Q_0080,3,Profiling,
+61,10,PAPER_Q_0079,3,Profiling,
+61,10,PAPER_Q_0098,3,Profiling,
+61,10,PAPER_Q_0099,4,Profiling,
+61,10,PAPER_Q_0072,3,GC,
+62,11,PAPER_Q_0035,3,Java Basics,
+62,11,PAPER_Q_0001,3,JVM,
+62,11,PAPER_Q_0022,3,Concurrency,
+62,11,PAPER_Q_0131,2,Database,
+62,11,PAPER_Q_0027,3,Concurrency,
+62,11,PAPER_Q_0085,3,JVM,
+62,11,PAPER_Q_0019,2,Java Basics,
+62,11,PAPER_Q_0015,2,Spring,
+62,11,PAPER_Q_0010,4,System Design,
+62,11,PAPER_Q_0035,3,Java Basics,
+63,11,PAPER_Q_0023,4,Spring,
+63,11,PAPER_Q_0127,4,Microservices,
+63,11,PAPER_Q_0131,2,Database,
+63,11,PAPER_Q_0110,3,Microservices,
+63,11,PAPER_Q_0032,4,System Design,
+63,11,PAPER_Q_0021,2,Spring,
+63,11,PAPER_Q_0108,4,Caching,
+63,11,PAPER_Q_0023,4,Spring,
+63,11,PAPER_Q_0013,2,Spring,
+63,11,PAPER_Q_0117,2,Microservices,
+64,5,PAPER_Q_0043,2,Threading,
+64,5,PAPER_Q_0047,3,Memory Model,
+64,5,PAPER_Q_0022,3,Concurrency,
+64,5,PAPER_Q_0068,3,Threading,
+65,9,PAPER_Q_0101,2,Performance,
+65,9,PAPER_Q_0098,3,Profiling,
+65,9,PAPER_Q_0092,3,GC,
+65,9,PAPER_Q_0083,3,Performance,
+65,9,PAPER_Q_0095,2,GC,
+65,9,PAPER_Q_0001,3,JVM,
+65,9,PAPER_Q_0079,3,Profiling,
+65,9,PAPER_Q_0087,2,GC,
+66,12,PAPER_Q_0053,3,Thread Pool,
+66,12,PAPER_Q_0038,3,Locks,
+66,12,PAPER_Q_0022,3,Concurrency,
+66,12,PAPER_Q_0047,3,Memory Model,
+66,12,PAPER_Q_0067,3,Thread Pool,
+66,12,PAPER_Q_0027,3,Concurrency,
+66,12,PAPER_Q_0068,3,Threading,
+66,12,PAPER_Q_0047,3,Memory Model,
+66,12,PAPER_Q_0038,3,Locks,
+66,12,PAPER_Q_0027,3,Concurrency,
+66,12,PAPER_Q_0052,1,Threading,
+67,12,PAPER_Q_0019,2,Java Basics,
+67,12,PAPER_Q_0021,2,Spring,
+67,12,PAPER_Q_0120,3,System Design,
+67,12,PAPER_Q_0027,3,Concurrency,
+67,12,PAPER_Q_0001,3,JVM,
+67,12,PAPER_Q_0085,3,JVM,
+67,12,PAPER_Q_0120,3,System Design,
+67,12,PAPER_Q_0031,3,Collections,
+67,12,PAPER_Q_0007,2,System Design,
+67,12,PAPER_Q_0021,2,Spring,
+67,12,PAPER_Q_0133,2,Spring,
+68,12,PAPER_Q_0013,2,Spring,
+68,12,PAPER_Q_0123,4,Spring,
+68,12,PAPER_Q_0034,4,JVM,
+68,12,PAPER_Q_0106,4,Spring,
+68,12,PAPER_Q_0027,3,Concurrency,
+68,12,PAPER_Q_0031,3,Collections,
+68,12,PAPER_Q_0057,3,Concurrency,
+68,12,PAPER_Q_0132,4,System Design,
+68,12,PAPER_Q_0019,2,Java Basics,
+68,12,PAPER_Q_0013,2,Spring,
+68,12,PAPER_Q_0001,3,JVM,
+69,11,PAPER_Q_0093,4,JVM,
+69,11,PAPER_Q_0105,3,Memory,
+69,11,PAPER_Q_0072,3,GC,
+69,11,PAPER_Q_0101,2,Performance,
+69,11,PAPER_Q_0098,3,Profiling,
+69,11,PAPER_Q_0095,2,GC,
+69,11,PAPER_Q_0083,3,Performance,
+69,11,PAPER_Q_0105,3,Memory,
+69,11,PAPER_Q_0072,3,GC,
+69,11,PAPER_Q_0095,2,GC,
+70,8,PAPER_Q_0033,1,JVM,
+70,8,PAPER_Q_0105,3,Memory,
+70,8,PAPER_Q_0102,1,Memory,
+70,8,PAPER_Q_0095,2,GC,
+70,8,PAPER_Q_0085,3,JVM,
+70,8,PAPER_Q_0098,3,Profiling,
+70,8,PAPER_Q_0080,3,Profiling,
+71,9,PAPER_Q_0037,3,Memory Model,
+71,9,PAPER_Q_0040,1,Locks,
+71,9,PAPER_Q_0052,1,Threading,
+71,9,PAPER_Q_0042,1,Threading,
+71,9,PAPER_Q_0043,2,Threading,
+71,9,PAPER_Q_0051,1,Thread Pool,
+71,9,PAPER_Q_0052,1,Threading,
+71,9,PAPER_Q_0042,1,Threading,
+72,10,PAPER_Q_0047,3,Memory Model,
+72,10,PAPER_Q_0039,1,Threading,
+72,10,PAPER_Q_0050,1,Threading,
+72,10,PAPER_Q_0052,1,Threading,
+72,10,PAPER_Q_0042,1,Threading,
+72,10,PAPER_Q_0059,1,Concurrency,
+72,10,PAPER_Q_0043,2,Threading,
+72,10,PAPER_Q_0039,1,Threading,
+72,10,PAPER_Q_0052,1,Threading,
+73,8,PAPER_Q_0118,3,Microservices,
+73,8,PAPER_Q_0120,3,System Design,
+73,8,PAPER_Q_0007,2,System Design,
+73,8,PAPER_Q_0135,4,Microservices,
+73,8,PAPER_Q_0129,2,Database,
+73,8,PAPER_Q_0108,4,Caching,
+73,8,PAPER_Q_0008,4,Database,
+74,8,PAPER_Q_0129,2,Database,
+74,8,PAPER_Q_0117,2,Microservices,
+74,8,PAPER_Q_0128,2,System Design,
+74,8,PAPER_Q_0124,2,Caching,
+74,8,PAPER_Q_0138,2,Caching,
+74,8,PAPER_Q_0021,2,Spring,
+74,8,PAPER_Q_0123,4,Spring,
+75,12,PAPER_Q_0136,3,System Design,
+75,12,PAPER_Q_0058,4,Concurrency,
+75,12,PAPER_Q_0023,4,Spring,
+75,12,PAPER_Q_0022,3,Concurrency,
+75,12,PAPER_Q_0009,4,Database,
+75,12,PAPER_Q_0034,4,JVM,
+75,12,PAPER_Q_0136,3,System Design,
+75,12,PAPER_Q_0021,2,Spring,
+75,12,PAPER_Q_0013,2,Spring,
+75,12,PAPER_Q_0113,2,System Design,
+75,12,PAPER_Q_0009,4,Database,
+76,12,PAPER_Q_0037,3,Memory Model,
+76,12,PAPER_Q_0048,3,Threading,
+76,12,PAPER_Q_0068,3,Threading,
+76,12,PAPER_Q_0064,4,Memory Model,
+76,12,PAPER_Q_0022,3,Concurrency,
+76,12,PAPER_Q_0049,3,Locks,
+76,12,PAPER_Q_0068,3,Threading,
+76,12,PAPER_Q_0048,3,Threading,
+76,12,PAPER_Q_0027,3,Concurrency,
+76,12,PAPER_Q_0022,3,Concurrency,
+76,12,PAPER_Q_0047,3,Memory Model,
+77,8,PAPER_Q_0060,4,Thread Pool,
+77,8,PAPER_Q_0049,3,Locks,
+77,8,PAPER_Q_0038,3,Locks,
+77,8,PAPER_Q_0043,2,Threading,
+77,8,PAPER_Q_0058,4,Concurrency,
+77,8,PAPER_Q_0053,3,Thread Pool,
+77,8,PAPER_Q_0065,4,Locks,
+78,10,PAPER_Q_0099,4,Profiling,
+78,10,PAPER_Q_0085,3,JVM,
+78,10,PAPER_Q_0105,3,Memory,
+78,10,PAPER_Q_0087,2,GC,
+78,10,PAPER_Q_0080,3,Profiling,
+78,10,PAPER_Q_0079,3,Profiling,
+78,10,PAPER_Q_0078,2,Profiling,
+78,10,PAPER_Q_0098,3,Profiling,
+78,10,PAPER_Q_0096,2,Performance,
+79,5,PAPER_Q_0043,2,Threading,
+79,5,PAPER_Q_0070,4,Locks,
+79,5,PAPER_Q_0027,3,Concurrency,
+79,5,PAPER_Q_0038,3,Locks,
+79,12,PAPER_Q_0062,4,Threading,
+79,12,PAPER_Q_0058,4,Concurrency,
+79,12,PAPER_Q_0047,3,Memory Model,
+79,12,PAPER_Q_0028,4,Concurrency,
+79,12,PAPER_Q_0018,5,Concurrency,
+79,12,PAPER_Q_0016,5,Concurrency,
+79,12,PAPER_Q_0058,4,Concurrency,
+80,11,PAPER_Q_0058,4,Concurrency,
+80,11,PAPER_Q_0068,3,Threading,
+80,11,PAPER_Q_0065,4,Locks,
+80,11,PAPER_Q_0022,3,Concurrency,
+80,11,PAPER_Q_0053,3,Thread Pool,
+80,11,PAPER_Q_0064,4,Memory Model,
+80,11,PAPER_Q_0037,3,Memory Model,
+80,11,PAPER_Q_0027,3,Concurrency,
+80,11,PAPER_Q_0058,4,Concurrency,
+80,11,PAPER_Q_0036,5,Threading,
+81,12,PAPER_Q_0021,2,Spring,
+81,12,PAPER_Q_0139,4,Database,
+81,12,PAPER_Q_0106,4,Spring,
+81,12,PAPER_Q_0132,4,System Design,
+81,12,PAPER_Q_0035,3,Java Basics,
+81,12,PAPER_Q_0008,4,Database,
+81,12,PAPER_Q_0123,4,Spring,
+81,12,PAPER_Q_0023,4,Spring,
+81,12,PAPER_Q_0136,3,System Design,
+81,12,PAPER_Q_0032,4,System Design,
+81,12,PAPER_Q_0031,3,Collections,
+82,8,PAPER_Q_0088,1,Memory,
+82,8,PAPER_Q_0033,1,JVM,
+82,8,PAPER_Q_0081,1,Memory,
+82,8,PAPER_Q_0103,1,Profiling,
+82,8,PAPER_Q_0101,2,Performance,
+82,8,PAPER_Q_0102,1,Memory,
+82,8,PAPER_Q_0095,2,GC,
+83,11,PAPER_Q_0050,1,Threading,
+83,11,PAPER_Q_0068,3,Threading,
+83,11,PAPER_Q_0040,1,Locks,
+83,11,PAPER_Q_0051,1,Thread Pool,
+83,11,PAPER_Q_0039,1,Threading,
+83,11,PAPER_Q_0067,3,Thread Pool,
+83,11,PAPER_Q_0043,2,Threading,
+83,11,PAPER_Q_0052,1,Threading,
+83,11,PAPER_Q_0050,1,Threading,
+83,11,PAPER_Q_0059,1,Concurrency,
+84,8,PAPER_Q_0047,3,Memory Model,
+84,8,PAPER_Q_0050,1,Threading,
+84,8,PAPER_Q_0052,1,Threading,
+84,8,PAPER_Q_0039,1,Threading,
+84,8,PAPER_Q_0043,2,Threading,
+84,8,PAPER_Q_0042,1,Threading,
+84,8,PAPER_Q_0051,1,Thread Pool,
+85,10,PAPER_Q_0117,2,Microservices,
+85,10,PAPER_Q_0124,2,Caching,
+85,10,PAPER_Q_0015,2,Spring,
+85,10,PAPER_Q_0128,2,System Design,
+85,10,PAPER_Q_0013,2,Spring,
+85,10,PAPER_Q_0021,2,Spring,
+85,10,PAPER_Q_0120,3,System Design,
+85,10,PAPER_Q_0138,2,Caching,
+85,10,PAPER_Q_0129,2,Database,
+86,7,PAPER_Q_0033,1,JVM,
+86,7,PAPER_Q_0072,3,GC,
+86,7,PAPER_Q_0101,2,Performance,
+86,7,PAPER_Q_0089,1,Memory,
+86,7,PAPER_Q_0087,2,GC,
+86,7,PAPER_Q_0103,1,Profiling,
+87,10,PAPER_Q_0095,2,GC,
+87,10,PAPER_Q_0078,2,Profiling,
+87,10,PAPER_Q_0101,2,Performance,
+87,10,PAPER_Q_0074,1,Profiling,
+87,10,PAPER_Q_0087,2,GC,
+87,10,PAPER_Q_0084,1,GC,
+87,10,PAPER_Q_0033,1,JVM,
+87,10,PAPER_Q_0081,1,Memory,
+87,10,PAPER_Q_0100,1,GC,
+88,10,PAPER_Q_0009,4,Database,
+88,10,PAPER_Q_0007,2,System Design,
+88,10,PAPER_Q_0126,3,Caching,
+88,10,PAPER_Q_0032,4,System Design,
+88,10,PAPER_Q_0026,4,Database,
+88,10,PAPER_Q_0023,4,Spring,
+88,10,PAPER_Q_0123,4,Spring,
+88,10,PAPER_Q_0003,5,Spring,
+88,10,PAPER_Q_0017,5,System Design,
+89,10,PAPER_Q_0010,4,System Design,
+89,10,PAPER_Q_0131,2,Database,
+89,10,PAPER_Q_0106,4,Spring,
+89,10,PAPER_Q_0127,4,Microservices,
+89,10,PAPER_Q_0109,4,Spring,
+89,10,PAPER_Q_0123,4,Spring,
+89,10,PAPER_Q_0032,4,System Design,
+89,10,PAPER_Q_0112,4,Microservices,
+89,10,PAPER_Q_0139,4,Database,
+90,9,PAPER_Q_0049,3,Locks,
+90,9,PAPER_Q_0022,3,Concurrency,
+90,9,PAPER_Q_0068,3,Threading,
+90,9,PAPER_Q_0057,3,Concurrency,
+90,9,PAPER_Q_0065,4,Locks,
+90,9,PAPER_Q_0038,3,Locks,
+90,9,PAPER_Q_0037,3,Memory Model,
+90,9,PAPER_Q_0055,4,Thread Pool,
+91,9,PAPER_Q_0138,2,Caching,
+91,9,PAPER_Q_0026,4,Database,
+91,9,PAPER_Q_0013,2,Spring,
+91,9,PAPER_Q_0112,4,Microservices,
+91,9,PAPER_Q_0109,4,Spring,
+91,9,PAPER_Q_0010,4,System Design,
+91,9,PAPER_Q_0008,4,Database,
+91,9,PAPER_Q_0023,4,Spring,
+92,12,PAPER_Q_0022,3,Concurrency,
+92,12,PAPER_Q_0047,3,Memory Model,
+92,12,PAPER_Q_0049,3,Locks,
+92,12,PAPER_Q_0065,4,Locks,
+92,12,PAPER_Q_0041,4,Memory Model,
+92,12,PAPER_Q_0048,3,Threading,
+92,12,PAPER_Q_0067,3,Thread Pool,
+92,12,PAPER_Q_0022,3,Concurrency,
+92,12,PAPER_Q_0041,4,Memory Model,
+92,12,PAPER_Q_0064,4,Memory Model,
+92,12,PAPER_Q_0070,4,Locks,
+93,12,PAPER_Q_0048,3,Threading,
+93,12,PAPER_Q_0069,4,Memory Model,
+93,12,PAPER_Q_0062,4,Threading,
+93,12,PAPER_Q_0056,4,Threading,
+93,12,PAPER_Q_0055,4,Thread Pool,
+93,12,PAPER_Q_0060,4,Thread Pool,
+93,12,PAPER_Q_0068,3,Threading,
+93,12,PAPER_Q_0053,3,Thread Pool,
+93,12,PAPER_Q_0038,3,Locks,
+93,12,PAPER_Q_0056,4,Threading,
+93,12,PAPER_Q_0064,4,Memory Model,
+94,10,PAPER_Q_0043,2,Threading,
+94,10,PAPER_Q_0070,4,Locks,
+94,10,PAPER_Q_0058,4,Concurrency,
+94,10,PAPER_Q_0053,3,Thread Pool,
+94,10,PAPER_Q_0064,4,Memory Model,
+94,10,PAPER_Q_0041,4,Memory Model,
+94,10,PAPER_Q_0047,3,Memory Model,
+94,10,PAPER_Q_0028,4,Concurrency,
+94,10,PAPER_Q_0068,3,Threading,
+95,9,PAPER_Q_0058,4,Concurrency,
+95,9,PAPER_Q_0041,4,Memory Model,
+95,9,PAPER_Q_0062,4,Threading,
+95,9,PAPER_Q_0060,4,Thread Pool,
+95,9,PAPER_Q_0053,3,Thread Pool,
+95,9,PAPER_Q_0067,3,Thread Pool,
+95,9,PAPER_Q_0068,3,Threading,
+95,9,PAPER_Q_0044,5,Threading,
+96,10,PAPER_Q_0058,4,Concurrency,
+96,10,PAPER_Q_0027,3,Concurrency,
+96,10,PAPER_Q_0047,3,Memory Model,
+96,10,PAPER_Q_0043,2,Threading,
+96,10,PAPER_Q_0028,4,Concurrency,
+96,10,PAPER_Q_0022,3,Concurrency,
+96,10,PAPER_Q_0047,3,Memory Model,
+96,10,PAPER_Q_0049,3,Locks,
+96,10,PAPER_Q_0063,4,Locks,
+97,8,PAPER_Q_0123,4,Spring,
+97,8,PAPER_Q_0110,3,Microservices,
+97,8,PAPER_Q_0126,3,Caching,
+97,8,PAPER_Q_0129,2,Database,
+97,8,PAPER_Q_0026,4,Database,
+97,8,PAPER_Q_0120,3,System Design,
+97,8,PAPER_Q_0013,2,Spring,
+98,11,PAPER_Q_0128,2,System Design,
+98,11,PAPER_Q_0027,3,Concurrency,
+98,11,PAPER_Q_0010,4,System Design,
+98,11,PAPER_Q_0001,3,JVM,
+98,11,PAPER_Q_0026,4,Database,
+98,11,PAPER_Q_0032,4,System Design,
+98,11,PAPER_Q_0010,4,System Design,
+98,11,PAPER_Q_0057,3,Concurrency,
+98,11,PAPER_Q_0027,3,Concurrency,
+98,11,PAPER_Q_0001,3,JVM,
+99,8,PAPER_Q_0133,2,Spring,
+99,8,PAPER_Q_0035,3,Java Basics,
+99,8,PAPER_Q_0085,3,JVM,
+99,8,PAPER_Q_0106,4,Spring,
+99,8,PAPER_Q_0034,4,JVM,
+99,8,PAPER_Q_0023,4,Spring,
+99,8,PAPER_Q_0109,4,Spring,
+100,9,PAPER_Q_0018,5,Concurrency,
+100,9,PAPER_Q_0058,4,Concurrency,
+100,9,PAPER_Q_0054,5,Memory Model,
+100,9,PAPER_Q_0036,5,Threading,
+100,9,PAPER_Q_0062,4,Threading,
+100,9,PAPER_Q_0061,5,Thread Pool,
+100,9,PAPER_Q_0065,4,Locks,
+100,9,PAPER_Q_0014,5,Concurrency,
+101,10,PAPER_Q_0123,4,Spring,
+101,10,PAPER_Q_0140,5,System Design,
+101,10,PAPER_Q_0025,5,Spring,
+101,10,PAPER_Q_0026,4,Database,
+101,10,PAPER_Q_0135,4,Microservices,
+101,10,PAPER_Q_0125,5,Spring,
+101,10,PAPER_Q_0008,4,Database,
+101,10,PAPER_Q_0123,4,Spring,
+101,10,PAPER_Q_0127,4,Microservices,
+102,10,PAPER_Q_0030,5,JVM,
+102,10,PAPER_Q_0109,4,Spring,
+102,10,PAPER_Q_0125,5,Spring,
+102,10,PAPER_Q_0009,4,Database,
+102,10,PAPER_Q_0003,5,Spring,
+102,10,PAPER_Q_0020,5,Java Basics,
+102,10,PAPER_Q_0034,4,JVM,
+102,10,PAPER_Q_0006,5,Spring,
+102,10,PAPER_Q_0030,5,JVM,
+103,9,PAPER_Q_0037,3,Memory Model,
+103,9,PAPER_Q_0038,3,Locks,
+103,9,PAPER_Q_0065,4,Locks,
+103,9,PAPER_Q_0022,3,Concurrency,
+103,9,PAPER_Q_0067,3,Thread Pool,
+103,9,PAPER_Q_0070,4,Locks,
+103,9,PAPER_Q_0027,3,Concurrency,
+103,9,PAPER_Q_0028,4,Concurrency,
+104,9,PAPER_Q_0139,4,Database,
+104,9,PAPER_Q_0131,2,Database,
+104,9,PAPER_Q_0008,4,Database,
+104,9,PAPER_Q_0031,3,Collections,
+104,9,PAPER_Q_0023,4,Spring,
+104,9,PAPER_Q_0123,4,Spring,
+104,9,PAPER_Q_0109,4,Spring,
+104,9,PAPER_Q_0027,3,Concurrency,
+105,12,PAPER_Q_0139,4,Database,
+105,12,PAPER_Q_0118,3,Microservices,
+105,12,PAPER_Q_0138,2,Caching,
+105,12,PAPER_Q_0126,3,Caching,
+105,12,PAPER_Q_0108,4,Caching,
+105,12,PAPER_Q_0118,3,Microservices,
+105,12,PAPER_Q_0106,4,Spring,
+105,12,PAPER_Q_0123,4,Spring,
+105,12,PAPER_Q_0136,3,System Design,
+105,12,PAPER_Q_0126,3,Caching,
+105,12,PAPER_Q_0032,4,System Design,
+106,9,PAPER_Q_0117,2,Microservices,
+106,9,PAPER_Q_0138,2,Caching,
+106,9,PAPER_Q_0002,1,Database,
+106,9,PAPER_Q_0136,3,System Design,
+106,9,PAPER_Q_0113,2,System Design,
+106,9,PAPER_Q_0129,2,Database,
+106,9,PAPER_Q_0021,2,Spring,
+106,9,PAPER_Q_0136,3,System Design,
+107,9,PAPER_Q_0002,1,Database,
+107,9,PAPER_Q_0113,2,System Design,
+107,9,PAPER_Q_0019,2,Java Basics,
+107,9,PAPER_Q_0031,3,Collections,
+107,9,PAPER_Q_0013,2,Spring,
+107,9,PAPER_Q_0133,2,Spring,
+107,9,PAPER_Q_0007,2,System Design,
+107,9,PAPER_Q_0012,1,Database,
+108,12,PAPER_Q_0031,3,Collections,
+108,12,PAPER_Q_0113,2,System Design,
+108,12,PAPER_Q_0002,1,Database,
+108,12,PAPER_Q_0131,2,Database,
+108,12,PAPER_Q_0122,1,Spring,
+108,12,PAPER_Q_0129,2,Database,
+108,12,PAPER_Q_0107,1,Spring,
+108,12,PAPER_Q_0002,1,Database,
+108,12,PAPER_Q_0033,1,JVM,
+108,12,PAPER_Q_0129,2,Database,
+108,12,PAPER_Q_0015,2,Spring,
+109,11,PAPER_Q_0009,4,Database,
+109,11,PAPER_Q_0093,4,JVM,
+109,11,PAPER_Q_0026,4,Database,
+109,11,PAPER_Q_0029,4,Collections,
+109,11,PAPER_Q_0034,4,JVM,
+109,11,PAPER_Q_0028,4,Concurrency,
+109,11,PAPER_Q_0008,4,Database,
+109,11,PAPER_Q_0123,4,Spring,
+109,11,PAPER_Q_0034,4,JVM,
+109,11,PAPER_Q_0029,4,Collections,
+110,12,PAPER_Q_0032,4,System Design,
+110,12,PAPER_Q_0021,2,Spring,
+110,12,PAPER_Q_0119,4,Caching,
+110,12,PAPER_Q_0026,4,Database,
+110,12,PAPER_Q_0135,4,Microservices,
+110,12,PAPER_Q_0120,3,System Design,
+110,12,PAPER_Q_0015,2,Spring,
+110,12,PAPER_Q_0132,4,System Design,
+110,12,PAPER_Q_0110,3,Microservices,
+110,12,PAPER_Q_0008,4,Database,
+110,12,PAPER_Q_0123,4,Spring,
+111,8,PAPER_Q_0129,2,Database,
+111,8,PAPER_Q_0026,4,Database,
+111,8,PAPER_Q_0126,3,Caching,
+111,8,PAPER_Q_0010,4,System Design,
+111,8,PAPER_Q_0135,4,Microservices,
+111,8,PAPER_Q_0008,4,Database,
+111,8,PAPER_Q_0110,3,Microservices,
+112,8,PAPER_Q_0047,3,Memory Model,
+112,8,PAPER_Q_0058,4,Concurrency,
+112,8,PAPER_Q_0068,3,Threading,
+112,8,PAPER_Q_0062,4,Threading,
+112,8,PAPER_Q_0047,3,Memory Model,
+112,8,PAPER_Q_0056,4,Threading,
+112,8,PAPER_Q_0043,2,Threading,
+113,12,PAPER_Q_0027,3,Concurrency,
+113,12,PAPER_Q_0019,2,Java Basics,
+113,12,PAPER_Q_0106,4,Spring,
+113,12,PAPER_Q_0035,3,Java Basics,
+113,12,PAPER_Q_0136,3,System Design,
+113,12,PAPER_Q_0031,3,Collections,
+113,12,PAPER_Q_0019,2,Java Basics,
+113,12,PAPER_Q_0008,4,Database,
+113,12,PAPER_Q_0028,4,Concurrency,
+113,12,PAPER_Q_0010,4,System Design,
+113,12,PAPER_Q_0027,3,Concurrency,
+114,10,PAPER_Q_0069,4,Memory Model,
+114,10,PAPER_Q_0037,3,Memory Model,
+114,10,PAPER_Q_0058,4,Concurrency,
+114,10,PAPER_Q_0064,4,Memory Model,
+114,10,PAPER_Q_0056,4,Threading,
+114,10,PAPER_Q_0069,4,Memory Model,
+114,10,PAPER_Q_0068,3,Threading,
+114,10,PAPER_Q_0053,3,Thread Pool,
+114,10,PAPER_Q_0041,4,Memory Model,
+115,5,PAPER_Q_0131,2,Database,
+115,5,PAPER_Q_0021,2,Spring,
+115,5,PAPER_Q_0138,2,Caching,
+115,5,PAPER_Q_0113,2,System Design,
+116,8,PAPER_Q_0058,4,Concurrency,
+116,8,PAPER_Q_0008,4,Database,
+116,8,PAPER_Q_0093,4,JVM,
+116,8,PAPER_Q_0029,4,Collections,
+116,8,PAPER_Q_0021,2,Spring,
+116,8,PAPER_Q_0027,3,Concurrency,
+116,8,PAPER_Q_0028,4,Concurrency,
+117,10,PAPER_Q_0109,4,Spring,
+117,10,PAPER_Q_0093,4,JVM,
+117,10,PAPER_Q_0010,4,System Design,
+117,10,PAPER_Q_0123,4,Spring,
+117,10,PAPER_Q_0136,3,System Design,
+117,10,PAPER_Q_0058,4,Concurrency,
+117,10,PAPER_Q_0090,4,JVM,
+117,10,PAPER_Q_0023,4,Spring,
+117,10,PAPER_Q_0028,4,Concurrency,
+118,8,PAPER_Q_0118,3,Microservices,
+118,8,PAPER_Q_0023,4,Spring,
+118,8,PAPER_Q_0109,4,Spring,
+118,8,PAPER_Q_0128,2,System Design,
+118,8,PAPER_Q_0010,4,System Design,
+118,8,PAPER_Q_0120,3,System Design,
+118,8,PAPER_Q_0126,3,Caching,
+119,11,PAPER_Q_0133,2,Spring,
+119,11,PAPER_Q_0058,4,Concurrency,
+119,11,PAPER_Q_0139,4,Database,
+119,11,PAPER_Q_0009,4,Database,
+119,11,PAPER_Q_0136,3,System Design,
+119,11,PAPER_Q_0010,4,System Design,
+119,11,PAPER_Q_0090,4,JVM,
+119,11,PAPER_Q_0032,4,System Design,
+119,11,PAPER_Q_0034,4,JVM,
+119,11,PAPER_Q_0003,5,Spring,
+120,11,PAPER_Q_0093,4,JVM,
+120,11,PAPER_Q_0085,3,JVM,
+120,11,PAPER_Q_0098,3,Profiling,
+120,11,PAPER_Q_0092,3,GC,
+120,11,PAPER_Q_0090,4,JVM,
+120,11,PAPER_Q_0034,4,JVM,
+120,11,PAPER_Q_0030,5,JVM,
+120,11,PAPER_Q_0071,5,GC,
+120,11,PAPER_Q_0104,4,Profiling,
+120,11,PAPER_Q_0093,4,JVM,
+121,9,PAPER_Q_0008,4,Database,
+121,9,PAPER_Q_0133,2,Spring,
+121,9,PAPER_Q_0026,4,Database,
+121,9,PAPER_Q_0106,4,Spring,
+121,9,PAPER_Q_0136,3,System Design,
+121,9,PAPER_Q_0108,4,Caching,
+121,9,PAPER_Q_0135,4,Microservices,
+121,9,PAPER_Q_0026,4,Database,
+122,11,PAPER_Q_0027,3,Concurrency,
+122,11,PAPER_Q_0010,4,System Design,
+122,11,PAPER_Q_0139,4,Database,
+122,11,PAPER_Q_0022,3,Concurrency,
+122,11,PAPER_Q_0057,3,Concurrency,
+122,11,PAPER_Q_0120,3,System Design,
+122,11,PAPER_Q_0008,4,Database,
+122,11,PAPER_Q_0031,3,Collections,
+122,11,PAPER_Q_0001,3,JVM,
+122,11,PAPER_Q_0085,3,JVM,
+123,12,PAPER_Q_0068,3,Threading,
+123,12,PAPER_Q_0047,3,Memory Model,
+123,12,PAPER_Q_0043,2,Threading,
+123,12,PAPER_Q_0038,3,Locks,
+123,12,PAPER_Q_0056,4,Threading,
+123,12,PAPER_Q_0069,4,Memory Model,
+123,12,PAPER_Q_0027,3,Concurrency,
+123,12,PAPER_Q_0041,4,Memory Model,
+123,12,PAPER_Q_0038,3,Locks,
+123,12,PAPER_Q_0064,4,Memory Model,
+123,12,PAPER_Q_0014,5,Concurrency,
+124,10,PAPER_Q_0013,2,Spring,
+124,10,PAPER_Q_0120,3,System Design,
+124,10,PAPER_Q_0022,3,Concurrency,
+124,10,PAPER_Q_0035,3,Java Basics,
+124,10,PAPER_Q_0031,3,Collections,
+124,10,PAPER_Q_0136,3,System Design,
+124,10,PAPER_Q_0133,2,Spring,
+124,10,PAPER_Q_0007,2,System Design,
+124,10,PAPER_Q_0085,3,JVM,
+125,8,PAPER_Q_0022,3,Concurrency,
+125,8,PAPER_Q_0035,3,Java Basics,
+125,8,PAPER_Q_0034,4,JVM,
+125,8,PAPER_Q_0026,4,Database,
+125,8,PAPER_Q_0010,4,System Design,
+125,8,PAPER_Q_0021,2,Spring,
+125,8,PAPER_Q_0109,4,Spring,
+126,8,PAPER_Q_0124,2,Caching,
+126,8,PAPER_Q_0110,3,Microservices,
+126,8,PAPER_Q_0139,4,Database,
+126,8,PAPER_Q_0109,4,Spring,
+126,8,PAPER_Q_0133,2,Spring,
+126,8,PAPER_Q_0129,2,Database,
+126,8,PAPER_Q_0112,4,Microservices,
+127,11,PAPER_Q_0001,3,JVM,
+127,11,PAPER_Q_0021,2,Spring,
+127,11,PAPER_Q_0113,2,System Design,
+127,11,PAPER_Q_0013,2,Spring,
+127,11,PAPER_Q_0005,1,Java Basics,
+127,11,PAPER_Q_0131,2,Database,
+127,11,PAPER_Q_0001,3,JVM,
+127,11,PAPER_Q_0133,2,Spring,
+127,11,PAPER_Q_0013,2,Spring,
+127,11,PAPER_Q_0136,3,System Design,
+128,9,PAPER_Q_0133,2,Spring,
+128,9,PAPER_Q_0107,1,Spring,
+128,9,PAPER_Q_0012,1,Database,
+128,9,PAPER_Q_0005,1,Java Basics,
+128,9,PAPER_Q_0133,2,Spring,
+128,9,PAPER_Q_0107,1,Spring,
+128,9,PAPER_Q_0015,2,Spring,
+128,9,PAPER_Q_0012,1,Database,
+129,10,PAPER_Q_0130,1,Microservices,
+129,10,PAPER_Q_0002,1,Database,
+129,10,PAPER_Q_0131,2,Database,
+129,10,PAPER_Q_0107,1,Spring,
+129,10,PAPER_Q_0138,2,Caching,
+129,10,PAPER_Q_0021,2,Spring,
+129,10,PAPER_Q_0133,2,Spring,
+129,10,PAPER_Q_0129,2,Database,
+129,10,PAPER_Q_0131,2,Database,
+130,4,PAPER_Q_0008,4,Database,
+130,4,PAPER_Q_0019,2,Java Basics,
+130,4,PAPER_Q_0120,3,System Design,
+131,8,PAPER_Q_0080,3,Profiling,
+131,8,PAPER_Q_0087,2,GC,
+131,8,PAPER_Q_0092,3,GC,
+131,8,PAPER_Q_0097,4,Performance,
+131,8,PAPER_Q_0105,3,Memory,
+131,8,PAPER_Q_0085,3,JVM,
+131,8,PAPER_Q_0092,3,GC,
+132,10,PAPER_Q_0057,3,Concurrency,
+132,10,PAPER_Q_0037,3,Memory Model,
+132,10,PAPER_Q_0048,3,Threading,
+132,10,PAPER_Q_0027,3,Concurrency,
+132,10,PAPER_Q_0053,3,Thread Pool,
+132,10,PAPER_Q_0049,3,Locks,
+132,10,PAPER_Q_0048,3,Threading,
+132,10,PAPER_Q_0057,3,Concurrency,
+132,10,PAPER_Q_0037,3,Memory Model,
+133,8,PAPER_Q_0023,4,Spring,
+133,8,PAPER_Q_0128,2,System Design,
+133,8,PAPER_Q_0139,4,Database,
+133,8,PAPER_Q_0106,4,Spring,
+133,8,PAPER_Q_0090,4,JVM,
+133,8,PAPER_Q_0085,3,JVM,
+133,8,PAPER_Q_0027,3,Concurrency,
+134,12,PAPER_Q_0034,4,JVM,
+134,12,PAPER_Q_0057,3,Concurrency,
+134,12,PAPER_Q_0109,4,Spring,
+134,12,PAPER_Q_0022,3,Concurrency,
+134,12,PAPER_Q_0023,4,Spring,
+134,12,PAPER_Q_0032,4,System Design,
+134,12,PAPER_Q_0120,3,System Design,
+134,12,PAPER_Q_0045,5,Concurrency,
+134,12,PAPER_Q_0093,4,JVM,
+134,12,PAPER_Q_0017,5,System Design,
+134,12,PAPER_Q_0010,4,System Design,
+135,8,PAPER_Q_0073,4,Memory,
+135,8,PAPER_Q_0097,4,Performance,
+135,8,PAPER_Q_0098,3,Profiling,
+135,8,PAPER_Q_0096,2,Performance,
+135,8,PAPER_Q_0082,4,Memory,
+135,8,PAPER_Q_0097,4,Performance,
+135,8,PAPER_Q_0080,3,Profiling,
+136,4,PAPER_Q_0056,4,Threading,
+136,4,PAPER_Q_0047,3,Memory Model,
+136,4,PAPER_Q_0070,4,Locks,
+137,8,PAPER_Q_0053,3,Thread Pool,
+137,8,PAPER_Q_0057,3,Concurrency,
+137,8,PAPER_Q_0049,3,Locks,
+137,8,PAPER_Q_0060,4,Thread Pool,
+137,8,PAPER_Q_0065,4,Locks,
+137,8,PAPER_Q_0048,3,Threading,
+137,8,PAPER_Q_0070,4,Locks,
+138,8,PAPER_Q_0082,4,Memory,
+138,8,PAPER_Q_0080,3,Profiling,
+138,8,PAPER_Q_0001,3,JVM,
+138,8,PAPER_Q_0079,3,Profiling,
+138,8,PAPER_Q_0098,3,Profiling,
+138,8,PAPER_Q_0099,4,Profiling,
+138,8,PAPER_Q_0093,4,JVM,
+139,8,PAPER_Q_0034,4,JVM,
+139,8,PAPER_Q_0098,3,Profiling,
+139,8,PAPER_Q_0078,2,Profiling,
+139,8,PAPER_Q_0095,2,GC,
+139,8,PAPER_Q_0093,4,JVM,
+139,8,PAPER_Q_0098,3,Profiling,
+139,8,PAPER_Q_0092,3,GC,
+140,9,PAPER_Q_0009,4,Database,
+140,9,PAPER_Q_0133,2,Spring,
+140,9,PAPER_Q_0136,3,System Design,
+140,9,PAPER_Q_0035,3,Java Basics,
+140,9,PAPER_Q_0129,2,Database,
+140,9,PAPER_Q_0123,4,Spring,
+140,9,PAPER_Q_0085,3,JVM,
+140,9,PAPER_Q_0027,3,Concurrency,
+141,9,PAPER_Q_0132,4,System Design,
+141,9,PAPER_Q_0131,2,Database,
+141,9,PAPER_Q_0129,2,Database,
+141,9,PAPER_Q_0013,2,Spring,
+141,9,PAPER_Q_0118,3,Microservices,
+141,9,PAPER_Q_0117,2,Microservices,
+141,9,PAPER_Q_0007,2,System Design,
+141,9,PAPER_Q_0113,2,System Design,
+142,12,PAPER_Q_0068,3,Threading,
+142,12,PAPER_Q_0055,4,Thread Pool,
+142,12,PAPER_Q_0069,4,Memory Model,
+142,12,PAPER_Q_0065,4,Locks,
+142,12,PAPER_Q_0027,3,Concurrency,
+142,12,PAPER_Q_0066,5,Memory Model,
+142,12,PAPER_Q_0044,5,Threading,
+142,12,PAPER_Q_0060,4,Thread Pool,
+142,12,PAPER_Q_0049,3,Locks,
+142,12,PAPER_Q_0064,4,Memory Model,
+142,12,PAPER_Q_0018,5,Concurrency,
+143,9,PAPER_Q_0049,3,Locks,
+143,9,PAPER_Q_0048,3,Threading,
+143,9,PAPER_Q_0060,4,Thread Pool,
+143,9,PAPER_Q_0028,4,Concurrency,
+143,9,PAPER_Q_0058,4,Concurrency,
+143,9,PAPER_Q_0068,3,Threading,
+143,9,PAPER_Q_0063,4,Locks,
+143,9,PAPER_Q_0049,3,Locks,
+144,9,PAPER_Q_0034,4,JVM,
+144,9,PAPER_Q_0097,4,Performance,
+144,9,PAPER_Q_0079,3,Profiling,
+144,9,PAPER_Q_0105,3,Memory,
+144,9,PAPER_Q_0093,4,JVM,
+144,9,PAPER_Q_0097,4,Performance,
+144,9,PAPER_Q_0073,4,Memory,
+144,9,PAPER_Q_0079,3,Profiling,
