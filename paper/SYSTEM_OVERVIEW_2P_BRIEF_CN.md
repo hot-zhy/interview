@@ -40,35 +40,53 @@
 - 每个工具都定义 fallback，LLM 不可用时不中断流程
 - 控制逻辑确定性强，可复现、可审计
 
-## 4. 算法主干（按论文 Section 3）
+## 4. 算法主干（按面试流程讲，易懂版）
 
-### 4.1 RQ1：Adaptive Control
-- 基于用户目标轮数推导 `n_min/n_max`
-- 用滑窗统计（均值、近窗均值、方差）监控状态
-- 四类终止条件：优秀提前结束、低分提前结束、稳定覆盖结束、预算耗尽
-- 难度更新支持两种策略：heuristic / target-score-control
-- 关键结论口径：**4–5 题内达到稳定校准**
+### 4.1 会话初始化与首题
+- **输入**：岗位方向、初始难度、目标轮数、可选简历解析
+- **怎么做**：有简历且 LLM 可用时先生成个性化首题；否则回退题库选题
+- **怎么评估**：首题相关度（和岗位/简历是否匹配）、首题可答性、首轮可用率
 
-### 4.2 RQ2：State-Aware Selection
-- 理论上是多目标优化（Gap、Resume、Coverage、Info、Explore、NextDir）
-- 实现上采用“LLM topic planner + priority cascade”
-  - Priority 0：LLM 建议下一个 chapter（需验证）
-  - Priority 1：缺口优先（含 next-direction 反馈注入）
+### 4.2 Observation -> Memory -> State（每轮更新）
+- **输入**：本轮题目、候选人回答、评估结果（含 missing points / next-direction）
+- **怎么做**：先记录 observation，再更新 memory（分数轨迹、覆盖、缺口、追问计数），最后压缩成 state 供决策
+- **怎么评估**：跨轮一致性、状态利用率（hint 是否被后续选题采用）、可追踪性
+
+### 4.3 回答评估（RQ3：Hybrid Judging）
+- **输入**：题目 + 标准答案 + 用户回答
+- **怎么做**：
+  1) Rule judge 先给稳定基线  
+  2) LLM judge 做语义增强  
+  3) Validator 校验结构和范围  
+  4) 失败自动 fallback 到 rule
+- **怎么评估**：agreement（kappa/ICC/exact）、非法输出率、回退成功率、uptime
+
+### 4.4 自适应控制（RQ1：难度与终止）
+- **输入**：历史分数、难度轨迹、章节覆盖、剩余预算
+- **怎么做**：
+  - 难度更新：`heuristic` 或 `target-score-control`
+  - 终止判断：最少轮次约束 + 优秀提前结束/低分提前结束/覆盖稳定结束 + 预算上限
+- **怎么评估**：calibration、convergence、stability（目标口径：4-5 题内稳定）
+
+### 4.5 追问策略（Follow-up）
+- **输入**：本题得分区间、missing points、追问次数、剩余预算
+- **怎么做**：先判断“要不要追问”；需要时优先上下文 LLM 追问，不可用时模板回退
+- **怎么评估**：追问有效率、追问后得分提升、重复追问率
+
+### 4.6 下一题选择（RQ2：State-Aware Selection）
+- **输入**：缺口集合、简历先验、覆盖状态、next-direction、当前难度
+- **怎么做**：`LLM topic planner + priority cascade`
+  - Priority 0：LLM 建议章节（需校验）
+  - Priority 1：缺口优先（含 next-direction 注入）
   - Priority 2：简历匹配
   - Priority 3：覆盖探索（weighted random / Thompson / UCB）
-- 个性化模式引入 IRT-inspired ability estimation + Fisher 信息
+  - 个性化模式：ability estimation + Fisher 信息
+- **怎么评估**：gap targeting、coverage、personalization relevance
 
-### 4.3 Follow-up 策略
-- 不把追问当“随机追加”，而是一个显式动作
-- 由分数区间、missing points、重复性检测、每题追问预算共同触发
-- LLM 可用时做上下文追问，不可用时模板回退
-
-### 4.4 RQ3：Hybrid Judging
-- Rule-based judge 给稳定基线
-- LLM judge 给语义细粒度补充
-- Validator 校验结构与取值范围
-- Fallback Router 保证异常时回退规则评分
-- 可选 multi-judge 聚合降低波动
+### 4.7 终止与报告生成
+- **输入**：全会话轨迹（题目、分数、缺口、难度/章节轨迹、可选语音表情信号）
+- **怎么做**：多步报告合成（综合总结、维度分析、缺口根因、学习计划、策略轨迹）
+- **怎么评估**：报告可解释性、建议可执行性、用户满意度
 
 ## 5. 结果怎么讲（避免过度 claim）
 
@@ -83,11 +101,13 @@
 
 ## 6. 你可以怎么讲给导师听
 
-推荐 3 分钟版本：
+推荐 90 秒版本（按系统顺序）：
 
-1. **先立问题**：固定面试不公平、随机选题不高效、纯规则/纯LLM评估各有硬伤。  
-2. **再讲框架**：我们把面试建模成受限动作的闭环系统，核心是 memory + policy + tool routing。  
-3. **最后讲价值**：在有限题量里更快校准、更准选题、更稳评估，而且任何 LLM 故障都可自动降级。  
+1. **初始化**：先用简历和岗位信息定首题，LLM 不可用就回退题库。  
+2. **每轮闭环**：回答先评估，再更新 memory/state，控制器决定“追问/下一题/结束”。  
+3. **评估可靠**：rule 保底、LLM 增强、validator 校验、异常自动 fallback。  
+4. **选题自适应**：优先补缺口，再看简历与覆盖，并结合探索策略防止偏科。  
+5. **结果价值**：在有限题量内更快校准、更准选题、更稳评估，且全流程可审计可回退。  
 
 ---
 
