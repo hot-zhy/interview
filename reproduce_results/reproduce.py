@@ -42,9 +42,12 @@ def main():
     modules = [
         ("calc_calibration", "tab_calibration.csv"),
         ("calc_selection", "tab_selection.csv"),
+        ("calc_bandit_policy", "tab_bandit_policy.csv"),
+        ("calc_eval_policy", "tab_eval_policy.csv"),
         ("calc_evaluation", "tab_evaluation.csv"),
         ("calc_system_performance", "tab_system_performance.csv"),
         ("calc_interview_outcomes", "tab_interview_outcomes.csv"),
+        ("calc_joint_ablation", "tab_joint_ablation.csv"),
     ]
 
     for mod_name, out_file in modules:

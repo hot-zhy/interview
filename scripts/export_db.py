@@ -13,6 +13,7 @@ Output files (in --output directory):
   - turns.csv          (from interview_turns, for human eval sampling)
   - question_bank.csv
   - resumes.csv        (raw resume metadata)
+  - eval_policy_trajectory.csv
 
 Manual annotation files (see MISSING_DATA.md):
   - ability_labels.csv
@@ -147,6 +148,8 @@ def export_evaluations(session, out_dir: Path):
         scores = e.scores_json or {}
         missing = e.missing_points_json
         missing_str = json.dumps(missing, ensure_ascii=False) if isinstance(missing, (list, dict)) else _safe_str(missing)
+        scores_payload = e.scores_json or {}
+        policy_meta = scores_payload.get("_agentic_meta", {}) if isinstance(scores_payload, dict) else {}
         rows.append({
             "session_id": aq.session_id,
             "round": round_num,
@@ -158,10 +161,50 @@ def export_evaluations(session, out_dir: Path):
             "practicality": scores.get("practicality", ""),
             "tradeoffs": scores.get("tradeoffs", ""),
             "overall_score": e.overall_score,
-            "provenance": "",  # rule/llm/hybrid - not in DB; fill from logs
+            "provenance": policy_meta.get("action", ""),
             "missing_points": missing_str,
         })
     path = out_dir / "evaluations.csv"
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w.writeheader()
+        w.writerows(rows)
+    return True
+
+
+def export_eval_policy_trajectory(session, out_dir: Path):
+    """Export state-action-reward trajectories for eval-policy offline training."""
+    evals = session.query(Evaluation).all()
+    if not evals:
+        return False
+    rows = []
+    for e in evals:
+        aq = session.query(AskedQuestion).filter(AskedQuestion.id == e.asked_question_id).first()
+        if not aq:
+            continue
+        scores_payload = e.scores_json if isinstance(e.scores_json, dict) else {}
+        policy_meta = scores_payload.get("_agentic_meta", {}) if isinstance(scores_payload, dict) else {}
+        state = policy_meta.get("state", {}) if isinstance(policy_meta, dict) else {}
+        round_num = session.query(AskedQuestion).filter(
+            AskedQuestion.session_id == aq.session_id,
+            AskedQuestion.created_at <= aq.created_at
+        ).count()
+        rows.append({
+            "session_id": aq.session_id,
+            "round": round_num,
+            "asked_question_id": aq.id,
+            "action": policy_meta.get("action", ""),
+            "reward": policy_meta.get("reward", ""),
+            "fallback_reason": policy_meta.get("fallback_reason", ""),
+            "answer_length": state.get("answer_length", ""),
+            "recent_avg_score": state.get("recent_avg_score", ""),
+            "missing_points_count": state.get("missing_points_count", ""),
+            "fallback_count": state.get("fallback_count", ""),
+            "llm_calls_used": state.get("llm_calls_used", ""),
+            "multi_judge_used": state.get("multi_judge_used", ""),
+            "overall_score": e.overall_score,
+        })
+    path = out_dir / "eval_policy_trajectory.csv"
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
@@ -248,6 +291,7 @@ def main():
             ("sessions.csv", export_sessions),
             ("asked_questions.csv", export_asked_questions),
             ("evaluations.csv", export_evaluations),
+            ("eval_policy_trajectory.csv", export_eval_policy_trajectory),
             ("turns.csv", export_turns),
             ("question_bank.csv", export_question_bank),
             ("resumes.csv", export_resumes),

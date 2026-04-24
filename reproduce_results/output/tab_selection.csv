@@ -1,5 +1,5 @@
-Strategy,Gap Targeting (%),Coverage (%),Personalization (%),Avg. Relevance Score
-Multi-Priority (Ours),8.2,23.0,100.0,1.00
-Random,—,—,—,—
-Fixed Template,—,—,—,—
-Difficulty-Only,—,—,—,—
+Strategy,Gap Targeting (%),Coverage (%),Personalization (%),Avg. Relevance Score,Cumulative Reward,Regret,Coverage@3 (%),Ability Error,Cost Violation Rate (%)
+Multi-Priority (Ours),8.2,26.4,100.0,1.00,0.000,nan,83.8,0.750,99.7
+Random,—,—,—,—,—,—,—,—,—
+Fixed Template,—,—,—,—,—,—,—,—,—
+Difficulty-Only,—,—,—,—,—,—,—,—,—

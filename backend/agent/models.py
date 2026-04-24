@@ -60,6 +60,7 @@ class EvaluationResult(BaseModel):
     next_direction: Optional[str] = None
     reasoning: Optional[str] = None
     provenance: str = "unknown"  # "rule" | "llm" | "hybrid" | "fallback"
+    policy_meta: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------

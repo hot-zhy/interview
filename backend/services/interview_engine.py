@@ -652,9 +652,14 @@ def _submit_answer_agentic(
     db.expire_all()
     existing_eval = db.query(Evaluation).filter(Evaluation.asked_question_id == asked_q.id).first()
 
+    eval_scores = dict(evaluation_result.get("scores", {}) or {})
+    policy_meta = evaluation_result.get("policy_meta")
+    if isinstance(policy_meta, dict) and policy_meta:
+        eval_scores["_agentic_meta"] = policy_meta
+
     eval_fields = dict(
         answer_text=answer_text or "",
-        scores_json=evaluation_result.get("scores", {}),
+        scores_json=eval_scores,
         overall_score=evaluation_result.get("overall_score", 0.0),
         feedback_text=evaluation_result.get("feedback", ""),
         missing_points_json=evaluation_result.get("missing_points"),

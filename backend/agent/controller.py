@@ -95,10 +95,20 @@ class AgentController:
         self.tracer.record_observation(obs)
 
         # 2. Evaluate (via judge router)
+        routing_state = {
+            "round_idx": turn_number,
+            "total_rounds": self.session.total_rounds or 10,
+            "recent_avg_score": sum(self.memory.score_history[-3:]) / max(1, len(self.memory.score_history[-3:])),
+            "missing_points_count": len(self.memory.missing_concepts),
+            "fallback_count": len([p for p in self.memory.provenance_log if "fallback" in str(p)]),
+            "llm_calls_used": len([p for p in self.memory.provenance_log if "llm" in str(p) or "hybrid" in str(p)]),
+            "multi_judge_used": len([e for e in self.memory.turn_evaluations if e.get("policy_meta", {}).get("action") == "llm_multi"]),
+        }
         eval_result, tool_records = self.judge_router.evaluate(
             question=asked_question.question_text,
             correct_answer=asked_question.correct_answer_text,
             user_answer=answer_text,
+            routing_state=routing_state,
         )
         self.tracer.record_evaluation(eval_result)
         self.tracer.record_tools(tool_records)
@@ -113,6 +123,7 @@ class AgentController:
             missing_points=eval_result.missing_points,
             next_direction=eval_result.next_direction,
             provenance=eval_result.provenance,
+            policy_meta=eval_result.policy_meta,
         )
         self.tracer.record_memory_snapshot(self.memory)
 
@@ -215,6 +226,7 @@ class AgentController:
             "missing_points": eval_result.missing_points,
             "next_direction": eval_result.next_direction,
             "reasoning": eval_result.reasoning,
+            "policy_meta": eval_result.policy_meta,
         }
 
         if action.action == ActionType.TERMINATE:

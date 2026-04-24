@@ -1,0 +1,9 @@
+participant_id,resume_available,experience_level,education_level,primary_language
+1,0,junior,,en
+2,0,mid,bachelor,
+3,0,junior,,en
+4,0,junior,bachelor,zh
+5,0,junior,,zh
+6,1,mid,master,
+7,1,junior,bachelor,
+8,1,senior,master,zh

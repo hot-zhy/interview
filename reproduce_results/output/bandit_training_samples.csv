@@ -1,0 +1,1228 @@
+session_id,round,chapter,reward,feature_dim
+1,11,System Design,0.31176,14
+1,11,System Design,0.3,14
+1,11,System Design,0.3,14
+1,11,Concurrency,0.31176,14
+1,11,Database,0.31176,14
+1,11,Spring,0.31176,14
+1,11,JVM,0.31176,14
+1,11,Concurrency,0.3,14
+1,11,Database,0.3,14
+1,11,Collections,0.31176,14
+2,9,JVM,0.31176,14
+2,9,Concurrency,0.31176,14
+2,9,Collections,0.31176,14
+2,9,JVM,0.3,14
+2,9,System Design,0.31176,14
+2,9,Spring,0.31176,14
+2,9,Database,0.31176,14
+2,9,System Design,0.3,14
+3,9,System Design,0.31176,14
+3,9,Spring,0.31176,14
+3,9,System Design,0.3,14
+3,9,JVM,0.31176,14
+3,9,Concurrency,0.31176,14
+3,9,System Design,0.3,14
+3,9,Java Basics,0.31176,14
+3,9,Spring,0.3,14
+4,10,Caching,0.31176,14
+4,10,System Design,0.31176,14
+4,10,Spring,0.31176,14
+4,10,Spring,0.3,14
+4,10,System Design,0.3,14
+4,10,Caching,0.3,14
+4,10,Caching,0.3,14
+4,10,System Design,0.3,14
+4,10,Spring,0.3,14
+5,8,Concurrency,0.31176,14
+5,8,Concurrency,0.3,14
+5,8,Locks,0.31176,14
+5,8,Threading,0.31176,14
+5,8,Thread Pool,0.31176,14
+5,8,Memory Model,0.31176,14
+5,8,Concurrency,0.3,14
+6,8,System Design,0.31176,14
+6,8,Database,0.31176,14
+6,8,System Design,0.3,14
+6,8,JVM,0.31176,14
+6,8,Spring,0.31176,14
+6,8,Concurrency,0.31176,14
+6,8,Database,0.3,14
+7,11,System Design,0.31176,14
+7,11,Spring,0.31176,14
+7,11,Spring,0.3,14
+7,11,System Design,0.3,14
+7,11,Microservices,0.31176,14
+7,11,Caching,0.31176,14
+7,11,Database,0.31176,14
+7,11,Spring,0.3,14
+7,11,Caching,0.3,14
+7,11,Caching,0.3,14
+8,8,Java Basics,0.31176,14
+8,8,JVM,0.31176,14
+8,8,Database,0.31176,14
+8,8,Database,0.3,14
+8,8,Java Basics,0.3,14
+8,8,System Design,0.31176,14
+8,8,Spring,0.31176,14
+9,12,Caching,0.31176,14
+9,12,Spring,0.31176,14
+9,12,Caching,0.3,14
+9,12,Caching,0.3,14
+9,12,Database,0.31176,14
+9,12,Spring,0.3,14
+9,12,System Design,0.31176,14
+9,12,Caching,0.3,14
+9,12,System Design,0.3,14
+9,12,Spring,0.3,14
+9,12,Spring,0.3,14
+10,10,Memory,0.31176,14
+10,10,GC,0.31176,14
+10,10,Performance,0.31176,14
+10,10,GC,0.3,14
+10,10,Profiling,0.31176,14
+10,10,Memory,0.3,14
+10,10,Profiling,0.3,14
+10,10,Memory,0.3,14
+10,10,JVM,0.31176,14
+11,10,JVM,0.31176,14
+11,10,GC,0.31176,14
+11,10,Profiling,0.31176,14
+11,10,Profiling,0.3,14
+11,10,JVM,0.3,14
+11,10,Performance,0.31176,14
+11,10,JVM,0.3,14
+11,10,JVM,0.3,14
+11,10,GC,0.3,14
+12,4,Database,0.31176,14
+12,4,System Design,0.31176,14
+12,4,Database,0.3,14
+13,11,Database,0.31176,14
+13,11,System Design,0.31176,14
+13,11,Concurrency,0.31176,14
+13,11,JVM,0.31176,14
+13,11,Database,0.3,14
+13,11,Java Basics,0.31176,14
+13,11,System Design,0.3,14
+13,11,Spring,0.31176,14
+13,11,System Design,0.3,14
+13,11,Spring,0.3,14
+14,12,Java Basics,0.31176,14
+14,12,JVM,0.31176,14
+14,12,Concurrency,0.31176,14
+14,12,Collections,0.31176,14
+14,12,Spring,0.31176,14
+14,12,JVM,0.3,14
+14,12,Concurrency,0.3,14
+14,12,Collections,0.3,14
+14,12,Concurrency,0.3,14
+14,12,Collections,0.3,14
+14,12,Spring,0.3,14
+15,9,Concurrency,0.31176,14
+15,9,System Design,0.31176,14
+15,9,Spring,0.31176,14
+15,9,Database,0.31176,14
+15,9,System Design,0.3,14
+15,9,JVM,0.31176,14
+15,9,Concurrency,0.3,14
+15,9,System Design,0.3,14
+16,4,Microservices,0.31176,14
+16,4,System Design,0.31176,14
+16,4,System Design,0.3,14
+17,9,Memory Model,0.31176,14
+17,9,Memory Model,0.3,14
+17,9,Thread Pool,0.31176,14
+17,9,Threading,0.31176,14
+17,9,Concurrency,0.31176,14
+17,9,Locks,0.31176,14
+17,9,Thread Pool,0.3,14
+17,9,Memory Model,0.3,14
+18,12,Concurrency,0.31176,14
+18,12,Threading,0.31176,14
+18,12,Threading,0.3,14
+18,12,Locks,0.31176,14
+18,12,Memory Model,0.31176,14
+18,12,Concurrency,0.3,14
+18,12,Locks,0.3,14
+18,12,Threading,0.3,14
+18,12,Locks,0.3,14
+18,12,Thread Pool,0.31176,14
+18,12,Concurrency,0.3,14
+19,9,Concurrency,0.31176,14
+19,9,Concurrency,0.3,14
+19,9,Concurrency,0.3,14
+19,9,Spring,0.31176,14
+19,9,System Design,0.31176,14
+19,9,Spring,0.3,14
+19,9,Spring,0.3,14
+19,9,JVM,0.31176,14
+20,10,Caching,0.31176,14
+20,10,Microservices,0.31176,14
+20,10,Spring,0.31176,14
+20,10,Spring,0.3,14
+20,10,Database,0.31176,14
+20,10,System Design,0.31176,14
+20,10,System Design,0.3,14
+20,10,Caching,0.3,14
+20,10,Caching,0.3,14
+21,9,Database,0.31176,14
+21,9,Spring,0.31176,14
+21,9,Database,0.3,14
+21,9,JVM,0.31176,14
+21,9,Concurrency,0.31176,14
+21,9,Spring,0.3,14
+21,9,Spring,0.3,14
+21,9,Collections,0.31176,14
+22,11,Concurrency,0.31176,14
+22,11,Memory Model,0.31176,14
+22,11,Concurrency,0.3,14
+22,11,Memory Model,0.3,14
+22,11,Concurrency,0.3,14
+22,11,Locks,0.31176,14
+22,11,Concurrency,0.3,14
+22,11,Concurrency,0.3,14
+22,11,Threading,0.31176,14
+22,11,Concurrency,0.3,14
+23,10,Memory Model,0.31176,14
+23,10,Memory Model,0.3,14
+23,10,Concurrency,0.31176,14
+23,10,Threading,0.31176,14
+23,10,Locks,0.31176,14
+23,10,Concurrency,0.3,14
+23,10,Memory Model,0.3,14
+23,10,Locks,0.3,14
+23,10,Memory Model,0.3,14
+24,8,Database,0.31176,14
+24,8,Collections,0.31176,14
+24,8,JVM,0.31176,14
+24,8,Concurrency,0.31176,14
+24,8,System Design,0.31176,14
+24,8,System Design,0.3,14
+24,8,Concurrency,0.3,14
+25,11,Microservices,0.31176,14
+25,11,Microservices,0.3,14
+25,11,System Design,0.31176,14
+25,11,System Design,0.3,14
+25,11,Caching,0.31176,14
+25,11,System Design,0.3,14
+25,11,Caching,0.3,14
+25,11,System Design,0.3,14
+25,11,Microservices,0.3,14
+25,11,Spring,0.31176,14
+26,9,Microservices,0.31176,14
+26,9,System Design,0.31176,14
+26,9,Spring,0.31176,14
+26,9,System Design,0.3,14
+26,9,Database,0.31176,14
+26,9,Spring,0.3,14
+26,9,Caching,0.31176,14
+26,9,Spring,0.3,14
+27,8,Caching,0.31176,14
+27,8,Microservices,0.31176,14
+27,8,Spring,0.31176,14
+27,8,Microservices,0.3,14
+27,8,System Design,0.31176,14
+27,8,Caching,0.3,14
+27,8,Microservices,0.3,14
+28,9,System Design,0.31176,14
+28,9,System Design,0.3,14
+28,9,System Design,0.3,14
+28,9,Microservices,0.31176,14
+28,9,Spring,0.31176,14
+28,9,Caching,0.31176,14
+28,9,Spring,0.3,14
+28,9,Microservices,0.3,14
+29,8,System Design,0.31176,14
+29,8,System Design,0.3,14
+29,8,System Design,0.3,14
+29,8,Microservices,0.31176,14
+29,8,Spring,0.31176,14
+29,8,System Design,0.3,14
+29,8,Microservices,0.3,14
+30,11,JVM,0.31176,14
+30,11,Concurrency,0.31176,14
+30,11,Java Basics,0.31176,14
+30,11,Spring,0.31176,14
+30,11,Spring,0.3,14
+30,11,Concurrency,0.3,14
+30,11,System Design,0.31176,14
+30,11,Database,0.31176,14
+30,11,Java Basics,0.3,14
+30,11,Concurrency,0.3,14
+31,12,GC,0.31176,14
+31,12,Memory,0.31176,14
+31,12,GC,0.3,14
+31,12,GC,0.3,14
+31,12,JVM,0.31176,14
+31,12,Profiling,0.31176,14
+31,12,JVM,0.3,14
+31,12,GC,0.3,14
+31,12,Performance,0.31176,14
+31,12,GC,0.3,14
+31,12,Memory,0.3,14
+32,8,System Design,0.31176,14
+32,8,Concurrency,0.31176,14
+32,8,System Design,0.3,14
+32,8,Spring,0.31176,14
+32,8,JVM,0.31176,14
+32,8,System Design,0.3,14
+32,8,JVM,0.3,14
+33,11,Spring,0.31176,14
+33,11,Microservices,0.31176,14
+33,11,System Design,0.31176,14
+33,11,Microservices,0.3,14
+33,11,Caching,0.31176,14
+33,11,Microservices,0.3,14
+33,11,Spring,0.3,14
+33,11,Spring,0.3,14
+33,11,Microservices,0.3,14
+33,11,Microservices,0.3,14
+34,5,Threading,0.31176,14
+34,5,Locks,0.31176,14
+34,5,Thread Pool,0.31176,14
+34,5,Concurrency,0.31176,14
+35,11,Threading,0.31176,14
+35,11,Threading,0.3,14
+35,11,Threading,0.3,14
+35,11,Thread Pool,0.31176,14
+35,11,Memory Model,0.31176,14
+35,11,Locks,0.31176,14
+35,11,Concurrency,0.31176,14
+35,11,Threading,0.3,14
+35,11,Memory Model,0.3,14
+35,11,Thread Pool,0.3,14
+36,5,Concurrency,0.31176,14
+36,5,Concurrency,0.3,14
+36,5,Memory Model,0.31176,14
+36,5,Memory Model,0.3,14
+37,8,Threading,0.31176,14
+37,8,Threading,0.3,14
+37,8,Memory Model,0.31176,14
+37,8,Thread Pool,0.31176,14
+37,8,Threading,0.3,14
+37,8,Threading,0.3,14
+37,8,Threading,0.3,14
+38,10,System Design,0.31176,14
+38,10,Spring,0.31176,14
+38,10,Spring,0.3,14
+38,10,Database,0.31176,14
+38,10,Caching,0.31176,14
+38,10,Database,0.3,14
+38,10,System Design,0.3,14
+38,10,System Design,0.3,14
+38,10,Spring,0.3,14
+39,8,JVM,0.31176,14
+39,8,Database,0.31176,14
+39,8,Spring,0.31176,14
+39,8,Collections,0.31176,14
+39,8,Database,0.3,14
+39,8,Java Basics,0.31176,14
+39,8,Java Basics,0.3,14
+40,10,Thread Pool,0.31176,14
+40,10,Thread Pool,0.3,14
+40,10,Threading,0.31176,14
+40,10,Threading,0.3,14
+40,10,Concurrency,0.31176,14
+40,10,Locks,0.31176,14
+40,10,Memory Model,0.31176,14
+40,10,Threading,0.3,14
+40,10,Thread Pool,0.3,14
+41,12,Caching,0.31176,14
+41,12,Microservices,0.31176,14
+41,12,Database,0.31176,14
+41,12,System Design,0.31176,14
+41,12,System Design,0.3,14
+41,12,Spring,0.31176,14
+41,12,System Design,0.3,14
+41,12,Microservices,0.3,14
+41,12,Database,0.3,14
+41,12,Caching,0.3,14
+41,12,Spring,0.3,14
+42,8,Memory Model,0.31176,14
+42,8,Memory Model,0.3,14
+42,8,Thread Pool,0.31176,14
+42,8,Locks,0.31176,14
+42,8,Concurrency,0.31176,14
+42,8,Memory Model,0.3,14
+42,8,Threading,0.31176,14
+43,11,Java Basics,0.31176,14
+43,11,Collections,0.31176,14
+43,11,Spring,0.31176,14
+43,11,JVM,0.31176,14
+43,11,Database,0.31176,14
+43,11,System Design,0.31176,14
+43,11,System Design,0.3,14
+43,11,System Design,0.3,14
+43,11,Spring,0.3,14
+43,11,Java Basics,0.3,14
+44,8,Memory Model,0.31176,14
+44,8,Thread Pool,0.31176,14
+44,8,Threading,0.31176,14
+44,8,Locks,0.31176,14
+44,8,Memory Model,0.3,14
+44,8,Concurrency,0.31176,14
+44,8,Threading,0.3,14
+45,11,System Design,0.31176,14
+45,11,Microservices,0.31176,14
+45,11,System Design,0.3,14
+45,11,Microservices,0.3,14
+45,11,Caching,0.31176,14
+45,11,Spring,0.31176,14
+45,11,System Design,0.3,14
+45,11,Caching,0.3,14
+45,11,Microservices,0.3,14
+45,11,System Design,0.3,14
+46,10,Spring,0.31176,14
+46,10,Spring,0.3,14
+46,10,Caching,0.31176,14
+46,10,Microservices,0.31176,14
+46,10,System Design,0.31176,14
+46,10,Spring,0.3,14
+46,10,Caching,0.3,14
+46,10,Microservices,0.3,14
+46,10,Microservices,0.3,14
+47,9,Memory Model,0.31176,14
+47,9,Threading,0.31176,14
+47,9,Concurrency,0.31176,14
+47,9,Thread Pool,0.31176,14
+47,9,Locks,0.31176,14
+47,9,Locks,0.3,14
+47,9,Thread Pool,0.3,14
+47,9,Threading,0.3,14
+48,9,Spring,0.31176,14
+48,9,Microservices,0.31176,14
+48,9,Caching,0.31176,14
+48,9,Database,0.31176,14
+48,9,System Design,0.31176,14
+48,9,Spring,0.3,14
+48,9,System Design,0.3,14
+48,9,Microservices,0.3,14
+49,8,Database,0.31176,14
+49,8,Spring,0.31176,14
+49,8,System Design,0.31176,14
+49,8,Database,0.3,14
+49,8,Concurrency,0.31176,14
+49,8,Spring,0.3,14
+49,8,System Design,0.3,14
+50,12,Collections,0.31176,14
+50,12,System Design,0.31176,14
+50,12,Java Basics,0.31176,14
+50,12,Spring,0.31176,14
+50,12,Collections,0.3,14
+50,12,System Design,0.3,14
+50,12,Concurrency,0.31176,14
+50,12,JVM,0.31176,14
+50,12,Concurrency,0.3,14
+50,12,Database,0.31176,14
+50,12,JVM,0.3,14
+51,11,Caching,0.31176,14
+51,11,Spring,0.31176,14
+51,11,System Design,0.31176,14
+51,11,Spring,0.3,14
+51,11,Caching,0.3,14
+51,11,Database,0.31176,14
+51,11,Caching,0.3,14
+51,11,Spring,0.3,14
+51,11,Caching,0.3,14
+51,11,Caching,0.3,14
+52,9,Database,0.31176,14
+52,9,Java Basics,0.31176,14
+52,9,Spring,0.31176,14
+52,9,Database,0.3,14
+52,9,System Design,0.31176,14
+52,9,JVM,0.31176,14
+52,9,Spring,0.3,14
+52,9,Database,0.3,14
+53,8,System Design,0.31176,14
+53,8,System Design,0.3,14
+53,8,System Design,0.3,14
+53,8,Microservices,0.31176,14
+53,8,Spring,0.31176,14
+53,8,System Design,0.3,14
+53,8,Caching,0.31176,14
+54,8,Concurrency,0.31176,14
+54,8,Locks,0.31176,14
+54,8,Concurrency,0.3,14
+54,8,Concurrency,0.3,14
+54,8,Memory Model,0.31176,14
+54,8,Concurrency,0.3,14
+54,8,Thread Pool,0.31176,14
+55,12,Caching,0.31176,14
+55,12,Caching,0.3,14
+55,12,Database,0.31176,14
+55,12,Caching,0.3,14
+55,12,Spring,0.31176,14
+55,12,System Design,0.31176,14
+55,12,Spring,0.3,14
+55,12,Database,0.3,14
+55,12,Spring,0.3,14
+55,12,Spring,0.3,14
+55,12,Microservices,0.31176,14
+56,12,Microservices,0.31176,14
+56,12,Database,0.31176,14
+56,12,Spring,0.31176,14
+56,12,Caching,0.31176,14
+56,12,Caching,0.3,14
+56,12,Spring,0.3,14
+56,12,Spring,0.3,14
+56,12,Spring,0.3,14
+56,12,System Design,0.31176,14
+56,12,Caching,0.3,14
+56,12,Caching,0.3,14
+57,12,System Design,0.31176,14
+57,12,System Design,0.3,14
+57,12,Spring,0.31176,14
+57,12,Database,0.31176,14
+57,12,Spring,0.3,14
+57,12,Spring,0.3,14
+57,12,System Design,0.3,14
+57,12,Spring,0.3,14
+57,12,System Design,0.3,14
+57,12,Database,0.3,14
+57,12,Caching,0.31176,14
+58,11,JVM,0.31176,14
+58,11,Spring,0.31176,14
+58,11,Spring,0.3,14
+58,11,Java Basics,0.31176,14
+58,11,Concurrency,0.31176,14
+58,11,System Design,0.31176,14
+58,11,Database,0.31176,14
+58,11,Spring,0.3,14
+58,11,Concurrency,0.3,14
+58,11,Spring,0.3,14
+59,8,Microservices,0.31176,14
+59,8,Caching,0.31176,14
+59,8,Microservices,0.3,14
+59,8,Spring,0.31176,14
+59,8,Spring,0.3,14
+59,8,System Design,0.31176,14
+59,8,Spring,0.3,14
+60,12,Java Basics,0.31176,14
+60,12,Spring,0.31176,14
+60,12,Database,0.31176,14
+60,12,Spring,0.3,14
+60,12,Spring,0.3,14
+60,12,Database,0.3,14
+60,12,Spring,0.3,14
+60,12,Collections,0.31176,14
+60,12,Concurrency,0.31176,14
+60,12,Java Basics,0.3,14
+60,12,System Design,0.31176,14
+61,10,JVM,0.31176,14
+61,10,GC,0.31176,14
+61,10,Performance,0.31176,14
+61,10,Memory,0.31176,14
+61,10,Profiling,0.31176,14
+61,10,Profiling,0.3,14
+61,10,Profiling,0.3,14
+61,10,Profiling,0.3,14
+61,10,GC,0.3,14
+62,11,Java Basics,0.31176,14
+62,11,JVM,0.31176,14
+62,11,Concurrency,0.31176,14
+62,11,Database,0.31176,14
+62,11,Concurrency,0.3,14
+62,11,JVM,0.3,14
+62,11,Java Basics,0.3,14
+62,11,Spring,0.31176,14
+62,11,System Design,0.31176,14
+62,11,Java Basics,0.3,14
+63,11,Spring,0.31176,14
+63,11,Microservices,0.31176,14
+63,11,Database,0.31176,14
+63,11,Microservices,0.3,14
+63,11,System Design,0.31176,14
+63,11,Spring,0.3,14
+63,11,Caching,0.31176,14
+63,11,Spring,0.3,14
+63,11,Spring,0.3,14
+63,11,Microservices,0.3,14
+64,5,Threading,0.31176,14
+64,5,Memory Model,0.31176,14
+64,5,Concurrency,0.31176,14
+64,5,Threading,0.3,14
+65,9,Performance,0.31176,14
+65,9,Profiling,0.31176,14
+65,9,GC,0.31176,14
+65,9,Performance,0.3,14
+65,9,GC,0.3,14
+65,9,JVM,0.31176,14
+65,9,Profiling,0.3,14
+65,9,GC,0.3,14
+66,12,Thread Pool,0.31176,14
+66,12,Locks,0.31176,14
+66,12,Concurrency,0.31176,14
+66,12,Memory Model,0.31176,14
+66,12,Thread Pool,0.3,14
+66,12,Concurrency,0.3,14
+66,12,Threading,0.31176,14
+66,12,Memory Model,0.3,14
+66,12,Locks,0.3,14
+66,12,Concurrency,0.3,14
+66,12,Threading,0.3,14
+67,12,Java Basics,0.31176,14
+67,12,Spring,0.31176,14
+67,12,System Design,0.31176,14
+67,12,Concurrency,0.31176,14
+67,12,JVM,0.31176,14
+67,12,JVM,0.3,14
+67,12,System Design,0.3,14
+67,12,Collections,0.31176,14
+67,12,System Design,0.3,14
+67,12,Spring,0.3,14
+67,12,Spring,0.3,14
+68,12,Spring,0.31176,14
+68,12,Spring,0.3,14
+68,12,JVM,0.31176,14
+68,12,Spring,0.3,14
+68,12,Concurrency,0.31176,14
+68,12,Collections,0.31176,14
+68,12,Concurrency,0.3,14
+68,12,System Design,0.31176,14
+68,12,Java Basics,0.31176,14
+68,12,Spring,0.3,14
+68,12,JVM,0.3,14
+69,11,JVM,0.31176,14
+69,11,Memory,0.31176,14
+69,11,GC,0.31176,14
+69,11,Performance,0.31176,14
+69,11,Profiling,0.31176,14
+69,11,GC,0.3,14
+69,11,Performance,0.3,14
+69,11,Memory,0.3,14
+69,11,GC,0.3,14
+69,11,GC,0.3,14
+70,8,JVM,0.31176,14
+70,8,Memory,0.31176,14
+70,8,Memory,0.3,14
+70,8,GC,0.31176,14
+70,8,JVM,0.3,14
+70,8,Profiling,0.31176,14
+70,8,Profiling,0.3,14
+71,9,Memory Model,0.31176,14
+71,9,Locks,0.31176,14
+71,9,Threading,0.31176,14
+71,9,Threading,0.3,14
+71,9,Threading,0.3,14
+71,9,Thread Pool,0.31176,14
+71,9,Threading,0.3,14
+71,9,Threading,0.3,14
+72,10,Memory Model,0.31176,14
+72,10,Threading,0.31176,14
+72,10,Threading,0.3,14
+72,10,Threading,0.3,14
+72,10,Threading,0.3,14
+72,10,Concurrency,0.31176,14
+72,10,Threading,0.3,14
+72,10,Threading,0.3,14
+72,10,Threading,0.3,14
+73,8,Microservices,0.31176,14
+73,8,System Design,0.31176,14
+73,8,System Design,0.3,14
+73,8,Microservices,0.3,14
+73,8,Database,0.31176,14
+73,8,Caching,0.31176,14
+73,8,Database,0.3,14
+74,8,Database,0.31176,14
+74,8,Microservices,0.31176,14
+74,8,System Design,0.31176,14
+74,8,Caching,0.31176,14
+74,8,Caching,0.3,14
+74,8,Spring,0.31176,14
+74,8,Spring,0.3,14
+75,12,System Design,0.31176,14
+75,12,Concurrency,0.31176,14
+75,12,Spring,0.31176,14
+75,12,Concurrency,0.3,14
+75,12,Database,0.31176,14
+75,12,JVM,0.31176,14
+75,12,System Design,0.3,14
+75,12,Spring,0.3,14
+75,12,Spring,0.3,14
+75,12,System Design,0.3,14
+75,12,Database,0.3,14
+76,12,Memory Model,0.31176,14
+76,12,Threading,0.31176,14
+76,12,Threading,0.3,14
+76,12,Memory Model,0.3,14
+76,12,Concurrency,0.31176,14
+76,12,Locks,0.31176,14
+76,12,Threading,0.3,14
+76,12,Threading,0.3,14
+76,12,Concurrency,0.3,14
+76,12,Concurrency,0.3,14
+76,12,Memory Model,0.3,14
+77,8,Thread Pool,0.31176,14
+77,8,Locks,0.31176,14
+77,8,Locks,0.3,14
+77,8,Threading,0.31176,14
+77,8,Concurrency,0.31176,14
+77,8,Thread Pool,0.3,14
+77,8,Locks,0.3,14
+78,10,Profiling,0.31176,14
+78,10,JVM,0.31176,14
+78,10,Memory,0.31176,14
+78,10,GC,0.31176,14
+78,10,Profiling,0.3,14
+78,10,Profiling,0.3,14
+78,10,Profiling,0.3,14
+78,10,Profiling,0.3,14
+78,10,Performance,0.31176,14
+79,5,Threading,0.26176,14
+79,5,Locks,0.26176,14
+79,5,Concurrency,0.26176,14
+79,5,Locks,0.25,14
+79,12,Threading,0.3,14
+79,12,Concurrency,0.3,14
+79,12,Memory Model,0.31176,14
+79,12,Concurrency,0.3,14
+79,12,Concurrency,0.3,14
+79,12,Concurrency,0.3,14
+79,12,Concurrency,0.3,14
+80,11,Concurrency,0.31176,14
+80,11,Threading,0.31176,14
+80,11,Locks,0.31176,14
+80,11,Concurrency,0.3,14
+80,11,Thread Pool,0.31176,14
+80,11,Memory Model,0.31176,14
+80,11,Memory Model,0.3,14
+80,11,Concurrency,0.3,14
+80,11,Concurrency,0.3,14
+80,11,Threading,0.3,14
+81,12,Spring,0.31176,14
+81,12,Database,0.31176,14
+81,12,Spring,0.3,14
+81,12,System Design,0.31176,14
+81,12,Java Basics,0.31176,14
+81,12,Database,0.3,14
+81,12,Spring,0.3,14
+81,12,Spring,0.3,14
+81,12,System Design,0.3,14
+81,12,System Design,0.3,14
+81,12,Collections,0.31176,14
+82,8,Memory,0.31176,14
+82,8,JVM,0.31176,14
+82,8,Memory,0.3,14
+82,8,Profiling,0.31176,14
+82,8,Performance,0.31176,14
+82,8,Memory,0.3,14
+82,8,GC,0.31176,14
+83,11,Threading,0.31176,14
+83,11,Threading,0.3,14
+83,11,Locks,0.31176,14
+83,11,Thread Pool,0.31176,14
+83,11,Threading,0.3,14
+83,11,Thread Pool,0.3,14
+83,11,Threading,0.3,14
+83,11,Threading,0.3,14
+83,11,Threading,0.3,14
+83,11,Concurrency,0.31176,14
+84,8,Memory Model,0.31176,14
+84,8,Threading,0.31176,14
+84,8,Threading,0.3,14
+84,8,Threading,0.3,14
+84,8,Threading,0.3,14
+84,8,Threading,0.3,14
+84,8,Thread Pool,0.31176,14
+85,10,Microservices,0.31176,14
+85,10,Caching,0.31176,14
+85,10,Spring,0.31176,14
+85,10,System Design,0.31176,14
+85,10,Spring,0.3,14
+85,10,Spring,0.3,14
+85,10,System Design,0.3,14
+85,10,Caching,0.3,14
+85,10,Database,0.31176,14
+86,7,JVM,0.31176,14
+86,7,GC,0.31176,14
+86,7,Performance,0.31176,14
+86,7,Memory,0.31176,14
+86,7,GC,0.3,14
+86,7,Profiling,0.31176,14
+87,10,GC,0.31176,14
+87,10,Profiling,0.31176,14
+87,10,Performance,0.31176,14
+87,10,Profiling,0.3,14
+87,10,GC,0.3,14
+87,10,GC,0.3,14
+87,10,JVM,0.31176,14
+87,10,Memory,0.31176,14
+87,10,GC,0.3,14
+88,10,Database,0.31176,14
+88,10,System Design,0.31176,14
+88,10,Caching,0.31176,14
+88,10,System Design,0.3,14
+88,10,Database,0.3,14
+88,10,Spring,0.31176,14
+88,10,Spring,0.3,14
+88,10,Spring,0.3,14
+88,10,System Design,0.3,14
+89,10,System Design,0.31176,14
+89,10,Database,0.31176,14
+89,10,Spring,0.31176,14
+89,10,Microservices,0.31176,14
+89,10,Spring,0.3,14
+89,10,Spring,0.3,14
+89,10,System Design,0.3,14
+89,10,Microservices,0.3,14
+89,10,Database,0.3,14
+90,9,Locks,0.31176,14
+90,9,Concurrency,0.31176,14
+90,9,Threading,0.31176,14
+90,9,Concurrency,0.3,14
+90,9,Locks,0.3,14
+90,9,Locks,0.3,14
+90,9,Memory Model,0.31176,14
+90,9,Thread Pool,0.31176,14
+91,9,Caching,0.31176,14
+91,9,Database,0.31176,14
+91,9,Spring,0.31176,14
+91,9,Microservices,0.31176,14
+91,9,Spring,0.3,14
+91,9,System Design,0.31176,14
+91,9,Database,0.3,14
+91,9,Spring,0.3,14
+92,12,Concurrency,0.31176,14
+92,12,Memory Model,0.31176,14
+92,12,Locks,0.31176,14
+92,12,Locks,0.3,14
+92,12,Memory Model,0.3,14
+92,12,Threading,0.31176,14
+92,12,Thread Pool,0.31176,14
+92,12,Concurrency,0.3,14
+92,12,Memory Model,0.3,14
+92,12,Memory Model,0.3,14
+92,12,Locks,0.3,14
+93,12,Threading,0.31176,14
+93,12,Memory Model,0.31176,14
+93,12,Threading,0.3,14
+93,12,Threading,0.3,14
+93,12,Thread Pool,0.31176,14
+93,12,Thread Pool,0.3,14
+93,12,Threading,0.3,14
+93,12,Thread Pool,0.3,14
+93,12,Locks,0.31176,14
+93,12,Threading,0.3,14
+93,12,Memory Model,0.3,14
+94,10,Threading,0.31176,14
+94,10,Locks,0.31176,14
+94,10,Concurrency,0.31176,14
+94,10,Thread Pool,0.31176,14
+94,10,Memory Model,0.31176,14
+94,10,Memory Model,0.3,14
+94,10,Memory Model,0.3,14
+94,10,Concurrency,0.3,14
+94,10,Threading,0.3,14
+95,9,Concurrency,0.31176,14
+95,9,Memory Model,0.31176,14
+95,9,Threading,0.31176,14
+95,9,Thread Pool,0.31176,14
+95,9,Thread Pool,0.3,14
+95,9,Thread Pool,0.3,14
+95,9,Threading,0.3,14
+95,9,Threading,0.3,14
+96,10,Concurrency,0.31176,14
+96,10,Concurrency,0.3,14
+96,10,Memory Model,0.31176,14
+96,10,Threading,0.31176,14
+96,10,Concurrency,0.3,14
+96,10,Concurrency,0.3,14
+96,10,Memory Model,0.3,14
+96,10,Locks,0.31176,14
+96,10,Locks,0.3,14
+97,8,Spring,0.31176,14
+97,8,Microservices,0.31176,14
+97,8,Caching,0.31176,14
+97,8,Database,0.31176,14
+97,8,Database,0.3,14
+97,8,System Design,0.31176,14
+97,8,Spring,0.3,14
+98,11,System Design,0.31176,14
+98,11,Concurrency,0.31176,14
+98,11,System Design,0.3,14
+98,11,JVM,0.31176,14
+98,11,Database,0.31176,14
+98,11,System Design,0.3,14
+98,11,System Design,0.3,14
+98,11,Concurrency,0.3,14
+98,11,Concurrency,0.3,14
+98,11,JVM,0.3,14
+99,8,Spring,0.31176,14
+99,8,Java Basics,0.31176,14
+99,8,JVM,0.31176,14
+99,8,Spring,0.3,14
+99,8,JVM,0.3,14
+99,8,Spring,0.3,14
+99,8,Spring,0.3,14
+100,9,Concurrency,0.31176,14
+100,9,Concurrency,0.3,14
+100,9,Memory Model,0.31176,14
+100,9,Threading,0.31176,14
+100,9,Threading,0.3,14
+100,9,Thread Pool,0.31176,14
+100,9,Locks,0.31176,14
+100,9,Concurrency,0.3,14
+101,10,Spring,0.31176,14
+101,10,System Design,0.31176,14
+101,10,Spring,0.3,14
+101,10,Database,0.31176,14
+101,10,Microservices,0.31176,14
+101,10,Spring,0.3,14
+101,10,Database,0.3,14
+101,10,Spring,0.3,14
+101,10,Microservices,0.3,14
+102,10,JVM,0.31176,14
+102,10,Spring,0.31176,14
+102,10,Spring,0.3,14
+102,10,Database,0.31176,14
+102,10,Spring,0.3,14
+102,10,Java Basics,0.31176,14
+102,10,JVM,0.3,14
+102,10,Spring,0.3,14
+102,10,JVM,0.3,14
+103,9,Memory Model,0.31176,14
+103,9,Locks,0.31176,14
+103,9,Locks,0.3,14
+103,9,Concurrency,0.31176,14
+103,9,Thread Pool,0.31176,14
+103,9,Locks,0.3,14
+103,9,Concurrency,0.3,14
+103,9,Concurrency,0.3,14
+104,9,Database,0.31176,14
+104,9,Database,0.3,14
+104,9,Database,0.3,14
+104,9,Collections,0.31176,14
+104,9,Spring,0.31176,14
+104,9,Spring,0.3,14
+104,9,Spring,0.3,14
+104,9,Concurrency,0.31176,14
+105,12,Database,0.31176,14
+105,12,Microservices,0.31176,14
+105,12,Caching,0.31176,14
+105,12,Caching,0.3,14
+105,12,Caching,0.3,14
+105,12,Microservices,0.3,14
+105,12,Spring,0.31176,14
+105,12,Spring,0.3,14
+105,12,System Design,0.31176,14
+105,12,Caching,0.3,14
+105,12,System Design,0.3,14
+106,9,Microservices,0.31176,14
+106,9,Caching,0.31176,14
+106,9,Database,0.31176,14
+106,9,System Design,0.31176,14
+106,9,System Design,0.3,14
+106,9,Database,0.3,14
+106,9,Spring,0.31176,14
+106,9,System Design,0.3,14
+107,9,Database,0.31176,14
+107,9,System Design,0.31176,14
+107,9,Java Basics,0.31176,14
+107,9,Collections,0.31176,14
+107,9,Spring,0.31176,14
+107,9,Spring,0.3,14
+107,9,System Design,0.3,14
+107,9,Database,0.3,14
+108,12,Collections,0.31176,14
+108,12,System Design,0.31176,14
+108,12,Database,0.31176,14
+108,12,Database,0.3,14
+108,12,Spring,0.31176,14
+108,12,Database,0.3,14
+108,12,Spring,0.3,14
+108,12,Database,0.3,14
+108,12,JVM,0.31176,14
+108,12,Database,0.3,14
+108,12,Spring,0.3,14
+109,11,Database,0.31176,14
+109,11,JVM,0.31176,14
+109,11,Database,0.3,14
+109,11,Collections,0.31176,14
+109,11,JVM,0.3,14
+109,11,Concurrency,0.31176,14
+109,11,Database,0.3,14
+109,11,Spring,0.31176,14
+109,11,JVM,0.3,14
+109,11,Collections,0.3,14
+110,12,System Design,0.31176,14
+110,12,Spring,0.31176,14
+110,12,Caching,0.31176,14
+110,12,Database,0.31176,14
+110,12,Microservices,0.31176,14
+110,12,System Design,0.3,14
+110,12,Spring,0.3,14
+110,12,System Design,0.3,14
+110,12,Microservices,0.3,14
+110,12,Database,0.3,14
+110,12,Spring,0.3,14
+111,8,Database,0.31176,14
+111,8,Database,0.3,14
+111,8,Caching,0.31176,14
+111,8,System Design,0.31176,14
+111,8,Microservices,0.31176,14
+111,8,Database,0.3,14
+111,8,Microservices,0.3,14
+112,8,Memory Model,0.31176,14
+112,8,Concurrency,0.31176,14
+112,8,Threading,0.31176,14
+112,8,Threading,0.3,14
+112,8,Memory Model,0.3,14
+112,8,Threading,0.3,14
+112,8,Threading,0.3,14
+113,12,Concurrency,0.31176,14
+113,12,Java Basics,0.31176,14
+113,12,Spring,0.31176,14
+113,12,Java Basics,0.3,14
+113,12,System Design,0.31176,14
+113,12,Collections,0.31176,14
+113,12,Java Basics,0.3,14
+113,12,Database,0.31176,14
+113,12,Concurrency,0.3,14
+113,12,System Design,0.3,14
+113,12,Concurrency,0.3,14
+114,10,Memory Model,0.31176,14
+114,10,Memory Model,0.3,14
+114,10,Concurrency,0.31176,14
+114,10,Memory Model,0.3,14
+114,10,Threading,0.31176,14
+114,10,Memory Model,0.3,14
+114,10,Threading,0.3,14
+114,10,Thread Pool,0.31176,14
+114,10,Memory Model,0.3,14
+115,5,Database,0.31176,14
+115,5,Spring,0.31176,14
+115,5,Caching,0.31176,14
+115,5,System Design,0.31176,14
+116,8,Concurrency,0.31176,14
+116,8,Database,0.31176,14
+116,8,JVM,0.31176,14
+116,8,Collections,0.31176,14
+116,8,Spring,0.31176,14
+116,8,Concurrency,0.3,14
+116,8,Concurrency,0.3,14
+117,10,Spring,0.31176,14
+117,10,JVM,0.31176,14
+117,10,System Design,0.31176,14
+117,10,Spring,0.3,14
+117,10,System Design,0.3,14
+117,10,Concurrency,0.31176,14
+117,10,JVM,0.3,14
+117,10,Spring,0.3,14
+117,10,Concurrency,0.3,14
+118,8,Microservices,0.31176,14
+118,8,Spring,0.31176,14
+118,8,Spring,0.3,14
+118,8,System Design,0.31176,14
+118,8,System Design,0.3,14
+118,8,System Design,0.3,14
+118,8,Caching,0.31176,14
+119,11,Spring,0.31176,14
+119,11,Concurrency,0.31176,14
+119,11,Database,0.31176,14
+119,11,Database,0.3,14
+119,11,System Design,0.31176,14
+119,11,System Design,0.3,14
+119,11,JVM,0.31176,14
+119,11,System Design,0.3,14
+119,11,JVM,0.3,14
+119,11,Spring,0.3,14
+120,11,JVM,0.31176,14
+120,11,JVM,0.3,14
+120,11,Profiling,0.31176,14
+120,11,GC,0.31176,14
+120,11,JVM,0.3,14
+120,11,JVM,0.3,14
+120,11,JVM,0.3,14
+120,11,GC,0.3,14
+120,11,Profiling,0.3,14
+120,11,JVM,0.3,14
+121,9,Database,0.31176,14
+121,9,Spring,0.31176,14
+121,9,Database,0.3,14
+121,9,Spring,0.3,14
+121,9,System Design,0.31176,14
+121,9,Caching,0.31176,14
+121,9,Microservices,0.31176,14
+121,9,Database,0.3,14
+122,11,Concurrency,0.31176,14
+122,11,System Design,0.31176,14
+122,11,Database,0.31176,14
+122,11,Concurrency,0.3,14
+122,11,Concurrency,0.3,14
+122,11,System Design,0.3,14
+122,11,Database,0.3,14
+122,11,Collections,0.31176,14
+122,11,JVM,0.31176,14
+122,11,JVM,0.3,14
+123,12,Threading,0.31176,14
+123,12,Memory Model,0.31176,14
+123,12,Threading,0.3,14
+123,12,Locks,0.31176,14
+123,12,Threading,0.3,14
+123,12,Memory Model,0.3,14
+123,12,Concurrency,0.31176,14
+123,12,Memory Model,0.3,14
+123,12,Locks,0.3,14
+123,12,Memory Model,0.3,14
+123,12,Concurrency,0.3,14
+124,10,Spring,0.31176,14
+124,10,System Design,0.31176,14
+124,10,Concurrency,0.31176,14
+124,10,Java Basics,0.31176,14
+124,10,Collections,0.31176,14
+124,10,System Design,0.3,14
+124,10,Spring,0.3,14
+124,10,System Design,0.3,14
+124,10,JVM,0.31176,14
+125,8,Concurrency,0.31176,14
+125,8,Java Basics,0.31176,14
+125,8,JVM,0.31176,14
+125,8,Database,0.31176,14
+125,8,System Design,0.31176,14
+125,8,Spring,0.31176,14
+125,8,Spring,0.3,14
+126,8,Caching,0.31176,14
+126,8,Microservices,0.31176,14
+126,8,Database,0.31176,14
+126,8,Spring,0.31176,14
+126,8,Spring,0.3,14
+126,8,Database,0.3,14
+126,8,Microservices,0.3,14
+127,11,JVM,0.31176,14
+127,11,Spring,0.31176,14
+127,11,System Design,0.31176,14
+127,11,Spring,0.3,14
+127,11,Java Basics,0.31176,14
+127,11,Database,0.31176,14
+127,11,JVM,0.3,14
+127,11,Spring,0.3,14
+127,11,Spring,0.3,14
+127,11,System Design,0.3,14
+128,9,Spring,0.31176,14
+128,9,Spring,0.3,14
+128,9,Database,0.31176,14
+128,9,Java Basics,0.31176,14
+128,9,Spring,0.3,14
+128,9,Spring,0.3,14
+128,9,Spring,0.3,14
+128,9,Database,0.3,14
+129,10,Microservices,0.31176,14
+129,10,Database,0.31176,14
+129,10,Database,0.3,14
+129,10,Spring,0.31176,14
+129,10,Caching,0.31176,14
+129,10,Spring,0.3,14
+129,10,Spring,0.3,14
+129,10,Database,0.3,14
+129,10,Database,0.3,14
+130,4,Database,0.31176,14
+130,4,Java Basics,0.31176,14
+130,4,System Design,0.31176,14
+131,8,Profiling,0.31176,14
+131,8,GC,0.31176,14
+131,8,GC,0.3,14
+131,8,Performance,0.31176,14
+131,8,Memory,0.31176,14
+131,8,JVM,0.31176,14
+131,8,GC,0.3,14
+132,10,Concurrency,0.31176,14
+132,10,Memory Model,0.31176,14
+132,10,Threading,0.31176,14
+132,10,Concurrency,0.3,14
+132,10,Thread Pool,0.31176,14
+132,10,Locks,0.31176,14
+132,10,Threading,0.3,14
+132,10,Concurrency,0.3,14
+132,10,Memory Model,0.3,14
+133,8,Spring,0.31176,14
+133,8,System Design,0.31176,14
+133,8,Database,0.31176,14
+133,8,Spring,0.3,14
+133,8,JVM,0.31176,14
+133,8,JVM,0.3,14
+133,8,Concurrency,0.31176,14
+134,12,JVM,0.31176,14
+134,12,Concurrency,0.31176,14
+134,12,Spring,0.31176,14
+134,12,Concurrency,0.3,14
+134,12,Spring,0.3,14
+134,12,System Design,0.31176,14
+134,12,System Design,0.3,14
+134,12,Concurrency,0.3,14
+134,12,JVM,0.3,14
+134,12,System Design,0.3,14
+134,12,System Design,0.3,14
+135,8,Memory,0.31176,14
+135,8,Performance,0.31176,14
+135,8,Profiling,0.31176,14
+135,8,Performance,0.3,14
+135,8,Memory,0.3,14
+135,8,Performance,0.3,14
+135,8,Profiling,0.3,14
+136,4,Threading,0.31176,14
+136,4,Memory Model,0.31176,14
+136,4,Locks,0.31176,14
+137,8,Thread Pool,0.31176,14
+137,8,Concurrency,0.31176,14
+137,8,Locks,0.31176,14
+137,8,Thread Pool,0.3,14
+137,8,Locks,0.3,14
+137,8,Threading,0.31176,14
+137,8,Locks,0.3,14
+138,8,Memory,0.31176,14
+138,8,Profiling,0.31176,14
+138,8,JVM,0.31176,14
+138,8,Profiling,0.3,14
+138,8,Profiling,0.3,14
+138,8,Profiling,0.3,14
+138,8,JVM,0.3,14
+139,8,JVM,0.31176,14
+139,8,Profiling,0.31176,14
+139,8,Profiling,0.3,14
+139,8,GC,0.31176,14
+139,8,JVM,0.3,14
+139,8,Profiling,0.3,14
+139,8,GC,0.3,14
+140,9,Database,0.31176,14
+140,9,Spring,0.31176,14
+140,9,System Design,0.31176,14
+140,9,Java Basics,0.31176,14
+140,9,Database,0.3,14
+140,9,Spring,0.3,14
+140,9,JVM,0.31176,14
+140,9,Concurrency,0.31176,14
+141,9,System Design,0.31176,14
+141,9,Database,0.31176,14
+141,9,Database,0.3,14
+141,9,Spring,0.31176,14
+141,9,Microservices,0.31176,14
+141,9,Microservices,0.3,14
+141,9,System Design,0.3,14
+141,9,System Design,0.3,14
+142,12,Threading,0.31176,14
+142,12,Thread Pool,0.31176,14
+142,12,Memory Model,0.31176,14
+142,12,Locks,0.31176,14
+142,12,Concurrency,0.31176,14
+142,12,Memory Model,0.3,14
+142,12,Threading,0.3,14
+142,12,Thread Pool,0.3,14
+142,12,Locks,0.3,14
+142,12,Memory Model,0.3,14
+142,12,Concurrency,0.3,14
+143,9,Locks,0.31176,14
+143,9,Threading,0.31176,14
+143,9,Thread Pool,0.31176,14
+143,9,Concurrency,0.31176,14
+143,9,Concurrency,0.3,14
+143,9,Threading,0.3,14
+143,9,Locks,0.3,14
+143,9,Locks,0.3,14
+144,9,JVM,0.31176,14
+144,9,Performance,0.31176,14
+144,9,Profiling,0.31176,14
+144,9,Memory,0.31176,14
+144,9,JVM,0.3,14
+144,9,Performance,0.3,14
+144,9,Memory,0.3,14
+144,9,Profiling,0.3,14

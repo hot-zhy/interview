@@ -1,0 +1,5 @@
+Setting,Selection Reward,Selection Regret,Eval Avg Reward,Eval Top1 Action Match (%)
+Baseline,—,—,—,—
+Eval-RL only,—,—,ILLUSTRATIVE,ILLUSTRATIVE
+Question-RL only,0.000,nan,—,—
+Eval-RL + Question-RL,0.000,nan,ILLUSTRATIVE,ILLUSTRATIVE

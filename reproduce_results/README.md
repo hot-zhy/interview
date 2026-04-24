@@ -28,6 +28,7 @@ data/
 ├── asked_questions.csv
 ├── question_bank.csv
 ├── evaluations.csv
+├── eval_policy_trajectory.csv
 ├── turns.csv
 ├── resumes.csv
 ├── human_evaluations.csv  (manual annotation)
@@ -53,9 +54,12 @@ python reproduce.py
 # Or run individual modules
 python calc_calibration.py
 python calc_selection.py
+python calc_bandit_policy.py
+python calc_eval_policy.py
 python calc_evaluation.py
 python calc_system_performance.py
 python calc_interview_outcomes.py
+python calc_joint_ablation.py
 
 # Module-level technical evaluation (see eval_modules/README.md)
 python eval_modules/run_calibration_sim.py --seed 42
@@ -65,9 +69,16 @@ python eval_modules/run_calibration_sim.py --seed 42
 
 - `output/tab_calibration.csv` — Calibration accuracy table
 - `output/tab_selection.csv` — Selection metrics table
+- `output/tab_bandit_policy.csv` — Contextual bandit policy training/evaluation summary
+- `output/contextual_bandit_policy.json` — Offline-trained policy artifact for online selector
+- `output/bandit_training_samples.csv` — History-derived samples used for training
+- `output/tab_eval_policy.csv` — Evaluation-routing policy training/evaluation summary
+- `output/contextual_eval_policy.json` — Offline-trained routing artifact for JudgeRouter
+- `output/eval_policy_training_samples.csv` — state-action-reward samples for eval policy
 - `output/tab_evaluation.csv` — Evaluation agreement table
 - `output/tab_system_performance.csv` — System performance table
 - `output/tab_interview_outcomes.csv` — Termination outcomes
+- `output/tab_joint_ablation.csv` — Eval-RL / Question-RL ablation table
 
 ## Table Caption Annotation
 

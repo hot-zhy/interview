@@ -1,7 +1,8 @@
 """Question selector service with adaptive strategy."""
 import random
 import math
-from typing import List, Optional, Dict
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Protocol
 from difflib import SequenceMatcher
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -13,11 +14,36 @@ from backend.services.personalized_algorithms import (
     ucb_chapter_score,
     compute_personalization_weights,
 )
+from backend.services.selection_rl import (
+    build_bandit_feature_snapshot,
+    choose_chapter_with_contextual_bandit,
+)
 
 try:
     from rapidfuzz import fuzz as _rf_fuzz  # type: ignore
 except Exception:  # pragma: no cover
     _rf_fuzz = None
+
+
+@dataclass
+class SelectionContext:
+    """State passed to chapter-selection policies."""
+
+    db: Session
+    session: InterviewSession
+    current_difficulty: int
+    track_chapters: Dict[str, float]
+    asked_chapters: List[str]
+    resume_skills: Optional[List[str]]
+    missing_chapters: Optional[List[str]]
+    llm_context: Optional[Dict]
+
+
+class ChapterSelectionPolicy(Protocol):
+    """Strategy interface for chapter selection."""
+
+    def select_chapter(self, ctx: SelectionContext) -> str:
+        ...
 
 
 def _partial_ratio(a: str, b: str) -> int:
@@ -30,6 +56,78 @@ def _partial_ratio(a: str, b: str) -> int:
         return int(_rf_fuzz.partial_ratio(a, b))
     # Fallback: SequenceMatcher ratio (not true partial ratio, but keeps system working)
     return int(SequenceMatcher(None, a, b).ratio() * 100)
+
+
+class RulePriorityChapterPolicy:
+    """Baseline policy: priority cascade + weighted random fallback."""
+
+    def select_chapter(self, ctx: SelectionContext) -> str:
+        return _select_chapter(
+            track_chapters=ctx.track_chapters,
+            resume_skills=ctx.resume_skills,
+            missing_chapters=ctx.missing_chapters,
+            asked_chapters=ctx.asked_chapters,
+            llm_context=ctx.llm_context,
+        )
+
+
+class ThompsonChapterPolicy:
+    """Maintain legacy Thompson behavior behind the strategy interface."""
+
+    def select_chapter(self, ctx: SelectionContext) -> str:
+        rule_choice = _select_chapter(
+            track_chapters=ctx.track_chapters,
+            resume_skills=ctx.resume_skills,
+            missing_chapters=ctx.missing_chapters,
+            asked_chapters=ctx.asked_chapters,
+            llm_context=ctx.llm_context,
+        )
+        ts_chapter = _select_chapter_thompson(
+            db=ctx.db,
+            session=ctx.session,
+            track_chapters=ctx.track_chapters,
+            asked_chapters=ctx.asked_chapters,
+            current_difficulty=ctx.current_difficulty,
+        )
+        if ts_chapter and not ctx.missing_chapters and not ctx.resume_skills:
+            return ts_chapter
+        return rule_choice
+
+
+class ContextualBanditChapterPolicy:
+    """Contextual-bandit chapter selector with safe fallback."""
+
+    def select_chapter(self, ctx: SelectionContext) -> str:
+        fallback = RulePriorityChapterPolicy().select_chapter(ctx)
+        if not ctx.track_chapters:
+            return fallback
+
+        feature_snapshot = build_bandit_feature_snapshot(
+            db=ctx.db,
+            session=ctx.session,
+            current_difficulty=ctx.current_difficulty,
+            track_chapters=ctx.track_chapters,
+            asked_chapters=ctx.asked_chapters,
+            resume_skills=ctx.resume_skills or [],
+            missing_chapters=ctx.missing_chapters or [],
+            llm_context=ctx.llm_context or {},
+        )
+        choice = choose_chapter_with_contextual_bandit(
+            snapshot=feature_snapshot,
+            candidate_chapters=list(ctx.track_chapters.keys()),
+            fallback_chapter=fallback,
+            policy_path=getattr(settings, "rl_policy_artifact_path", ""),
+            alpha=float(getattr(settings, "rl_bandit_alpha", 0.35)),
+        )
+        return choice or fallback
+
+
+def _resolve_chapter_policy(strategy: str) -> ChapterSelectionPolicy:
+    if strategy == "thompson_sampling":
+        return ThompsonChapterPolicy()
+    if strategy == "contextual_bandit":
+        return ContextualBanditChapterPolicy()
+    return RulePriorityChapterPolicy()
 
 
 def select_question(
@@ -90,30 +188,20 @@ def select_question(
             "avg_score": sum(all_scores) / len(all_scores) if all_scores else 0.5,
         }
 
-    # Determine target chapter
-    if getattr(settings, "selector_strategy", "weighted_random") == "thompson_sampling":
-        target_chapter = _select_chapter(
-            track_chapters=track_chapters,
-            resume_skills=resume_skills,
-            missing_chapters=missing_chapters,
-            asked_chapters=asked_chapters,
-            llm_context=llm_ctx,
-        )
-        ts_chapter = _select_chapter_thompson(
-            db=db, session=session, track_chapters=track_chapters,
-            asked_chapters=asked_chapters, current_difficulty=current_difficulty
-        )
-        if ts_chapter:
-            if not missing_chapters and not resume_skills:
-                target_chapter = ts_chapter
-    else:
-        target_chapter = _select_chapter(
-            track_chapters=track_chapters,
-            resume_skills=resume_skills,
-            missing_chapters=missing_chapters,
-            asked_chapters=asked_chapters,
-            llm_context=llm_ctx,
-        )
+    # Determine target chapter through pluggable chapter policy.
+    selector = getattr(settings, "selector_strategy", "weighted_random")
+    policy = _resolve_chapter_policy(selector)
+    selection_ctx = SelectionContext(
+        db=db,
+        session=session,
+        current_difficulty=current_difficulty,
+        track_chapters=track_chapters,
+        asked_chapters=asked_chapters,
+        resume_skills=resume_skills,
+        missing_chapters=missing_chapters,
+        llm_context=llm_ctx,
+    )
+    target_chapter = policy.select_chapter(selection_ctx)
     
     # Query questions matching criteria
     query = db.query(QuestionBank).filter(
@@ -165,7 +253,6 @@ def select_question(
         return None
     
     # 个性化选题策略
-    selector = getattr(settings, "selector_strategy", "weighted_random")
     if selector == "personalized" or selector == "max_info":
         return _select_personalized(
             db, session, available_questions, current_difficulty,

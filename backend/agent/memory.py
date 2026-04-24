@@ -7,7 +7,7 @@ to reconstruct memory when needed.
 """
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session as DBSession
 
@@ -57,6 +57,12 @@ class MemoryManager:
                 provenance="reconstructed",
                 asked_question_id=str(aq.id),
             )
+            scores = ev.scores_json or {}
+            mem.turn_evaluations.append({
+                "asked_question_id": str(aq.id),
+                "overall_score": float(ev.overall_score),
+                "policy_meta": scores.get("_agentic_meta", {}),
+            })
 
         return mem
 
@@ -70,6 +76,7 @@ class MemoryManager:
         missing_points: List[str],
         next_direction: Optional[str],
         provenance: str,
+        policy_meta: Optional[Dict] = None,
     ) -> InterviewMemory:
         """Append a new turn's data to memory (in-place mutation + return)."""
         mem.append_turn(
@@ -81,6 +88,11 @@ class MemoryManager:
             provenance=provenance,
             asked_question_id=asked_question_id,
         )
+        mem.turn_evaluations.append({
+            "asked_question_id": asked_question_id,
+            "overall_score": float(score),
+            "policy_meta": policy_meta or {},
+        })
         return mem
 
     @staticmethod

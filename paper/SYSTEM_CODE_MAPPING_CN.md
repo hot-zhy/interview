@@ -167,3 +167,37 @@
 
 如果你希望，我可以继续把这份映射再细化成“章节段落 -> 函数名 -> 关键参数 -> 测试点”的四列表格版，方便逐条对稿。
 
+## 12. Agentic-RL（题目选择）代码映射
+
+> 目标：在不改主流程接口的前提下，把“选章节”升级为可训练 policy module。
+
+### 论文概念
+
+- State-conditioned policy（RQ2 扩展）
+- Offline training + online inference
+- Safe fallback（策略异常时回退启发式）
+
+### 代码落点
+
+- 策略接口与策略解析：
+  - `backend/services/question_selector.py`
+  - 关键符号：`SelectionContext`、`ChapterSelectionPolicy`、`_resolve_chapter_policy(...)`
+- 在线 RL 推断与特征：
+  - `backend/services/selection_rl.py`
+  - 关键符号：`BanditFeatureSnapshot`、`feature_vector_for_chapter(...)`、`choose_chapter_with_contextual_bandit(...)`
+- 历史样本构建（用于离线训练）：
+  - `backend/services/selection_rl.py`
+  - 关键符号：`TrainingSample`、`build_training_samples_from_session_history(...)`
+- 离线训练与评估：
+  - `reproduce_results/bandit_utils.py`
+  - `reproduce_results/calc_bandit_policy.py`
+
+### 配置项（实验开关）
+
+- `selector_strategy=contextual_bandit`
+- `rl_policy_artifact_path`
+- `rl_bandit_alpha`
+- `rl_reward_*` / `rl_cost_*`
+
+均定义于 `backend/core/config.py`。
+

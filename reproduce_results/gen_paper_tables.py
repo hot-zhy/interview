@@ -51,17 +51,38 @@ def main():
     rows = read_csv(out_dir / "tab_selection.csv")
     if rows:
         lines.append("% --- tab_selection ---")
-        lines.append("\\begin{tabular}{lcccc}")
+        lines.append("\\begin{tabular}{lcccccc}")
         lines.append("\\toprule")
-        lines.append("\\textbf{Strategy} & \\textbf{Gap Targeting (\\%)} & \\textbf{Coverage (\\%)} & \\textbf{Personalization (\\%)} & \\textbf{Avg. Relevance Score} \\\\")
+        lines.append("\\textbf{Strategy} & \\textbf{Gap Targeting (\\%)} & \\textbf{Coverage (\\%)} & \\textbf{Personalization (\\%)} & \\textbf{Reward} & \\textbf{Regret} & \\textbf{Coverage@3 (\\%)} \\\\")
         lines.append("\\midrule")
         for r in rows:
             s = r.get("Strategy", "")
             gt = r.get("Gap Targeting (%)", "---")
             cov = r.get("Coverage (%)", "---")
             pers = r.get("Personalization (%)", "---")
-            rel = r.get("Avg. Relevance Score", "---")
-            lines.append(f"{s} & {gt} & {cov} & {pers} & {rel} \\\\")
+            rew = r.get("Cumulative Reward", "---")
+            reg = r.get("Regret", "---")
+            cov3 = r.get("Coverage@3 (%)", "---")
+            lines.append(f"{s} & {gt} & {cov} & {pers} & {rew} & {reg} & {cov3} \\\\")
+        lines.append("\\bottomrule")
+        lines.append("\\end{tabular}")
+        lines.append("")
+
+    # Contextual bandit policy
+    rows = read_csv(out_dir / "tab_bandit_policy.csv")
+    if rows:
+        lines.append("% --- tab_bandit_policy ---")
+        lines.append("\\begin{tabular}{lcccccc}")
+        lines.append("\\toprule")
+        lines.append("\\textbf{Strategy} & \\textbf{Train Samples} & \\textbf{Avg Reward} & \\textbf{Avg Regret} & \\textbf{Coverage@3 (\\%)} & \\textbf{Ability Error} & \\textbf{Cost Violation (\\%)} \\\\")
+        lines.append("\\midrule")
+        for r in rows:
+            lines.append(
+                f"{r.get('Strategy', '')} & {r.get('Train Samples', '---')} & "
+                f"{r.get('Avg Reward', '---')} & {r.get('Avg Regret', '---')} & "
+                f"{r.get('Coverage@3 (%)', '---')} & {r.get('Ability Error', '---')} & "
+                f"{r.get('Cost Violation Rate (%)', '---')} \\\\"
+            )
         lines.append("\\bottomrule")
         lines.append("\\end{tabular}")
         lines.append("")
