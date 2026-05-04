@@ -78,13 +78,18 @@ class LLMJudgeTool(_BaseTool):
     name = "llm_judge"
 
     def invoke(
-        self, question: str, correct_answer: str, user_answer: str
+        self, question: str, correct_answer: str, user_answer: str, judge_count: Optional[int] = None
     ) -> tuple[Optional[EvaluationResult], ToolInvocationRecord]:
         from backend.services.llm_provider import evaluate_with_llm
 
         start = time.time()
         try:
-            result = evaluate_with_llm(question, correct_answer, user_answer)
+            result = evaluate_with_llm(
+                question,
+                correct_answer,
+                user_answer,
+                judge_count_override=judge_count,
+            )
             if result is None:
                 rec = self._record("llm_judge", "llm_unavailable", True, False, start)
                 return None, rec
@@ -97,6 +102,8 @@ class LLMJudgeTool(_BaseTool):
                 reasoning=result.get("reasoning"),
                 provenance="llm",
             )
+            if isinstance(result.get("_multi_judge_meta"), dict):
+                ev.policy_meta["multi_judge"] = result["_multi_judge_meta"]
             rec = self._record("llm_judge", f"score={ev.overall_score:.2f}", True, False, start)
             return ev, rec
         except Exception as exc:

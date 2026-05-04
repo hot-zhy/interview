@@ -1,2 +1,2 @@
-Strategy,Train Samples,Avg Reward,Avg Regret,Top1 Action Match (%)
-Eval Routing Contextual Bandit,ILLUSTRATIVE,ILLUSTRATIVE,ILLUSTRATIVE,ILLUSTRATIVE
+Strategy,Train Samples,Avg Reward,Avg Regret,Top1 Action Match (%),Policy Artifact
+Eval Routing Contextual Bandit,1906,0.5731,0.0493,15.4,contextual_eval_policy.json

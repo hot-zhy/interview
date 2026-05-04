@@ -25,6 +25,9 @@ from backend.agent.models import (
 )
 from backend.agent.memory import MemoryManager
 from backend.agent.state_builder import StateBuilder
+from backend.agent.guardrails import evaluate_guardrails
+from backend.agent.eval_policy import EvalRewardSignal, compute_eval_reward
+from backend.agent.subtask_planner import build_eval_subtasks, summarize_subtask_plan
 from backend.agent.tools import ValidatorTool
 from backend.agent.trace import TraceCollector
 
@@ -187,3 +190,59 @@ class TestFeatureFlags:
         assert s.enable_multi_judge is False
         assert s.enable_followup_planner is False
         assert s.enable_agent_tracing is False
+
+
+class TestWideSeekExtensions:
+    def test_guardrail_budget(self, monkeypatch):
+        from backend.core.config import settings
+
+        monkeypatch.setattr(settings, "rollout_variant", "wideseek_w4")
+        monkeypatch.setattr(settings, "rollout_percent", 100)
+        monkeypatch.setattr(settings, "guardrail_max_llm_calls_per_session", 1)
+        d = evaluate_guardrails(
+            session_id=1,
+            routing_state={"round_idx": 2, "llm_calls_used": 2, "multi_judge_used": 0, "fallback_count": 0},
+        )
+        assert d.allow_llm is False
+        assert d.forced_action == "rule_only"
+
+    def test_subtask_plan_toggle(self, monkeypatch):
+        from backend.core.config import settings
+
+        monkeypatch.setattr(settings, "enable_wide_subtask_planner", False)
+        tasks = build_eval_subtasks("q", "a")
+        assert tasks == []
+
+        monkeypatch.setattr(settings, "enable_wide_subtask_planner", True)
+        monkeypatch.setattr(settings, "wide_subtask_max_workers", 2)
+        tasks = build_eval_subtasks("question", "answer")
+        summary = summarize_subtask_plan(tasks)
+        assert summary["enabled"] is True
+        assert summary["count"] == 2
+
+    def test_reward_penalizes_latency_and_instability(self):
+        r_fast = compute_eval_reward(
+            EvalRewardSignal(
+                agreement=0.8,
+                quality=0.8,
+                feedback_hit=1.0,
+                llm_used=True,
+                multi_judge_used=True,
+                followup_used=False,
+                latency_ms=500,
+                instability=0.05,
+            )
+        )
+        r_slow = compute_eval_reward(
+            EvalRewardSignal(
+                agreement=0.8,
+                quality=0.8,
+                feedback_hit=1.0,
+                llm_used=True,
+                multi_judge_used=True,
+                followup_used=False,
+                latency_ms=6000,
+                instability=0.8,
+            )
+        )
+        assert r_slow < r_fast

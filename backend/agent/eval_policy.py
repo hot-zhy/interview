@@ -51,6 +51,8 @@ class EvalRewardSignal:
     llm_used: bool
     multi_judge_used: bool
     followup_used: bool
+    latency_ms: float = 0.0
+    instability: float = 0.0
 
 
 def _bounded(value: float, lo: float, hi: float) -> float:
@@ -149,9 +151,15 @@ def compute_eval_reward(signal: EvalRewardSignal) -> float:
         cost += float(getattr(settings, "eval_cost_multi_judge_penalty", 0.07))
     if signal.followup_used:
         cost += float(getattr(settings, "eval_cost_followup_penalty", 0.02))
+    latency_budget = max(float(getattr(settings, "eval_latency_budget_ms", 3500.0)), 1.0)
+    latency_term = _bounded(float(signal.latency_ms) / latency_budget, 0.0, 1.0)
+    instability_ref = max(float(getattr(settings, "eval_instability_reference", 0.25)), 1e-6)
+    instability_term = _bounded(float(signal.instability) / instability_ref, 0.0, 1.0)
     return float(
         float(getattr(settings, "eval_reward_agreement_weight", 0.45)) * _bounded(signal.agreement, 0.0, 1.0)
         + float(getattr(settings, "eval_reward_quality_weight", 0.25)) * _bounded(signal.quality, 0.0, 1.0)
         + float(getattr(settings, "eval_reward_feedback_weight", 0.20)) * _bounded(signal.feedback_hit, 0.0, 1.0)
         - float(getattr(settings, "eval_reward_cost_weight", 0.10)) * cost
+        - float(getattr(settings, "eval_reward_latency_weight", 0.10)) * latency_term
+        - float(getattr(settings, "eval_reward_instability_weight", 0.10)) * instability_term
     )

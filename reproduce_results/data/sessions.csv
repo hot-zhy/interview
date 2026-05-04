@@ -1,21 +1,301 @@
 session_id,participant_id,track,duration_min,n_questions,initial_difficulty,termination_reason,termination_rounds
-1,2,Java Backend,,6,2,active,6
-2,3,Java Backend,23.3,6,4,completed,6
-3,2,Java Concurrency,23.9,4,4,completed,4
-4,4,Spring & Microservices,25.3,4,4,completed,4
-5,3,Spring & Microservices,,5,2,active,5
-6,6,Java Backend,24.1,3,2,completed,3
-7,6,JVM & Performance,5,7,4,completed,7
-8,7,Java Backend,20.1,5,4,completed,5
-9,4,Java Backend,40.7,3,2,completed,3
-10,2,Spring & Microservices,23.5,4,4,completed,4
-11,3,JVM & Performance,21.4,5,4,completed,5
-12,2,Java Concurrency,,5,2,active,5
-13,8,Spring & Microservices,,4,4,active,4
-14,6,Java Backend,13.4,4,2,completed,4
-15,7,JVM & Performance,27.2,3,4,completed,3
-16,8,Java Concurrency,34.2,4,2,completed,4
-17,7,Spring & Microservices,27.1,5,2,completed,5
-18,2,Java Concurrency,26.3,6,4,completed,6
-19,2,Spring & Microservices,40.6,5,3,completed,5
-20,1,Java Backend,22.1,6,4,completed,6
+1,1,JVM & Performance,40.5,7,4,completed,7
+2,1,JVM & Performance,37.0,7,4,completed,7
+3,1,JVM & Performance,34.7,5,4,completed,5
+4,2,Java Backend,44.5,6,3,completed,6
+5,2,Spring & Microservices,41.3,7,3,completed,7
+6,2,Java Backend,32.0,5,3,completed,5
+7,3,Java Backend,36.5,7,3,completed,7
+8,3,Spring & Microservices,40.8,6,3,completed,6
+9,3,Java Concurrency,36.8,7,3,completed,7
+10,4,Spring & Microservices,54.3,8,3,completed,8
+11,4,Spring & Microservices,18.0,4,3,early_stop,4
+12,4,Spring & Microservices,41.5,6,3,completed,6
+13,5,Java Concurrency,36.9,6,3,completed,6
+14,5,Java Backend,48.9,7,3,completed,7
+15,5,Java Concurrency,49.0,7,3,completed,7
+16,6,Spring & Microservices,47.9,7,3,completed,7
+17,6,Spring & Microservices,41.3,6,3,completed,6
+18,6,Java Backend,37.1,6,3,completed,6
+19,7,Spring & Microservices,26.5,6,3,early_stop,6
+20,7,Java Backend,30.1,5,3,completed,5
+21,7,Spring & Microservices,46.7,8,3,completed,8
+22,8,Spring & Microservices,35.4,6,4,completed,6
+23,8,Spring & Microservices,48.0,7,4,completed,7
+24,8,Java Concurrency,48.0,8,4,completed,8
+25,9,Java Backend,39.9,6,3,completed,6
+26,9,Spring & Microservices,47.0,7,3,completed,7
+27,9,Java Backend,37.9,7,3,completed,7
+28,10,Spring & Microservices,50.5,8,4,completed,8
+29,10,Java Concurrency,48.1,8,4,completed,8
+30,10,Java Backend,40.5,6,4,completed,6
+31,11,Spring & Microservices,39.5,6,3,completed,6
+32,11,Java Backend,28.4,5,3,completed,5
+33,11,Java Backend,43.9,7,3,completed,7
+34,12,Spring & Microservices,29.6,5,4,completed,5
+35,12,JVM & Performance,42.8,6,4,completed,6
+36,12,Java Concurrency,32.9,5,4,completed,5
+37,13,Spring & Microservices,37.3,6,3,completed,6
+38,13,Java Concurrency,40.2,6,3,completed,6
+39,13,Java Backend,37.3,6,3,completed,6
+40,14,Java Concurrency,30.4,5,4,completed,5
+41,14,Java Concurrency,30.4,5,4,completed,5
+42,14,Spring & Microservices,36.1,7,4,completed,7
+43,15,JVM & Performance,53.3,8,4,completed,8
+44,15,JVM & Performance,44.1,7,4,completed,7
+45,15,Spring & Microservices,44.0,8,4,completed,8
+46,16,Java Backend,48.4,8,4,completed,8
+47,16,Spring & Microservices,,3,4,active,3
+48,16,Java Backend,,5,4,active,5
+49,17,Java Backend,45.3,8,4,completed,8
+50,17,Java Backend,17.2,3,4,early_stop,3
+51,17,Java Concurrency,50.0,8,4,completed,8
+52,18,Spring & Microservices,,7,2,active,7
+53,18,Java Backend,37.0,7,2,completed,7
+54,18,Java Backend,,5,2,active,5
+55,19,JVM & Performance,43.1,7,4,completed,7
+56,19,JVM & Performance,39.8,6,4,completed,6
+57,19,JVM & Performance,39.2,6,4,completed,6
+58,20,Spring & Microservices,19.0,4,3,early_stop,4
+59,20,Java Backend,34.5,7,3,completed,7
+60,20,Spring & Microservices,40.9,6,3,completed,6
+61,21,Spring & Microservices,,5,3,active,5
+62,21,Java Backend,27.8,5,3,completed,5
+63,21,Java Backend,34.4,7,3,completed,7
+64,22,Spring & Microservices,35.9,5,3,completed,5
+65,22,Java Backend,,3,3,active,3
+66,22,Java Backend,33.3,6,3,completed,6
+67,23,Java Backend,33.0,6,3,completed,6
+68,23,Spring & Microservices,53.2,8,3,completed,8
+69,23,Spring & Microservices,44.7,8,3,completed,8
+70,24,Spring & Microservices,38.7,7,5,completed,7
+71,24,Java Concurrency,46.8,7,5,completed,7
+72,24,Java Concurrency,43.4,7,5,completed,7
+73,25,JVM & Performance,20.5,3,2,early_stop,3
+74,25,Java Concurrency,49.2,8,2,completed,8
+75,25,Spring & Microservices,48.0,7,2,completed,7
+76,26,Spring & Microservices,48.0,8,4,completed,8
+77,26,Java Backend,36.3,7,4,completed,7
+78,26,Spring & Microservices,29.5,5,4,completed,5
+79,27,Spring & Microservices,43.3,7,4,completed,7
+80,27,Java Concurrency,32.8,6,4,completed,6
+81,27,Java Backend,42.0,7,4,completed,7
+82,28,Java Concurrency,39.6,6,5,completed,6
+83,28,Spring & Microservices,32.2,5,5,completed,5
+84,28,Java Concurrency,41.2,8,5,completed,8
+85,29,Spring & Microservices,36.1,6,3,completed,6
+86,29,Java Backend,37.2,5,3,completed,5
+87,29,Java Concurrency,36.3,6,3,completed,6
+88,30,Spring & Microservices,43.5,6,3,completed,6
+89,30,Spring & Microservices,41.1,7,3,completed,7
+90,30,Java Concurrency,35.6,5,3,completed,5
+91,31,JVM & Performance,43.7,7,4,completed,7
+92,31,Spring & Microservices,48.0,8,4,completed,8
+93,31,Spring & Microservices,40.7,8,4,completed,8
+94,32,JVM & Performance,39.0,6,3,completed,6
+95,32,Spring & Microservices,35.8,5,3,completed,5
+96,32,Java Backend,30.8,5,3,completed,5
+97,33,Java Concurrency,32.3,6,4,completed,6
+98,33,Java Backend,46.4,7,4,completed,7
+99,33,Java Backend,35.3,7,4,completed,7
+100,34,Java Backend,44.5,7,3,completed,7
+101,34,JVM & Performance,46.3,7,3,completed,7
+102,34,Java Backend,36.6,7,3,completed,7
+103,35,Java Backend,46.0,8,4,completed,8
+104,35,Java Concurrency,20.6,4,4,early_stop,4
+105,35,JVM & Performance,54.0,8,4,completed,8
+106,36,JVM & Performance,49.0,8,4,completed,8
+107,36,Java Concurrency,46.4,8,4,completed,8
+108,36,Spring & Microservices,40.0,8,4,completed,8
+109,37,Java Backend,44.1,8,3,completed,8
+110,37,Java Backend,40.0,7,3,completed,7
+111,37,Spring & Microservices,37.6,5,3,completed,5
+112,38,Spring & Microservices,44.3,7,3,completed,7
+113,38,Java Backend,49.6,8,3,completed,8
+114,38,Java Backend,53.4,8,3,completed,8
+115,39,Spring & Microservices,42.5,7,3,completed,7
+116,39,Spring & Microservices,31.9,6,3,completed,6
+117,39,Java Concurrency,38.8,6,3,completed,6
+118,40,Spring & Microservices,44.1,8,3,completed,8
+119,40,Java Backend,53.0,8,3,completed,8
+120,40,Java Concurrency,34.8,5,3,completed,5
+121,41,Java Backend,45.4,7,3,completed,7
+122,41,Java Backend,40.9,8,3,completed,8
+123,41,Spring & Microservices,39.2,6,3,completed,6
+124,42,Spring & Microservices,42.5,8,4,completed,8
+125,42,Java Backend,49.8,8,4,completed,8
+126,42,Java Concurrency,34.0,5,4,completed,5
+127,43,Java Concurrency,33.7,6,4,completed,6
+128,43,Java Concurrency,50.1,8,4,completed,8
+129,43,JVM & Performance,52.8,8,4,completed,8
+130,44,Spring & Microservices,16.0,3,4,early_stop,3
+131,44,Java Concurrency,43.0,8,4,completed,8
+132,44,Java Concurrency,54.4,8,4,completed,8
+133,45,Java Concurrency,48.8,7,4,completed,7
+134,45,Spring & Microservices,39.8,8,4,completed,8
+135,45,JVM & Performance,31.8,5,4,completed,5
+136,46,Java Backend,36.4,5,3,completed,5
+137,46,Spring & Microservices,42.4,6,3,completed,6
+138,46,JVM & Performance,41.7,6,3,completed,6
+139,47,Spring & Microservices,,6,3,active,6
+140,47,Java Backend,33.7,5,3,completed,5
+141,47,Java Backend,36.1,5,3,completed,5
+142,48,Java Backend,33.6,6,3,completed,6
+143,48,Spring & Microservices,34.7,6,3,completed,6
+144,48,Java Backend,33.3,5,3,completed,5
+145,49,Spring & Microservices,37.8,6,3,completed,6
+146,49,Java Backend,33.8,5,3,completed,5
+147,49,Spring & Microservices,28.9,5,3,completed,5
+148,50,Java Backend,37.0,5,3,completed,5
+149,50,Java Backend,47.3,8,3,completed,8
+150,50,Spring & Microservices,45.9,8,3,completed,8
+151,51,Java Concurrency,34.2,5,4,completed,5
+152,51,Spring & Microservices,42.4,8,4,completed,8
+153,51,Java Concurrency,29.3,5,4,completed,5
+154,52,JVM & Performance,40.9,8,5,completed,8
+155,52,JVM & Performance,47.3,7,5,completed,7
+156,52,Spring & Microservices,39.2,6,5,completed,6
+157,53,Java Backend,,3,3,active,3
+158,53,Java Backend,35.5,7,3,completed,7
+159,53,Java Concurrency,52.0,8,3,completed,8
+160,54,Java Backend,39.0,8,2,completed,8
+161,54,Spring & Microservices,25.5,5,2,early_stop,5
+162,54,Java Backend,,4,2,active,4
+163,55,Spring & Microservices,33.1,6,4,completed,6
+164,55,Java Backend,22.0,5,4,early_stop,5
+165,55,Spring & Microservices,52.6,8,4,completed,8
+166,56,Spring & Microservices,47.7,8,4,completed,8
+167,56,Spring & Microservices,,4,4,active,4
+168,56,Java Concurrency,43.6,8,4,completed,8
+169,57,Java Backend,25.5,5,3,early_stop,5
+170,57,Java Backend,36.8,7,3,completed,7
+171,57,Spring & Microservices,43.9,8,3,completed,8
+172,58,Java Backend,35.9,6,4,completed,6
+173,58,Java Concurrency,32.5,5,4,completed,5
+174,58,Java Backend,29.4,5,4,completed,5
+175,59,Spring & Microservices,42.1,7,3,completed,7
+176,59,JVM & Performance,33.9,5,3,completed,5
+177,59,Java Backend,24.5,4,3,early_stop,4
+178,60,Java Concurrency,28.5,5,3,completed,5
+179,60,Java Backend,38.0,7,3,completed,7
+180,60,Java Concurrency,49.1,8,3,completed,8
+181,61,Spring & Microservices,33.3,5,3,completed,5
+182,61,Spring & Microservices,38.4,6,3,completed,6
+183,61,Java Backend,35.3,5,3,completed,5
+184,62,JVM & Performance,38.7,6,4,completed,6
+185,62,Java Concurrency,33.3,5,4,completed,5
+186,62,Spring & Microservices,39.0,6,4,completed,6
+187,63,Java Concurrency,53.5,8,3,completed,8
+188,63,Java Backend,51.0,8,3,completed,8
+189,63,Java Concurrency,35.7,7,3,completed,7
+190,64,Spring & Microservices,51.1,8,4,completed,8
+191,64,Spring & Microservices,43.9,8,4,completed,8
+192,64,Java Concurrency,47.8,7,4,completed,7
+193,65,Java Backend,51.7,8,4,completed,8
+194,65,JVM & Performance,29.3,5,4,completed,5
+195,65,Java Backend,30.5,5,4,completed,5
+196,66,Java Backend,48.5,7,3,completed,7
+197,66,Java Concurrency,37.5,7,3,completed,7
+198,66,Java Backend,46.6,8,3,completed,8
+199,67,Java Concurrency,50.1,7,4,completed,7
+200,67,Spring & Microservices,40.3,6,4,completed,6
+201,67,Java Backend,33.1,5,4,completed,5
+202,68,Java Concurrency,38.5,7,4,completed,7
+203,68,Spring & Microservices,35.7,5,4,completed,5
+204,68,Java Backend,38.3,5,4,completed,5
+205,69,Java Concurrency,41.2,6,3,completed,6
+206,69,Spring & Microservices,41.9,6,3,completed,6
+207,69,Spring & Microservices,40.1,8,3,completed,8
+208,70,Spring & Microservices,30.5,6,3,completed,6
+209,70,Java Backend,41.8,6,3,completed,6
+210,70,Spring & Microservices,41.1,6,3,completed,6
+211,71,Java Backend,52.6,8,2,completed,8
+212,71,Spring & Microservices,17.9,3,2,early_stop,3
+213,71,Java Backend,24.0,5,2,early_stop,5
+214,72,Java Backend,38.9,6,3,completed,6
+215,72,Spring & Microservices,45.8,8,3,completed,8
+216,72,Spring & Microservices,36.1,6,3,completed,6
+217,73,Java Concurrency,45.4,8,4,completed,8
+218,73,Java Concurrency,17.8,3,4,early_stop,3
+219,73,Java Concurrency,,3,4,active,3
+220,74,Spring & Microservices,37.2,6,4,completed,6
+221,74,Spring & Microservices,48.9,7,4,completed,7
+222,74,Java Concurrency,50.2,8,4,completed,8
+223,75,Spring & Microservices,46.6,7,3,completed,7
+224,75,Java Backend,,5,3,active,5
+225,75,Java Backend,35.6,7,3,completed,7
+226,76,JVM & Performance,49.2,7,5,completed,7
+227,76,Java Concurrency,46.1,7,5,completed,7
+228,76,Java Concurrency,51.0,8,5,completed,8
+229,77,Java Backend,39.2,5,3,completed,5
+230,77,Java Concurrency,40.7,8,3,completed,8
+231,77,Java Concurrency,29.7,5,3,completed,5
+232,78,Java Concurrency,38.5,8,4,completed,8
+233,78,JVM & Performance,39.0,5,4,completed,5
+234,78,Java Concurrency,41.4,6,4,completed,6
+235,79,JVM & Performance,33.1,6,3,completed,6
+236,79,Spring & Microservices,35.1,5,3,completed,5
+237,79,Spring & Microservices,37.8,5,3,completed,5
+238,80,Java Concurrency,48.2,7,4,completed,7
+239,80,JVM & Performance,31.8,5,4,completed,5
+240,80,Java Concurrency,39.2,7,4,completed,7
+241,81,Java Concurrency,36.9,5,4,completed,5
+242,81,Spring & Microservices,48.7,7,4,completed,7
+243,81,Spring & Microservices,32.1,6,4,completed,6
+244,82,Java Backend,48.0,7,3,completed,7
+245,82,Spring & Microservices,31.9,6,3,completed,6
+246,82,Spring & Microservices,33.6,6,3,completed,6
+247,83,Java Concurrency,31.4,5,3,completed,5
+248,83,Java Backend,39.1,6,3,completed,6
+249,83,Java Backend,46.6,7,3,completed,7
+250,84,Spring & Microservices,35.8,7,3,completed,7
+251,84,Java Backend,43.5,7,3,completed,7
+252,84,Java Backend,36.4,5,3,completed,5
+253,85,Spring & Microservices,18.6,3,4,early_stop,3
+254,85,Java Backend,35.1,5,4,completed,5
+255,85,Java Backend,44.8,8,4,completed,8
+256,86,Java Concurrency,49.1,8,4,completed,8
+257,86,Spring & Microservices,45.1,7,4,completed,7
+258,86,Java Backend,47.0,7,4,completed,7
+259,87,Spring & Microservices,35.7,5,5,completed,5
+260,87,JVM & Performance,40.3,8,5,completed,8
+261,87,Java Concurrency,44.0,7,5,completed,7
+262,88,Java Concurrency,37.7,5,3,completed,5
+263,88,Java Concurrency,32.7,6,3,completed,6
+264,88,Java Backend,44.2,8,3,completed,8
+265,89,Java Backend,15.9,3,3,early_stop,3
+266,89,Java Backend,38.9,5,3,completed,5
+267,89,Java Backend,48.0,7,3,completed,7
+268,90,Java Backend,47.1,8,3,completed,8
+269,90,Java Backend,36.2,7,3,completed,7
+270,90,Spring & Microservices,39.6,7,3,completed,7
+271,91,Spring & Microservices,37.0,6,2,completed,6
+272,91,Java Backend,40.6,8,2,completed,8
+273,91,Java Concurrency,29.3,5,2,completed,5
+274,92,Java Concurrency,42.8,6,3,completed,6
+275,92,Java Concurrency,30.3,5,3,completed,5
+276,92,Spring & Microservices,40.5,7,3,completed,7
+277,93,Java Backend,48.8,8,3,completed,8
+278,93,Java Backend,40.8,8,3,completed,8
+279,93,Spring & Microservices,28.9,5,3,completed,5
+280,94,Java Concurrency,53.5,8,4,completed,8
+281,94,Java Concurrency,34.5,6,4,completed,6
+282,94,Spring & Microservices,33.4,5,4,completed,5
+283,95,Spring & Microservices,29.4,5,2,completed,5
+284,95,JVM & Performance,37.3,8,2,completed,8
+285,95,Java Backend,42.7,6,2,completed,6
+286,96,Spring & Microservices,44.2,7,3,completed,7
+287,96,Spring & Microservices,36.1,7,3,completed,7
+288,96,Java Backend,21.1,4,3,early_stop,4
+289,97,Java Backend,29.3,5,2,completed,5
+290,97,Java Backend,30.1,5,2,completed,5
+291,97,Java Backend,48.0,8,2,completed,8
+292,98,Java Concurrency,20.0,4,3,early_stop,4
+293,98,Java Concurrency,48.9,7,3,completed,7
+294,98,Spring & Microservices,37.7,7,3,completed,7
+295,99,JVM & Performance,44.1,8,4,completed,8
+296,99,Java Concurrency,46.0,8,4,completed,8
+297,99,Spring & Microservices,49.4,7,4,completed,7
+298,100,Spring & Microservices,39.3,7,3,completed,7
+299,100,JVM & Performance,54.6,8,3,completed,8
+300,100,Java Backend,47.7,8,3,completed,8

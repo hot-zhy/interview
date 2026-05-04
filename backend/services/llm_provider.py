@@ -2,6 +2,9 @@
 import json
 import re
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+from statistics import pstdev
+import time
 from typing import Dict, List, Optional
 from pydantic import BaseModel, ValidationError
 from backend.core.config import settings
@@ -21,7 +24,8 @@ class EvaluationOutput(BaseModel):
 def evaluate_with_llm(
     question: str,
     correct_answer: str,
-    user_answer: str
+    user_answer: str,
+    judge_count_override: Optional[int] = None,
 ) -> Optional[Dict]:
     """
     Evaluate answer using LLM (ZhipuAI GLM-4-Flash).
@@ -32,7 +36,8 @@ def evaluate_with_llm(
     # Try ZhipuAI
     if settings.zhipuai_api_key:
         try:
-            judge_count = max(1, min(int(getattr(settings, "llm_multi_judge_count", 1)), 5))
+            selected = judge_count_override if judge_count_override is not None else getattr(settings, "llm_multi_judge_count", 1)
+            judge_count = max(1, min(int(selected), 8))
             use_cot = bool(getattr(settings, "llm_use_cot", False))
             if judge_count > 1:
                 return _evaluate_with_multi_judge(
@@ -174,24 +179,64 @@ def _evaluate_with_multi_judge(
     - Aggregate numeric scores by mean
     - Merge missing points by frequency
     """
+    started = time.time()
     results: List[Dict] = []
-    for i in range(judge_count):
-        # Slight temperature diversity to reduce identical outputs.
+    judge_details: List[Dict] = []
+    parallel_enabled = bool(getattr(settings, "llm_multi_judge_parallel_enabled", True))
+    max_parallel = max(1, int(getattr(settings, "llm_multi_judge_max_parallel", 4)))
+    timeout_sec = max(1.0, float(getattr(settings, "llm_multi_judge_timeout_sec", 25.0)))
+    min_results = max(1, int(getattr(settings, "llm_multi_judge_fail_open_min_results", 1)))
+
+    def _run_single(i: int) -> Dict:
         temp = 0.2 + 0.1 * (i % 3)
+        t0 = time.time()
         try:
-            r = _evaluate_with_zhipuai(
+            payload = _evaluate_with_zhipuai(
                 question=question,
                 correct_answer=correct_answer,
                 user_answer=user_answer,
                 use_cot=use_cot,
                 temperature=temp,
             )
-            if r:
-                results.append(r)
-        except Exception:
-            continue
+            return {
+                "ok": bool(payload),
+                "idx": i,
+                "temperature": round(temp, 2),
+                "duration_ms": round((time.time() - t0) * 1000.0, 1),
+                "result": payload,
+                "error": "",
+            }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "idx": i,
+                "temperature": round(temp, 2),
+                "duration_ms": round((time.time() - t0) * 1000.0, 1),
+                "result": None,
+                "error": str(exc)[:120],
+            }
 
-    if not results:
+    if parallel_enabled and judge_count > 1:
+        with ThreadPoolExecutor(max_workers=min(max_parallel, judge_count)) as pool:
+            futures = [pool.submit(_run_single, i) for i in range(judge_count)]
+            try:
+                for fut in as_completed(futures, timeout=timeout_sec):
+                    detail = fut.result()
+                    judge_details.append(detail)
+                    if detail["ok"] and detail.get("result"):
+                        results.append(detail["result"])
+            except TimeoutError:
+                for fut in futures:
+                    if not fut.done():
+                        fut.cancel()
+    else:
+        for i in range(judge_count):
+            detail = _run_single(i)
+            judge_details.append(detail)
+            if detail["ok"] and detail.get("result"):
+                results.append(detail["result"])
+
+    if len(results) < min_results:
         return None
 
     dimensions = ["correctness", "depth", "clarity", "practicality", "tradeoffs"]
@@ -219,6 +264,8 @@ def _evaluate_with_multi_judge(
 
     reasonings = [str(r.get("reasoning", "")).strip() for r in results if str(r.get("reasoning", "")).strip()]
     merged_reasoning = " | ".join(reasonings[:2]) if reasonings else None
+    disagreement_std = round(float(pstdev(overall_vals)), 4) if len(overall_vals) > 1 else 0.0
+    total_duration_ms = round((time.time() - started) * 1000.0, 1)
 
     return {
         "scores": merged_scores,
@@ -227,6 +274,17 @@ def _evaluate_with_multi_judge(
         "missing_points": merged_missing,
         "next_direction": merged_next_direction,
         "reasoning": merged_reasoning,
+        "_multi_judge_meta": {
+            "requested_judges": int(judge_count),
+            "successful_judges": len(results),
+            "failed_judges": max(0, int(judge_count) - len(results)),
+            "parallel_used": bool(parallel_enabled and judge_count > 1),
+            "max_parallel": int(max_parallel),
+            "timeout_sec": float(timeout_sec),
+            "disagreement_std": disagreement_std,
+            "total_duration_ms": total_duration_ms,
+            "judges": judge_details,
+        },
     }
 
 

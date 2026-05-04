@@ -91,6 +91,13 @@ class TraceCollector:
         )
 
     def summary(self) -> Dict[str, Any]:
+        all_tools = [ti for t in self.traces for ti in t.tool_invocations]
+        latencies = [float(ti.duration_ms) for ti in all_tools if ti.duration_ms is not None]
+        instability = [
+            float((t.evaluation.policy_meta or {}).get("instability", 0.0))
+            for t in self.traces
+            if t.evaluation
+        ]
         return {
             "session_id": self.session_id,
             "total_turns": len(self.traces),
@@ -108,4 +115,7 @@ class TraceCollector:
                 for ti in t.tool_invocations
                 if ti.fallback_used
             ),
+            "avg_tool_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else 0.0,
+            "p95_tool_latency_ms": round(sorted(latencies)[max(0, int(len(latencies) * 0.95) - 1)], 2) if latencies else 0.0,
+            "avg_instability": round(sum(instability) / len(instability), 4) if instability else 0.0,
         }

@@ -195,7 +195,6 @@ def export_eval_policy_trajectory(session, out_dir: Path):
             "asked_question_id": aq.id,
             "action": policy_meta.get("action", ""),
             "reward": policy_meta.get("reward", ""),
-            "fallback_reason": policy_meta.get("fallback_reason", ""),
             "answer_length": state.get("answer_length", ""),
             "recent_avg_score": state.get("recent_avg_score", ""),
             "missing_points_count": state.get("missing_points_count", ""),
@@ -203,6 +202,18 @@ def export_eval_policy_trajectory(session, out_dir: Path):
             "llm_calls_used": state.get("llm_calls_used", ""),
             "multi_judge_used": state.get("multi_judge_used", ""),
             "overall_score": e.overall_score,
+            "rollout_variant": policy_meta.get("rollout_variant", ""),
+            "guardrail_reason": policy_meta.get("guardrail_reason", ""),
+            "fallback_reason": policy_meta.get("fallback_reason", ""),
+            "latency_ms": policy_meta.get("latency_ms", ""),
+            "instability": policy_meta.get("instability", ""),
+            "width_requested": (policy_meta.get("multi_judge", {}) or {}).get("requested_judges", ""),
+            "width_completed": (policy_meta.get("multi_judge", {}) or {}).get("successful_judges", 1),
+            "estimated_cost": (
+                0.03 * (1 if policy_meta.get("action") in {"llm_single", "llm_multi"} else 0)
+                + 0.07 * (1 if policy_meta.get("action") == "llm_multi" else 0)
+                + 0.02 * (1 if policy_meta.get("action") == "ask_followup_then_eval" else 0)
+            ),
         })
     path = out_dir / "eval_policy_trajectory.csv"
     with open(path, "w", newline="", encoding="utf-8") as f:

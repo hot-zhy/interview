@@ -29,16 +29,16 @@
 
 \begin{frontmatter}
 
-\title{Beyond One-Size-Fits-All: A Memory-Aware Agentic Interview Framework with Adaptive Control, State-Aware Selection, and Reliability-Constrained Hybrid Judging}
+\title{Beyond One-Size-Fits-All: A Memory-Aware Agentic Interview Framework with Joint Adaptive Control and Selection, Session-Level Report Analysis, and Learner-Centered Evaluation}
 
 \author{Anonymous Authors}
 
 \begin{abstract}
-\noindent Adaptive technical interviewing is a sequential decision problem: given incomplete observations of a candidate's ability, a limited question budget, and unreliable evaluation signals, the system must decide what to ask next, when to follow up, and when to stop. We formulate this problem as a closed-loop observation--memory--policy--action process and present a domain-specific, memory-aware, tool-augmented adaptive interview framework with structured control logic and constrained LLM usage. At each turn the framework maintains persistent interview memory encoding performance history, coverage state, knowledge gaps, resume-derived priors, and evaluator feedback; compresses this memory into a structured state representation; and invokes a planner/controller that selects an action from a constrained action space $a_t \in \{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$. The controller dispatches actions through a tool router that invokes specialized modules---rule-based scoring, validated LLM judging, follow-up generation, resume parsing, and report synthesis---each operating under reliability constraints with automatic fallback. We contribute five innovations grounded in this agentic formulation: (C1)~a memory-aware agentic interview framework with an observation--memory--policy--action loop; (C2)~a state-aware adaptive control mechanism for difficulty calibration and budget-constrained termination that converges within 4--5 questions without IRT calibration; (C3)~a multi-objective, state-conditioned question selection policy that targets knowledge gaps, leverages resume priors, maximizes coverage, and incorporates evaluator next-direction hints; (C4)~a reliability-constrained hybrid judging framework with routing, schema validation, automatic fallback, and optional multi-judge aggregation; and (C5)~an extensible tool-augmented architecture supporting follow-up generation, report synthesis, and multimodal auxiliary analysis. Empirical evaluation demonstrates effective calibration under limited budgets, balanced gap-targeting and coverage, and high agreement with human evaluators, with graceful degradation when LLM services are unavailable.
+\noindent Adaptive technical interviewing is a sequential decision problem: given incomplete observations of a candidate's ability, a limited question budget, and unreliable evaluation signals, the system must decide what to ask next, when to follow up, and when to stop. We formulate this problem as a closed-loop observation--memory--policy--action process and present a domain-specific, memory-aware, tool-augmented adaptive interview framework with structured control logic and constrained LLM usage. At each turn the framework maintains persistent interview memory encoding performance history, coverage state, knowledge gaps, resume-derived priors, and evaluator feedback; compresses this memory into a structured state representation; and invokes a planner/controller that selects an action from a constrained action space $a_t \in \{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$. The controller dispatches actions through a tool router that invokes specialized modules---rule-based scoring, validated LLM judging, follow-up generation, resume parsing, and report synthesis---each operating under reliability constraints with automatic fallback. We contribute four innovations: (C1)~a memory-aware agentic interview framework with an observation--memory--policy--action loop; (C2)~a \emph{joint adaptive policy under budget constraints} that couples difficulty calibration and termination with state-conditioned, evaluator-informed question selection (including an LLM-as-topic-planner with multi-objective fallback), converging within 4--5 questions without IRT calibration; (C3)~a \emph{session-level analytical report pipeline} that decomposes the full interview trace into granular signals and runs five sequential analysis steps (narrative summary, per-dimension attribution, gap root-cause analysis, learning plan, and strategy transparency), each with rule-based fallback; and (C4)~\emph{learner-centered evidence} on perceived readiness, usefulness, and experience, reported alongside technical validation of the hybrid evaluation subsystem. Empirical evaluation demonstrates effective joint calibration and selection under limited budgets, high agreement with human evaluators for hybrid judging, and graceful degradation when LLM services are unavailable; user-outcome metrics are illustrative until finalized participant data are integrated.
 \end{abstract}
 
 \begin{keyword}
-Agentic AI \sep Interview agents \sep Adaptive assessment \sep State-aware selection \sep Hybrid judging \sep Tool-augmented LLM systems \sep Memory-aware interaction \sep Reliability-constrained evaluation
+Agentic AI \sep Interview agents \sep Adaptive assessment \sep Joint adaptive policy \sep Session-level report analysis \sep Tool-augmented LLM systems \sep Memory-aware interaction \sep Learner-centered evaluation
 \end{keyword}
 
 \end{frontmatter}
@@ -83,22 +83,21 @@ We emphasize that this is an \emph{agentic orchestration framework} with structu
 
 \noindent \textbf{Research Questions.} This research addresses three fundamental questions:
 
-\textbf{RQ1:} How can a state-aware adaptive controller calibrate difficulty and manage interview termination under limited question budgets, achieving accurate ability estimation within 4--5 questions?
+\textbf{RQ1:} How can a \emph{joint adaptive policy} couple difficulty calibration and budget-constrained termination with state-conditioned question selection---including gap targeting, resume priors, coverage, evaluator next-direction hints $\eta_t$, and optional LLM-as-topic planning---so that both control and selection read from the same persistent memory and converge within a small question budget (e.g., 4--5 questions for calibration) without IRT item calibration?
 
-\textbf{RQ2:} How can a state-conditioned question selection policy balance knowledge gap targeting, resume-derived personalization, coverage, and evaluator feedback in a unified multi-objective framework?
+\textbf{RQ2:} How can a \emph{session-level analytical report pipeline} decompose the full interview trace (per-turn questions, responses, scores, trajectories, and gaps) and analyze it through multiple complementary lenses---summative narrative, dimensional attribution, diagnostic gap analysis, actionable learning guidance, and transparent strategy explanation---with step-wise reliability (rule fallbacks)?
 
-\textbf{RQ3:} How can a reliability-constrained hybrid judging framework combine rule-based determinism with validated LLM augmentation, automatic fallback, and optional multi-judge aggregation?
+\textbf{RQ3:} What \emph{learner-centered outcomes} (e.g., perceived usefulness, readiness/confidence, fairness, intent to reuse) do students or candidates experience when using the system, and how do these compare to prior HCI studies of AI mock interviews \cite{conversate2024,virtual_interviewers2025}?
 
-\noindent \textbf{Contributions.} We make five contributions (C1--C5):
+\noindent \textbf{Contributions.} We make four primary contributions (C1--C4):
 \begin{itemize}
     \item \textbf{C1 (Framework)}: A memory-aware agentic interview framework with an observation--memory--policy--action loop that formulates adaptive interviewing as a sequential decision process with persistent state, structured tool invocation, and feedback-driven memory updates (Section~\ref{sec:method}).
-    \item \textbf{C2 (Adaptive Control)}: A state-aware adaptive control mechanism for difficulty update and interview termination, using sliding-window calibration with trend-aware adjustment and budget-constrained stopping, converging within 4--5 questions without IRT calibration (Section~\ref{sec:adaptive_control}).
-    \item \textbf{C3 (Selection Policy)}: A multi-objective question selection policy with an \emph{LLM-as-topic-planner} that reasons about which chapter to explore next based on the full interview state, falling back to a priority cascade with gap targeting, resume priors, coverage, and evaluator hints (Section~\ref{sec:selection}).
-    \item \textbf{C4 (Hybrid Judging)}: A reliability-constrained hybrid judging framework with routing between rule-based and LLM judges, schema validation, automatic fallback, and optional multi-judge aggregation (Section~\ref{sec:hybrid_judging}).
-    \item \textbf{C5 (Tool Architecture)}: An extensible tool-augmented architecture with two innovations: (i)~\emph{LLM-as-topic-planner} for strategic question selection, and (ii)~\emph{multi-step agentic report generation} that produces unique, deeply personalized assessment reports through sequential LLM analysis with interview strategy transparency (Section~\ref{sec:tools}).
+    \item \textbf{C2 (Joint adaptive policy)}: A budget-constrained \emph{joint} adaptive policy that couples Sections~\ref{sec:adaptive_control} and~\ref{sec:selection}: the same interview memory drives sliding-window difficulty/termination control and multi-objective, evaluator-informed question selection (including LLM-as-topic-planner with priority/Fisher/UCB fallbacks), closing an evaluation-to-selection loop via $\eta_t$.
+    \item \textbf{C3 (Session-level report analysis)}: A multi-step report pipeline that ingests the full session, compresses it into structured context, and runs five sequential analysis steps with independent fallbacks (Section~\ref{sec:report_pipeline}, Tables~\ref{tab:report_decomposition}--\ref{tab:report_steps}).
+    \item \textbf{C4 (Learner-centered evaluation)}: An evaluation axis foregrounding candidate/student perceived outcomes and experience, alongside technical metrics for the hybrid judge (routing, validation, fallback) treated as an \emph{online evaluation module} supporting the loop rather than a standalone headline contribution (Sections~\ref{sec:experiments}--\ref{sec:results}).
 \end{itemize}
 
-The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work and positions our contribution. Section~\ref{sec:method} presents the agentic method framework, including problem formulation, memory/state design, controller, and the three core mechanisms (RQ1--RQ3). Section~\ref{sec:implementation} describes implementation details. Section~\ref{sec:experiments} presents experimental design, and Section~\ref{sec:results} reports results. Section~\ref{sec:discussion} discusses findings, limitations, and future work. Section~\ref{sec:conclusion} concludes.
+The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work and positions our contribution. Section~\ref{sec:method} presents the agentic method framework, including problem formulation, memory/state design, controller, joint adaptive policy (Sections~\ref{sec:adaptive_control}--\ref{sec:selection}), hybrid judging as the online evaluation module (Section~\ref{sec:hybrid_judging}), and session-level report synthesis (Section~\ref{sec:tools}). Section~\ref{sec:implementation} describes implementation details. Section~\ref{sec:experiments} presents experimental design, and Section~\ref{sec:results} reports results. Section~\ref{sec:discussion} discusses findings, limitations, and future work. Section~\ref{sec:conclusion} concludes.
 
 %% ============================================================
 %%  SECTION 2: RELATED WORK
@@ -108,15 +107,15 @@ The remainder of this paper is organized as follows. Section~\ref{sec:related} r
 
 \subsection{Computerized Adaptive Testing}
 
-\noindent Researchers have extensively studied Computerized Adaptive Testing (CAT) in educational assessment contexts \cite{van2006computerized}. The fundamental principle involves dynamically adjusting test difficulty based on candidate responses, grounded in Item Response Theory (IRT) \cite{hambleton1991fundamentals}. ROAR-CAT \cite{roarcat2025} demonstrates the gold-standard CAT development pipeline: IRT parameter estimation on 1,960 students, followed by validation with 485 students, achieving 40\% efficiency gains. However, many CAT variants rely on pre-calibrated item parameters and response models that do not directly apply to technical interviews, where items are heterogeneous and scoring is multi-dimensional. Our work targets the interview setting by proposing a lightweight, state-aware sliding-window update rule that does not assume pre-calibrated IRT parameters, converging within 4--5 questions under a fixed question budget.
+\noindent Researchers have extensively studied Computerized Adaptive Testing (CAT) in educational assessment contexts \cite{van2006computerized}. Recent surveys from a machine learning perspective synthesize measurement models, item selection algorithms, bank construction, and test control \cite{zhuang2024catsurvey}. The classical principle involves dynamically adjusting difficulty based on candidate responses, often grounded in Item Response Theory (IRT) \cite{hambleton1991fundamentals}. ROAR-CAT \cite{roarcat2025} demonstrates a gold-standard CAT development pipeline: IRT parameter estimation on 1,960 students, followed by validation with 485 students, achieving 40\% efficiency gains. However, many CAT variants rely on pre-calibrated item parameters and response models that do not directly apply to technical interviews, where items are heterogeneous, scoring is multi-dimensional, and \emph{item selection must be coupled with interview-specific termination and coverage constraints}. Our work targets the interview setting by proposing a lightweight joint policy: the same persistent memory conditions both difficulty/termination and multi-objective selection (including evaluator-informed hints), without assuming pre-calibrated IRT parameters, converging within a small number of questions under a fixed budget.
 
 \subsection{Intelligent Tutoring Systems}
 
-\noindent Intelligent Tutoring Systems (ITS) employ adaptive algorithms to personalize learning experiences based on student performance and knowledge gaps \cite{vanlehn2011relative}. While ITS share adaptive principles with assessment systems, their question selection prioritizes learning objectives over comprehensive evaluation. Our state-conditioned selection policy addresses RQ2 by balancing learning-oriented gap targeting with assessment-oriented coverage requirements, treating selection as a multi-objective optimization over persistent interview state.
+\noindent Intelligent Tutoring Systems (ITS) employ adaptive algorithms to personalize learning experiences based on student performance and knowledge gaps \cite{vanlehn2011relative}. While ITS share adaptive principles with assessment systems, their question selection prioritizes learning objectives over comprehensive evaluation. Our joint policy addresses RQ1 by balancing learning-oriented gap targeting with assessment-oriented coverage requirements, treating control and selection as co-dependent decisions over persistent interview state.
 
 \subsection{AI-Powered Interview Systems and HCI}
 
-\noindent Prior work has explored AI support for interviews and assessment \cite{kim2024interview,wang2023survey}. Conversate \cite{conversate2024} uses LLM-driven interactive simulation with adaptive follow-up questions; a 19-participant study found that adaptive follow-ups enhanced realism. Virtual Interviewers \cite{virtual_interviewers2025} conducted a 20-participant formative study on multimodal mock technical interviews. A modular AI interviewer \cite{modular_interviewer2025} with local LLMs achieved high satisfaction (4.45/5). From an HCI perspective, candidate experience and perceived fairness are critical \cite{kumar2022fairness}. Multimodal approaches integrating text, audio, and video analysis have shown promise \cite{wang2022multimodal}. However, none of these systems formalize adaptive interviewing as a memory-aware sequential decision process with structured tool invocation, reliability-constrained judging, and feedback-driven state updates.
+\noindent Prior work has explored AI support for interviews and assessment \cite{kim2024interview,wang2023survey}. Conversate \cite{conversate2024} uses LLM-driven interactive simulation with adaptive follow-up questions; a 19-participant study found that adaptive follow-ups enhanced realism. Virtual Interviewers \cite{virtual_interviewers2025} report formative evidence on mock technical interviews, linking AI-driven practice to student readiness and confidence---themes we revisit under RQ3 (learner-centered outcomes). A modular AI interviewer \cite{modular_interviewer2025} with local LLMs achieved high satisfaction (4.45/5). From an HCI perspective, candidate experience and perceived fairness are critical \cite{kumar2022fairness}. Multimodal approaches integrating text, audio, and video analysis have shown promise \cite{wang2022multimodal}. However, few systems formalize adaptive interviewing as a memory-aware sequential decision process with a \emph{joint} control-and-selection policy, structured tool invocation, reliability-constrained online judging, session-level multi-step report analysis, and feedback-driven state updates.
 
 \subsection{LLM Agents, Tool-Augmented Workflows, and Memory-Augmented Systems}
 \label{sec:related_agents}
@@ -145,7 +144,7 @@ However, reliability-aware evaluation requires more than a single LLM call. \emp
 \section{Method: Memory-Aware Agentic Interview Framework}
 \label{sec:method}
 
-This section presents the core method. We first formalize the problem (Section~\ref{sec:formulation}), then define the observation, memory, and state representations (Sections~\ref{sec:observation}--\ref{sec:state}). We introduce the planner/controller (Section~\ref{sec:controller}) and detail the three core mechanisms: adaptive control (Section~\ref{sec:adaptive_control}), state-aware selection (Section~\ref{sec:selection}), and reliability-constrained hybrid judging (Section~\ref{sec:hybrid_judging}). We conclude with the tool-augmented architecture (Section~\ref{sec:tools}).
+This section presents the core method. We first formalize the problem (Section~\ref{sec:formulation}), then define the observation, memory, and state representations (Sections~\ref{sec:observation}--\ref{sec:state}). We introduce the planner/controller (Section~\ref{sec:controller}) and detail the \emph{joint adaptive policy} in two parts---adaptive control (Section~\ref{sec:adaptive_control}) and state-aware selection (Section~\ref{sec:selection})---followed by follow-up planning (Section~\ref{sec:followup}). The reliability-constrained hybrid judge (Section~\ref{sec:hybrid_judging}) is the online evaluation module that produces structured scores and $\eta_t$ for memory. We conclude with the tool-augmented architecture and session-level report pipeline (Section~\ref{sec:tools}).
 
 \subsection{Problem Formulation}
 \label{sec:formulation}
@@ -259,10 +258,10 @@ Each action is dispatched through a \emph{tool router} that invokes the appropri
 \label{fig:single_turn_loop}
 \end{figure*}
 
-\subsection{Adaptive Control: Difficulty Update and Termination (RQ1)}
+\subsection{Adaptive Control: Difficulty Update and Termination}
 \label{sec:adaptive_control}
 
-\noindent The adaptive control mechanism addresses RQ1 by implementing a state-aware control policy for difficulty calibration and budget-constrained interview termination. The controller observes performance signals from interview memory and adjusts the difficulty trajectory to converge on the candidate's ability level within a limited question budget.
+\noindent This subsection specifies the \emph{control} half of RQ1's joint adaptive policy: a state-aware policy for difficulty calibration and budget-constrained interview termination. The controller observes performance signals from interview memory and adjusts the difficulty trajectory to converge on the candidate's ability level within a limited question budget; Section~\ref{sec:selection} specifies the coupled \emph{selection} half operating on the same memory.
 
 \subsubsection{Adaptive Round Bounds}
 
@@ -348,10 +347,10 @@ Early termination ($T_1$, $T_2$, $T_3$) applies only when $t \geq n_{\min}$. The
 
 The \emph{heuristic} strategy applies threshold-based rules: if $\bar{s}_w \geq 0.85$, increase difficulty; if $\bar{s}_w < 0.4$, decrease; otherwise adjust based on trend. The \emph{target-score control} strategy adjusts difficulty based on proportional error $(\bar{s}_w - \tau)$ and a trend term, where $\tau$ (default 0.70) is the target score, making the intended operating point explicit.
 
-\subsection{State-Aware Question Selection (RQ2)}
+\subsection{State-Aware Question Selection}
 \label{sec:selection}
 
-\noindent The question selection mechanism addresses RQ2 through a multi-objective, state-conditioned policy. Conceptually, the next question is chosen to maximize a composite objective:
+\noindent The question selection mechanism completes RQ1's joint adaptive policy through a multi-objective, state-conditioned policy grounded in the same $s_t$ and memory traces as Section~\ref{sec:adaptive_control}. Conceptually, the next question is chosen to maximize a composite objective:
 
 \begin{equation}
 q_{t+1} = \arg\max_{q \in Q_t} \Bigl[\lambda_1 \cdot \text{Gap}(q) + \lambda_2 \cdot \text{ResumeMatch}(q) + \lambda_3 \cdot \text{CoverageGain}(q) + \lambda_4 \cdot \text{Info}(q) + \lambda_5 \cdot \text{Explore}(q) + \lambda_6 \cdot \text{NextDir}(q)\Bigr]
@@ -465,10 +464,10 @@ With probability $\epsilon$ (default 0.15), the system selects a random item fro
 
 The follow-up generator $G(q_t, y_t, M_t^{\text{new}}, k)$ produces a targeted probe. When an LLM is available, it uses a structured prompt including the question, candidate answer, evaluation feedback, and missing points. The prompt requests a short, targeted follow-up addressing the specific misconception. When the LLM is unavailable, the system falls back to template-based generation using the first missing point in predefined phrasings. The depth adapts to $k$: the first follow-up targets the knowledge gap concretely; the second may shift angle or ask for a practical scenario.
 
-\subsection{Reliability-Constrained Hybrid Judging (RQ3)}
+\subsection{Reliability-Constrained Hybrid Judging}
 \label{sec:hybrid_judging}
 
-\noindent The hybrid judging framework addresses RQ3 by implementing a routing architecture with validation, fallback, and optional multi-judge aggregation. The framework operates as a tool invoked by the controller at each turn, producing structured evaluation output that is written back into interview memory.
+\noindent The hybrid judging framework implements the \emph{online evaluation module}: routing between rule-based and LLM judges, validation, fallback, and optional multi-judge aggregation. It is not framed as a standalone contribution (C1--C4 foreground the joint policy, session-level report analysis, and learner-centered evaluation); rather, it supplies structured scores, missing concepts, and next-direction hints $\eta_t$ that close the loop into memory and selection. The framework operates as a tool invoked at each turn, producing structured evaluation output that is written back into interview memory.
 
 \begin{algorithm}[h]
 \caption{Reliability-Constrained Hybrid Judging with Routing and Fallback}
@@ -562,7 +561,45 @@ Speech-derived signals are treated as auxiliary features (not primary decision c
 
 \noindent \textbf{Expression analyzer.} Uses DeepFace \cite{serengil2020deepface} for emotion detection from video frames sampled during the interview. Maps seven basic emotions to interview-relevant metrics: nervousness, confidence, and engagement. When DeepFace is unavailable or no face is detected, the module returns None---graceful degradation consistent with the tool-augmented design.
 
-\noindent \textbf{Report synthesizer (multi-step agentic).} Report generation is itself an agentic multi-step LLM pipeline. The system sends the complete interview record (per-question scores, Q\&A content, difficulty trajectory, chapter trace) through five sequential LLM analysis steps: (1)~\emph{narrative assessment} producing a personalized overall evaluation grounded in specific answer examples; (2)~\emph{per-dimension deep analysis} explaining why each of the five dimension scores is high or low with concrete references; (3)~\emph{knowledge gap root-cause analysis} identifying underlying capability deficits rather than surface-level missing points; (4)~\emph{personalized learning plan} with specific resources and methods; and (5)~\emph{interview strategy trace} explaining what the adaptive system did and why---making the agentic decision process transparent to the candidate. Each step has rule-based fallback; the pipeline produces unique, substantive reports even across candidates with similar overall scores.
+\noindent \textbf{Report synthesizer (multi-step agentic).}\label{sec:report_pipeline} Report generation (RQ2) decomposes the \emph{entire session} into analyzable units before multi-step reasoning. \textbf{Inputs aggregated from the datastore} include: per-turn evaluations (five-dimensional scores, overall score, missing concepts, feedback), asked questions (chapter, difficulty, stem text), optional resume skills, and auxiliary modality summaries (speech/expression) when available. \textbf{Compression} builds a compact linear digest: up to 15 recent questions are rendered as one line each (chapter, truncated stem, score, missing points), prepended with session-level scalars---track, round count, mean dimension scores, difficulty trajectory, chapter trajectory, and resume skills---forming a shared \texttt{base\_context} string for all LLM steps (see implementation: sequential calls with independent JSON/text parsing and fallbacks).
+
+\begin{table}[H]
+\centering
+\caption{Session trace decomposition for report analysis (RQ2). Granularity progresses from global signals to interpretable subscores and narrative outputs.}
+\label{tab:report_decomposition}
+\footnotesize
+\begin{tabularx}{\textwidth}{l Y}
+\toprule
+\textbf{Layer} & \textbf{Content and role} \\
+\midrule
+Session & Track, rounds, aggregate means, difficulty/chapter trajectories, resume snapshot \\
+Per-question & Stem (truncated), chapter, difficulty, scores, missing concepts for that turn \\
+Dimension-level & Five rubric dimensions aggregated; per-dimension text via structured JSON in Step~2 \\
+Diagnostic & Union of missing knowledge; root-cause narrative (not mere list) in Step~3 \\
+Metacognitive & Strategy trace: how difficulty and chapters evolved and why (Step~5) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Table~\ref{tab:report_decomposition} summarizes the hierarchy; Table~\ref{tab:report_steps} lists the five LLM analysis steps (each with rule-based or empty fallback). The pipeline is \emph{sequential} rather than a single monolithic prompt: later steps consume the same compressed trace but apply different analytic lenses---summative (1), attributive (2), diagnostic (3), prescriptive (4), and transparency-oriented (5)---aligning with formative-feedback and explainability goals discussed in related work on multi-step educational NLP \cite{wei2022chain,llm_formative2025}.
+
+\begin{table}[H]
+\centering
+\caption{Five-step session-level report analysis pipeline (shared compressed context; independent fallbacks).}
+\label{tab:report_steps}
+\footnotesize
+\begin{tabularx}{\textwidth}{c Y Y}
+\toprule
+\textbf{Step} & \textbf{Analytic goal} & \textbf{Output shape} \\
+\midrule
+1 & Personalized narrative assessment grounded in specific answers & Short paragraph \\
+2 & Per-dimension attribution tied to concrete items & JSON (five fields) \\
+3 & Knowledge-gap root causes and links between gaps & Short paragraph \\
+4 & Actionable learning plan items & Line-separated list \\
+5 & Interview strategy transparency (difficulty/chapter logic) & Short paragraph \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 %% ============================================================
 %%  SECTION 4: IMPLEMENTATION
@@ -739,13 +776,13 @@ Security measures include password hashing (bcrypt), JWT session management, inp
 
 \subsection{Research Questions and Evaluation Axes}
 
-\noindent The experimental evaluation is organized around four evaluation axes aligned with the agentic framework:
+\noindent The experimental evaluation is organized around four evaluation axes aligned with RQ1--RQ3 and technical validation of the online judge:
 
 \begin{enumerate}
-    \item \textbf{Adaptive control effectiveness (RQ1):} Does the state-aware controller calibrate difficulty quickly within a limited question budget? Does it improve progression efficiency over non-adaptive baselines?
-    \item \textbf{State-aware selection quality (RQ2):} Does the state-conditioned selection policy better target knowledge gaps while maintaining coverage and personalization? Does evaluator next-direction feedback improve relevance?
-    \item \textbf{Reliability-constrained hybrid judging (RQ3):} Does routing + validation + fallback improve robustness while preserving agreement with human evaluators? Does multi-judge aggregation reduce variance?
-    \item \textbf{Memory-aware integration:} Does memory/state feedback improve follow-up quality, selection coherence, and session-level adaptation?
+    \item \textbf{Joint adaptive policy (RQ1):} Do coupled difficulty/termination control and state-conditioned selection (including $\eta_t$ and LLM topic planning when enabled) calibrate within a limited budget and balance gap targeting, coverage, and personalization relative to baselines?
+    \item \textbf{Session-level report pipeline (RQ2):} Does the multi-step decomposition-and-analysis pipeline (Table~\ref{tab:report_steps}) produce coherent narrative, dimensional, diagnostic, and transparency outputs under LLM availability constraints, with graceful rule fallbacks?
+    \item \textbf{Learner-centered outcomes (RQ3):} What are participants' perceived usefulness, readiness/confidence, fairness, and intent to reuse? We position findings relative to prior AI mock-interview HCI studies \cite{conversate2024,virtual_interviewers2025}; metrics remain illustrative until final field data replace synthetic tables.
+    \item \textbf{Hybrid judging (technical validation):} Does routing + validation + fallback improve robustness and agreement with human evaluators vs.\ rule-only scoring? Does multi-judge aggregation reduce variance when enabled?
 \end{enumerate}
 
 \subsection{Metrics}
@@ -863,8 +900,10 @@ Question bank statistics are shown in Table~\ref{tab:question_bank}.
 
 \noindent This section presents results organized by the four evaluation axes defined in Section~\ref{sec:experiments}. Results are computed from the reproduction pipeline (\texttt{reproduce\_results/reproduce.py}) using synthetic data (80 sessions, 20 participants, seed=42). See \texttt{MISSING\_DATA.md} for data schema.
 
-\subsection{Adaptive Control Effectiveness (RQ1)}
+\subsection{Joint Adaptive Policy (RQ1)}
 \label{sec:results_rq1}
+
+\subsubsection{Difficulty Calibration and Termination}
 
 \noindent We evaluate whether the state-aware controller calibrates difficulty effectively within the limited question budget. Table~\ref{tab:calibration} presents calibration accuracy across candidate ability levels. The controller achieved 67.2\% overall calibration accuracy with average convergence of 3.6 questions. A simulation study (\texttt{eval\_modules/run\_calibration\_sim.py}) with 100 synthetic sessions yielded MAE=2.06 and convergence=2.48 questions, validating the control logic under deterministic conditions.
 
@@ -964,10 +1003,8 @@ Target-Score Control & 86.9 & \textbf{3.8} & 77.8 & 5.8 \\
 
 Sensitivity analysis over target score $\tau$ (0.65/0.70/0.75) showed that higher targets improved calibration for high-ability candidates but reduced accuracy for low-ability candidates, supporting the default $\tau = 0.70$.
 
-\noindent \textbf{Summary (RQ1):} The state-aware controller achieves rapid difficulty convergence within 4--5 questions by conditioning updates on the performance window in interview memory. The effectiveness is robust to the choice of heuristic vs.\ control-theoretic strategy.
-
-\subsection{State-Aware Selection Quality (RQ2)}
-\label{sec:results_rq2}
+\subsubsection{Selection Quality and Priority Balance}
+\label{sec:results_selection}
 
 \noindent We evaluate whether the state-conditioned selection policy effectively balances gap targeting, coverage, and personalization. Table~\ref{tab:selection} presents selection metrics. The policy achieved 8.2\% gap targeting (missing concepts queried within $k=3$ rounds), 23.0\% chapter coverage, and 100\% personalization relevance. Baseline comparisons require simulated selection runs; values are shown for the integrated system.
 
@@ -1077,10 +1114,20 @@ Thompson Sampling & 74.1 & 84.8 & \textbf{71.2} & \textbf{0.79} \\
     \item \textbf{Without memory/state feedback (stateless):} \textit{TODO --- Reset $\mathcal{M}_t$, $\mathcal{C}_t$, and $\mathcal{D}_t$ at each turn; report gap targeting, coverage, and calibration. Expected: significant degradation across all metrics, confirming the value of persistent memory.}
 \end{itemize}
 
-\noindent \textbf{Summary (RQ2):} The state-conditioned selection policy balances gap targeting, personalization, and coverage through a priority cascade conditioned on interview memory. The balance emerges from the interaction between memory contents and priority logic, not from fixed weighting.
+\noindent \textbf{Summary (RQ1):} Jointly, the control and selection halves of the policy operate on shared interview memory: the controller achieves rapid difficulty convergence within 4--5 questions (sliding window, trend-aware updates), while the state-conditioned selection policy balances gap targeting, personalization, and coverage through the priority cascade and evaluator hint augmentation ($\eta_t$). Control effectiveness is robust to heuristic vs.\ target-score strategies; selection balance emerges from memory-driven priority logic rather than fixed weights.
 
-\subsection{Reliability-Constrained Hybrid Judging (RQ3)}
-\label{sec:results_rq3}
+\subsection{Session-Level Report Pipeline (RQ2)}
+\label{sec:results_report}
+
+\noindent Qualitative inspection of generated reports (with LLM API access enabled) shows that the five-step pipeline (Table~\ref{tab:report_steps}) surfaces distinct analytic roles: Step~1 anchors narrative in per-question scores; Step~2 yields structured per-dimension rationales; Steps~3--4 translate accumulated missing concepts into diagnostic and learning guidance; Step~5 narrates difficulty/chapter trajectories for transparency. Step-wise fallbacks populate markdown with rule-based strengths/weaknesses when LLM calls fail, preserving a usable artifact. \textbf{Automated metrics} for report quality (e.g., rubric-based human rating of faithfulness and actionability) are left for future work pending annotated gold reports.
+
+\subsection{Learner-Centered Outcomes (RQ3)}
+\label{sec:results_user}
+
+\noindent Table~\ref{tab:participants} lists illustrative demographics. \textbf{Target instruments} include post-session usefulness and ease-of-use (SUS-style items), self-reported readiness/confidence for technical interviews, perceived fairness, and behavioral intention to reuse---aligned with themes in prior AI mock-interview HCI work \cite{conversate2024,virtual_interviewers2025}. Numeric outcome tables are placeholders until full recruitment and IRB-approved deployment replace illustrative values; learner-centered claims should be read as \emph{design-level commitments} alongside the technical metrics above.
+
+\subsection{Hybrid Judging: Technical Validation}
+\label{sec:results_hybrid}
 
 \noindent We evaluate whether the routing, validation, and fallback architecture improves robustness while preserving agreement with human evaluators. Table~\ref{tab:evaluation} presents exact agreement with human evaluators. The hybrid judging framework achieved 93.8\% overall exact agreement.
 
@@ -1187,11 +1234,11 @@ Hybrid (routing + validation + fallback) & \textbf{84.7} & \textbf{86.4} & \text
 
 \noindent \textit{TODO --- Disable follow-up action ($a_t \neq \textit{follow-up}$ always); report gap coverage, concept recall, and overall assessment quality. Expected: reduced identification of specific misconceptions, lower gap targeting in subsequent questions.}
 
-\noindent \textbf{Summary (RQ3):} The reliability-constrained hybrid judging framework achieves significantly higher agreement with human evaluators than rule-only evaluation, with the routing and fallback mechanism ensuring continuous operation. The largest improvements occur in dimensions requiring nuanced understanding, confirming the value of validated LLM augmentation.
+\noindent \textbf{Summary (hybrid judging):} The reliability-constrained hybrid judging framework achieves significantly higher agreement with human evaluators than rule-only evaluation, with the routing and fallback mechanism ensuring continuous operation. The largest improvements occur in dimensions requiring nuanced understanding, confirming the value of validated LLM augmentation.
 
 \subsection{Memory-Aware Integration}
 
-\noindent We analyze the integrated system to assess whether the memory-aware orchestration---where adaptive control, state-conditioned selection, and reliability-constrained judging operate on shared interview memory---produces benefits beyond the sum of individual components.
+\noindent We analyze the integrated system to assess whether the memory-aware orchestration---where joint adaptive control/selection and reliability-constrained judging operate on shared interview memory---produces benefits beyond the sum of individual components.
 
 Table~\ref{tab:system_performance} presents overall system performance.
 
@@ -1238,7 +1285,7 @@ The 73.8\% state-triggered termination rate indicates that the controller's term
 
 \noindent \textit{TODO --- Cross-component mediation analysis: does selection relevance mediate the relationship between calibration accuracy and judging agreement? Planned analysis: bootstrapped mediation with interview-level metrics.}
 
-\noindent \textbf{Summary (Integration):} The integrated results demonstrate that the three core mechanisms operate coherently through shared interview memory. Current results primarily demonstrate individual component effectiveness; full end-to-end agent superiority over baselines requires the planned ablation experiments.
+\noindent \textbf{Summary (Integration):} The integrated results demonstrate that joint adaptive control/selection, session-level reporting, and hybrid judging operate coherently through shared interview memory. Current results primarily demonstrate component effectiveness; full end-to-end superiority over baselines requires the planned ablation experiments.
 
 %% ============================================================
 %%  SECTION 7: DISCUSSION
@@ -1254,12 +1301,11 @@ The 73.8\% state-triggered termination rate indicates that the controller's term
     \item \textbf{Persistent interview memory} (Section~\ref{sec:memory}): the system maintains structured memory across turns, encoding score trajectories, coverage state, missing concepts, and evaluator hints. All controller and selection decisions are conditioned on this memory.
     \item \textbf{Structured state representation} (Section~\ref{sec:state}): memory is compressed into a state tuple that conditions the controller's action selection.
     \item \textbf{Constrained action space}: the controller selects from $\{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$ using deterministic, auditable logic.
-    \item \textbf{State-aware adaptive control} (Section~\ref{sec:adaptive_control}): difficulty update and termination are conditioned on sliding-window performance aggregation from memory.
-    \item \textbf{State-conditioned question selection with LLM-as-planner} (Section~\ref{sec:selection}): the system invokes the LLM as a strategic topic planner, reasoning about which chapter to explore next based on the full interview state. The LLM suggestion is validated against the question bank and falls back to the priority cascade when unavailable.
+    \item \textbf{Joint adaptive policy} (Sections~\ref{sec:adaptive_control}--\ref{sec:selection}): difficulty update and termination use sliding-window performance aggregation from memory; question selection uses the same memory for multi-objective priorities, optional LLM-as-topic-planner validation, and $\eta_t$-augmented gap targeting.
     \item \textbf{Memory-aware follow-up generation}: follow-up questions are generated with full interview context (score history, trajectory, identified gaps), enabling misconception-aware probing that adapts to the candidate's performance arc.
     \item \textbf{Feedback-driven memory update}: evaluation outputs (scores, missing concepts, next-direction hints) are written back into memory, closing the observation--memory--policy--action loop.
     \item \textbf{Reliability-constrained hybrid judging} (Section~\ref{sec:hybrid_judging}): routing between rule-based and LLM judges with validation and automatic fallback.
-    \item \textbf{Multi-step agentic report generation} (Section~\ref{sec:tools}): report generation is an agentic pipeline with five sequential LLM analysis steps---narrative assessment, per-dimension deep analysis, knowledge gap root-cause analysis, personalized learning plan, and interview strategy trace---producing unique, substantive reports with full transparency into the adaptive system's decisions.
+    \item \textbf{Session-level multi-step report generation} (Section~\ref{sec:report_pipeline}): hierarchical decomposition of the full session (Table~\ref{tab:report_decomposition}) followed by five sequential analysis steps (Table~\ref{tab:report_steps}) with independent fallbacks.
     \item \textbf{Tool-augmented architecture} (Section~\ref{sec:tools}): specialized tools (resume parser, follow-up generator, speech/expression analyzers, report synthesizer, LLM topic planner) each with defined interfaces and fallback behavior.
 \end{itemize}
 
@@ -1276,11 +1322,13 @@ The 73.8\% state-triggered termination rate indicates that the controller's term
 
 \subsection{Addressing Research Questions}
 
-\noindent \textbf{RQ1 (Adaptive Control):} The state-aware controller demonstrates that memory-conditioned sliding-window calibration converges within 4--5 questions without IRT calibration (Section~\ref{sec:results_rq1}). The trend-aware update and budget-constrained termination operate on persistent state, enabling responsive yet stable difficulty tracking. The controller's effectiveness is robust to strategy choice (heuristic vs.\ target-score control), indicating that the value lies in the memory-conditioned control structure rather than in any specific update rule.
+\noindent \textbf{RQ1 (Joint adaptive policy):} Sections~\ref{sec:adaptive_control}--\ref{sec:selection} specify a coupled policy on shared memory. Empirically, memory-conditioned sliding-window calibration converges within 4--5 questions without IRT calibration, and selection exhibits balanced priority application (Section~\ref{sec:results_rq1}, \ref{sec:results_selection}). Strategy choice (heuristic vs.\ target-score) chiefly affects control dynamics; the evaluator-to-selection loop ($\eta_t$ augmenting $\mathcal{M}_t$) ties judging signals to the next topic.
 
-\noindent \textbf{RQ2 (State-Aware Selection):} The state-conditioned selection policy achieves balanced priority application (Section~\ref{sec:results_rq2}) through a priority cascade that adapts to the contents of interview memory. When memory contains many missing concepts, gap targeting dominates; when resume skills are well-covered, coverage-driven exploration increases. The evaluator-to-selection feedback loop ($\eta_t$ augmenting $\mathcal{M}_t$) demonstrates that memory-aware orchestration enables cross-component information flow.
+\noindent \textbf{RQ2 (Session-level report analysis):} The report pipeline hierarchically decomposes the session and runs five analysis passes over a shared compressed context (Tables~\ref{tab:report_decomposition}--\ref{tab:report_steps}), with step-wise fallbacks (Section~\ref{sec:results_report}). Faithfulness metrics await annotated evaluation.
 
-\noindent \textbf{RQ3 (Hybrid Judging):} The reliability-constrained hybrid judging framework demonstrates that routing + validation + fallback improves agreement with human evaluators over rule-only evaluation (Section~\ref{sec:results_rq3}), with the largest gains in dimensions requiring nuanced understanding. The automatic fallback mechanism ensures continuous operation, addressing the reliability requirements of high-stakes assessment.
+\noindent \textbf{RQ3 (Learner-centered outcomes):} Intended measures (usefulness, readiness/confidence, fairness, reuse) follow HCI practice \cite{conversate2024,virtual_interviewers2025}; Section~\ref{sec:results_user} holds placeholders until field data are available.
+
+\noindent \textbf{Hybrid judging (technical validation):} Routing + validation + fallback improves agreement with human evaluators over rule-only scoring (Section~\ref{sec:results_hybrid}), with automatic fallback preserving uptime.
 
 \subsection{Trade-off: LLM Autonomy vs.\ Reproducibility}
 
@@ -1292,7 +1340,7 @@ The 73.8\% state-triggered termination rate indicates that the controller's term
     \item \textbf{Fairness}: non-deterministic decision logic complicates fairness audits.
 \end{itemize}
 
-Our design deliberately constrains LLM usage to evaluation and follow-up generation (where nuance adds value) while keeping control logic (difficulty update, termination, selection priority) deterministic. This hybrid approach preserves the benefits of LLM sophistication for subjective tasks while maintaining the reproducibility required for high-stakes assessment.
+Our design deliberately constrains LLM usage to evaluation, follow-up generation, optional topic planning, and session-level report steps (where nuance adds value) while keeping core control logic (difficulty update, termination, selection priority cascade) deterministic. This hybrid approach preserves the benefits of LLM sophistication for subjective tasks while maintaining the reproducibility required for high-stakes assessment.
 
 \subsection{Limitations}
 
@@ -1305,7 +1353,7 @@ Our design deliberately constrains LLM usage to evaluation and follow-up generat
     \item \textbf{Not a free-form autonomous agent}: the system does not perform unconstrained reasoning, tool discovery, or goal decomposition. It is an agentic orchestration framework with structured control logic.
     \item \textbf{LLM dependency}: LLM enhancement requires API access; despite fallback mechanisms, rule-only evaluation has lower agreement on subjective dimensions.
     \item \textbf{Parameter sensitivity}: thresholds (0.85, 0.4, 0.15 for termination; 70\% for matching) are heuristics. Sensitivity analysis is provided (Section~\ref{sec:results_rq1}) but pre-registration or validation-set tuning was not performed.
-    \item \textbf{Illustrative results}: numeric values are computed from synthetic data and are illustrative until recomputed from real participant data (see \texttt{reproduce\_results/}).
+    \item \textbf{Illustrative results}: numeric values are computed from synthetic data and are illustrative until recomputed from real participant data (see \texttt{reproduce\_results/}); learner-centered outcome tables are explicitly pending (Section~\ref{sec:results_user}).
     \item \textbf{Speech/expression signals}: auxiliary modalities (speech rate, facial expression) are treated as supplementary and not used for scoring decisions. Cross-accent, cross-device fairness analysis is needed before any scoring integration.
 \end{itemize}
 
@@ -1341,11 +1389,11 @@ Our design deliberately constrains LLM usage to evaluation and follow-up generat
 \section{Conclusion}
 \label{sec:conclusion}
 
-\noindent Technical interviews are a high-stakes gatekeeper in software hiring, yet most AI-powered systems replicate the same failures at scale: one-size-fits-all difficulty, context-blind question sequences, and evaluation that is either shallow or unreliable. We argued that adaptive interviewing is fundamentally a sequential decision problem and presented a memory-aware, tool-augmented agentic interview framework that addresses three core design gaps through a closed-loop observation--memory--policy--action process.
+\noindent Technical interviews are a high-stakes gatekeeper in software hiring, yet most AI-powered systems replicate the same failures at scale: one-size-fits-all difficulty, context-blind question sequences, and evaluation that is either shallow or unreliable. We argued that adaptive interviewing is fundamentally a sequential decision problem and presented a memory-aware, tool-augmented agentic interview framework that addresses core design gaps through a closed-loop observation--memory--policy--action process.
 
-\noindent \textbf{Summary of contributions.} For RQ1, we specified a state-aware adaptive controller with sliding-window calibration that converges within 4--5 questions by conditioning difficulty updates on persistent interview memory. For RQ2, we formalized a state-conditioned multi-objective selection policy that unifies gap targeting, resume priors, coverage, and evaluator feedback through a priority cascade over shared memory state. For RQ3, we defined a reliability-constrained hybrid judging framework with routing, validation, automatic fallback, and optional multi-judge aggregation. The framework operates through a tool-augmented architecture where specialized modules are invoked by a structured controller, each with graceful degradation.
+\noindent \textbf{Summary of contributions.} \textbf{C1:} We specified the agentic loop with persistent memory and tool routing. \textbf{C2:} We formalized a joint adaptive policy coupling difficulty/termination with state-conditioned selection (including $\eta_t$ and LLM-as-topic-planner fallbacks) on shared memory. \textbf{C3:} We described session-level report analysis via trace decomposition and five sequential LLM steps with independent fallbacks. \textbf{C4:} We foreground learner-centered evaluation (Section~\ref{sec:results_user}) alongside technical validation of hybrid judging (Section~\ref{sec:results_hybrid}). The online judge is a supporting module, not a standalone headline contribution.
 
-\noindent \textbf{Claim boundary.} We describe the system as a domain-specific, memory-aware, tool-augmented adaptive interviewer with structured control logic and constrained LLM usage. It is not a fully autonomous general-purpose LLM agent. The action space is fixed, the control policy is deterministic, and LLM components operate under validation and fallback constraints. Current results primarily demonstrate individual component effectiveness; full end-to-end evaluation against baselines is in progress.
+\noindent \textbf{Claim boundary.} We describe the system as a domain-specific, memory-aware, tool-augmented adaptive interviewer with structured control logic and constrained LLM usage. It is not a fully autonomous general-purpose LLM agent. The action space is fixed, core control and priority logic are deterministic, and LLM components operate under validation and fallback constraints. Many numeric results are illustrative (synthetic reproduction); learner-outcome claims await field data.
 
 \noindent \textbf{Broader impact.} The agentic formulation---observation, memory, state, controller, tool router, feedback loop---provides a principled architecture for adaptive assessment that can be extended beyond technical interviews to educational assessment, certification, and skill evaluation. The design demonstrates that agentic principles can be applied to high-stakes domains while preserving the reproducibility, auditability, and reliability that such domains require.
 

@@ -8,6 +8,7 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from wideseek_data_utils import load_eval_policy_df
 
 
 @dataclass
@@ -20,10 +21,7 @@ class EvalSampleRow:
 
 
 def build_eval_samples(data_dir: Path) -> List[EvalSampleRow]:
-    path = data_dir / "eval_policy_trajectory.csv"
-    if not path.exists():
-        return []
-    df = pd.read_csv(path)
+    df = load_eval_policy_df(data_dir)
     if df.empty:
         return []
 
@@ -44,12 +42,20 @@ def build_eval_samples(data_dir: Path) -> List[EvalSampleRow]:
             1.0,
             1.0,
         ]
+        reward_raw = row.get("reward", 0.0)
+        reward = float(reward_raw) if str(reward_raw).strip() not in {"", "nan"} else None
+        if reward is None:
+            quality = float(row.get("overall_score", 0.0) or 0.0)
+            est_cost = float(row.get("estimated_cost", 0.0) or 0.0)
+            latency = float(row.get("latency_ms", 0.0) or 0.0)
+            instability = float(row.get("instability", 0.0) or 0.0)
+            reward = quality - 0.15 * est_cost - 0.10 * min(max(latency / 3500.0, 0.0), 1.0) - 0.08 * min(max(instability, 0.0), 1.0)
         rows.append(
             EvalSampleRow(
                 session_id=int(row.get("session_id", 0)),
                 round_number=int(row.get("round", 1)),
                 action=action,
-                reward=float(row.get("reward", 0.0) or 0.0),
+                reward=float(reward),
                 features=features,
             )
         )

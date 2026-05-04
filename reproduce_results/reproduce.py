@@ -40,14 +40,23 @@ def main():
 
     # Run modules
     modules = [
+        ("calc_training_snapshot", "tab_training_snapshot.csv"),
         ("calc_calibration", "tab_calibration.csv"),
         ("calc_selection", "tab_selection.csv"),
         ("calc_bandit_policy", "tab_bandit_policy.csv"),
         ("calc_eval_policy", "tab_eval_policy.csv"),
+        ("calc_eval_policy_ablation", "tab_eval_policy_ablation.csv"),
+        ("calc_width_policy", "tab_width_policy.csv"),
+        ("calc_subtask_policy", "tab_subtask_policy.csv"),
+        ("calc_wideseek_baseline", "tab_wideseek_baseline.csv"),
         ("calc_evaluation", "tab_evaluation.csv"),
         ("calc_system_performance", "tab_system_performance.csv"),
         ("calc_interview_outcomes", "tab_interview_outcomes.csv"),
         ("calc_joint_ablation", "tab_joint_ablation.csv"),
+        ("calc_joint_reward_sweep", "tab_joint_reward_sweep.csv"),
+        ("calc_canary_abtest", "tab_canary_abtest.csv"),
+        ("calc_go_nogo", "tab_go_nogo.csv"),
+        ("calc_best_report", "tab_best_config.csv"),
     ]
 
     for mod_name, out_file in modules:

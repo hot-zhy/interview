@@ -1,0 +1,16 @@
+{
+  "rows": 1906,
+  "sessions": 300,
+  "rows_by_split": {
+    "test": 299,
+    "train": 1415,
+    "val": 192
+  },
+  "sessions_by_split": {
+    "test": 46,
+    "train": 222,
+    "val": 32
+  },
+  "seed": 42,
+  "snapshot_file": "snapshot_eval_policy_trajectory.csv"
+}

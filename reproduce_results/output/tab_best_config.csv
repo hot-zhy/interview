@@ -1,0 +1,2 @@
+Decision,Recommended Stage,Failure Reason,Best Alpha,Best Beta,Best Gamma,Top1 Width Match (%),Avg Width,Subtask Diversity,Quality Delta (%),Cost Delta (%),P95 Latency Delta (%),Fallback Delta (%),Snapshot Rows
+GO,10%,all_passed,0.05,0.05,0.05,1.8,2.08,3,22.415,-12.195,0.0,0.0,1906

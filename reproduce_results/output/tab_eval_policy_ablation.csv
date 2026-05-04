@@ -1,0 +1,5 @@
+Ablation,Dropped,Train Samples,Eval Samples,Avg Reward,Avg Regret,Top1 Action Match (%)
+all_features,none,1415,491,0.57465,0.04868,17.92
+drop_latency_proxies,"llm_calls_used,multi_judge_used",1415,491,0.57465,0.01272,71.69
+drop_answer_shape,"answer_length,missing_points_count",1415,491,0.57465,0.05029,12.22
+drop_history,"recent_avg_score,fallback_count",1415,491,0.57465,0.05248,30.14

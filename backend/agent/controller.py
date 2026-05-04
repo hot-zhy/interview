@@ -24,6 +24,11 @@ from backend.agent.models import (
     InterviewState,
     Observation,
 )
+from backend.agent.subtask_planner import (
+    annotate_result_with_subtasks,
+    build_eval_subtasks,
+    summarize_subtask_plan,
+)
 from backend.agent.state_builder import StateBuilder
 from backend.agent.tools import ResumeParserTool
 from backend.agent.trace import TraceCollector
@@ -96,6 +101,7 @@ class AgentController:
 
         # 2. Evaluate (via judge router)
         routing_state = {
+            "session_id": self.session.id,
             "round_idx": turn_number,
             "total_rounds": self.session.total_rounds or 10,
             "recent_avg_score": sum(self.memory.score_history[-3:]) / max(1, len(self.memory.score_history[-3:])),
@@ -104,12 +110,20 @@ class AgentController:
             "llm_calls_used": len([p for p in self.memory.provenance_log if "llm" in str(p) or "hybrid" in str(p)]),
             "multi_judge_used": len([e for e in self.memory.turn_evaluations if e.get("policy_meta", {}).get("action") == "llm_multi"]),
         }
+        subtask_plan = summarize_subtask_plan(
+            build_eval_subtasks(
+                question=asked_question.question_text,
+                user_answer=answer_text,
+            )
+        )
+        routing_state["subtask_plan"] = subtask_plan
         eval_result, tool_records = self.judge_router.evaluate(
             question=asked_question.question_text,
             correct_answer=asked_question.correct_answer_text,
             user_answer=answer_text,
             routing_state=routing_state,
         )
+        annotate_result_with_subtasks(eval_result, subtask_plan)
         self.tracer.record_evaluation(eval_result)
         self.tracer.record_tools(tool_records)
 

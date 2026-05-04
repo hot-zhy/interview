@@ -1,0 +1,5 @@
+Stage,Treatment Samples,Control Samples,Quality Delta (%),Cost Delta (%),P95 Latency Delta (%),Fallback Delta (%)
+10%,206,1700,22.415,-12.195,0.0,0.0
+30%,591,1315,19.825,-1.45,0.0,0.0
+50%,977,929,18.7,-1.096,0.0,0.0
+100%,1906,0,0.0,0.0,0.0,0.0

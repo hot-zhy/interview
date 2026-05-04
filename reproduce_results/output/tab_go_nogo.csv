@@ -1,0 +1,2 @@
+Gate,Decision,Recommended Stage,Quality Gate (>=3%),Cost Gate (<=10%),Latency Gate (<=15%),Stability Gate (fallback<=0%),Reason
+go_nogo,GO,10%,True,True,True,True,all_passed

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     zhipuai_model: str = "glm-4-flash"
     llm_use_cot: bool = False  # whether to enable CoT-style reasoning in evaluator prompt
     llm_multi_judge_count: int = 1  # 1 means single judge; >1 enables multi-judge aggregation
+    llm_multi_judge_parallel_enabled: bool = True
+    llm_multi_judge_max_parallel: int = 4
+    llm_multi_judge_timeout_sec: float = 25.0
+    llm_multi_judge_fail_open_min_results: int = 1
     
     # App Settings
     app_name: str = "AI Interview System"
@@ -81,8 +85,8 @@ class Settings(BaseSettings):
     rl_cost_llm_penalty: float = 0.05
     rl_cost_followup_penalty: float = 0.03
     # Agentic-RL (evaluation-routing module) defaults
-    enable_eval_policy_agent: bool = False
-    eval_policy_strategy: str = "heuristic"  # "heuristic" | "contextual_bandit"
+    enable_eval_policy_agent: bool = True
+    eval_policy_strategy: str = "contextual_bandit"  # "heuristic" | "contextual_bandit"
     eval_policy_artifact_path: str = "reproduce_results/output/contextual_eval_policy.json"
     eval_policy_alpha: float = 0.25
     eval_policy_max_llm_calls_per_session: int = 8
@@ -94,6 +98,16 @@ class Settings(BaseSettings):
     eval_cost_llm_penalty: float = 0.03
     eval_cost_multi_judge_penalty: float = 0.07
     eval_cost_followup_penalty: float = 0.02
+    eval_reward_latency_weight: float = 0.10
+    eval_reward_instability_weight: float = 0.10
+    eval_latency_budget_ms: float = 3500.0
+    eval_instability_reference: float = 0.25
+
+    # Joint reward weighting for offline sweeps.
+    joint_reward_quality_weight: float = 1.0
+    joint_reward_cost_alpha: float = 0.15
+    joint_reward_latency_beta: float = 0.10
+    joint_reward_instability_gamma: float = 0.08
     
     # 面试结束与轮次
     min_rounds_ratio: float = 0.5   # 最少轮次 = total_rounds * min_rounds_ratio
@@ -101,12 +115,22 @@ class Settings(BaseSettings):
     max_rounds_cap: int = 20        # 轮次绝对上限
 
     # Agentic framework feature flags (all default OFF to preserve legacy behaviour)
-    enable_agent_controller: bool = False
+    enable_agent_controller: bool = True
     enable_memory_state: bool = False
-    enable_tool_routing: bool = False
-    enable_multi_judge: bool = False
-    enable_followup_planner: bool = False
-    enable_agent_tracing: bool = False
+    enable_tool_routing: bool = True
+    enable_multi_judge: bool = True
+    enable_followup_planner: bool = True
+    enable_agent_tracing: bool = True
+
+    # WideSeek-style rollout & guardrails
+    enable_wide_subtask_planner: bool = True
+    wide_subtask_max_workers: int = 3
+    rollout_variant: str = "wideseek_w2"  # control | wideseek_w2 | wideseek_w4 | wideseek_w8
+    rollout_percent: int = 100
+    rollout_hash_salt: str = "wideseek-r1-rollout"
+    guardrail_max_llm_calls_per_session: int = 10
+    guardrail_max_multi_judge_per_session: int = 4
+    guardrail_max_fallback_rate: float = 0.5
     
     class Config:
         env_file = ".env"
