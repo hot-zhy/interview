@@ -116,6 +116,46 @@ def _inject_interview_styles():
             color: #155e75;
             max-width: 92%;
         }
+        .analysis-steps {
+            display: grid;
+            gap: 7px;
+            margin-top: 2px;
+        }
+        .analysis-step {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+        }
+        .analysis-dot {
+            align-items: center;
+            background: #cbd5e1;
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            flex: 0 0 18px;
+            font-size: 0.72rem;
+            height: 18px;
+            justify-content: center;
+            width: 18px;
+        }
+        .analysis-step.done .analysis-dot {
+            background: #0f766e;
+        }
+        .analysis-step.active .analysis-dot {
+            animation: pulseDot 1s ease-in-out infinite;
+            background: #4f46e5;
+        }
+        .analysis-step.pending {
+            color: #64748b;
+        }
+        .analysis-title {
+            font-weight: 750;
+            margin-bottom: 7px;
+        }
+        @keyframes pulseDot {
+            0%, 100% { opacity: 0.55; transform: scale(0.92); }
+            50% { opacity: 1; transform: scale(1); }
+        }
         .followup-chip {
             display: inline-flex;
             align-items: center;
@@ -175,30 +215,100 @@ def _candidate_html(content: str) -> str:
     )
 
 
+def _system_html(title: str, content: str) -> str:
+    return (
+        f'<div class="chat-role">{html.escape(title)}</div>'
+        f'<div class="chat-bubble system">{_safe_lines(content)}</div>'
+    )
+
+
 def _get_chat_notes(session_id: int):
     notes = st.session_state.setdefault("_interview_chat_notes", {})
     return notes.setdefault(str(session_id), [])
 
 
-def _remember_chat_note(session_id: int, token: str, title: str, content: str):
+def _remember_chat_note(
+    session_id: int,
+    token: str,
+    title: str,
+    content: str,
+    anchor_candidate_idx: int,
+):
     notes = _get_chat_notes(session_id)
     if any(note.get("token") == token for note in notes):
         return
-    notes.append({"token": token, "title": title, "content": content})
+    notes.append(
+        {
+            "token": token,
+            "title": title,
+            "content": content,
+            "anchor_candidate_idx": anchor_candidate_idx,
+        }
+    )
 
 
 def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""):
+    notes_by_anchor = {}
+    unanchored_notes = []
+    for note in _get_chat_notes(session_id):
+        anchor = note.get("anchor_candidate_idx")
+        if isinstance(anchor, int) and anchor > 0:
+            notes_by_anchor.setdefault(anchor, []).append(note)
+        else:
+            unanchored_notes.append(note)
+
+    candidate_idx = 0
     for turn in turns:
         if turn["role"] == "candidate":
             _bubble("你", turn["content"], "candidate", align_right=True)
+            candidate_idx += 1
+            for note in notes_by_anchor.get(candidate_idx, []):
+                _bubble(note.get("title", "系统"), note.get("content", ""), "system")
         else:
             _bubble(t("interview.interviewer"), turn["content"], "interviewer")
 
     if optimistic_candidate:
         st.markdown(_candidate_html(optimistic_candidate), unsafe_allow_html=True)
+        candidate_idx += 1
+        for note in notes_by_anchor.get(candidate_idx, []):
+            _bubble(note.get("title", "系统"), note.get("content", ""), "system")
 
-    for note in _get_chat_notes(session_id):
+    for note in unanchored_notes:
         _bubble(note.get("title", "系统"), note.get("content", ""), "system")
+
+
+def _analysis_progress_html(candidate_text: str, active_step: int = 1) -> str:
+    steps = [
+        "收到回答并写入本轮记录",
+        "评估语义匹配、关键点覆盖和表达清晰度",
+        "判断是否需要追问或切换题目",
+        "整理面试官评价并生成下一轮问题",
+    ]
+    rows = []
+    for idx, label in enumerate(steps, start=1):
+        if idx < active_step:
+            state = "done"
+            marker = "✓"
+        elif idx == active_step:
+            state = "active"
+            marker = "…"
+        else:
+            state = "pending"
+            marker = str(idx)
+        rows.append(
+            f'<div class="analysis-step {state}">'
+            f'<span class="analysis-dot">{marker}</span>'
+            f'<span>{html.escape(label)}</span>'
+            f'</div>'
+        )
+    processing = (
+        '<div class="chat-role">面试官 · AI 分析中</div>'
+        '<div class="chat-bubble system">'
+        '<div class="analysis-title">我正在分析你的回答，请稍等。</div>'
+        f'<div class="analysis-steps">{"".join(rows)}</div>'
+        '</div>'
+    )
+    return _candidate_html(candidate_text) + processing
 
 
 def _scroll_chat_to_bottom():
@@ -248,14 +358,23 @@ def _build_eval_summary(result: dict) -> str:
     return "\n".join(lines)
 
 
-def _build_decision_summary(result: dict) -> str:
+def _build_analysis_summary(result: dict) -> str:
     if "evaluation" not in result:
         return ""
     action = "继续追问" if result.get("followup") else "进入下一题"
     reason = (result.get("followup_reason") or "").strip()
+    eval_summary = _build_eval_summary(result)
+
+    lines = [
+        "流程：已完成回答记录、语义评估、关键点检查和下一步决策。",
+    ]
+    if eval_summary:
+        lines.append(eval_summary)
     if reason:
-        return f"我已经完成本轮评估，下一步：{action}。\n原因：{reason}"
-    return f"我已经完成本轮评估，下一步：{action}。"
+        lines.append(f"下一步：{action}。原因：{reason}")
+    else:
+        lines.append(f"下一步：{action}。")
+    return "\n\n".join(lines)
 
 
 def _collect_expression_payload():
@@ -269,44 +388,62 @@ def _submit_and_update(
     answer: Optional[str],
     answer_type: str,
     token: str,
+    anchor_candidate_idx: int,
+    live_placeholder,
+    display_answer: str,
     audio_data: Optional[dict] = None,
 ):
-    with st.status("正在分析回答...", expanded=True) as status:
-        st.write("已收到回答，正在保存到面试记录。")
-        expr_data = _collect_expression_payload()
-        st.write("正在评估关键点覆盖、表达清晰度和追问必要性。")
-        result = submit_answer(
-            db,
+    live_placeholder.markdown(
+        _analysis_progress_html(display_answer, active_step=2),
+        unsafe_allow_html=True,
+    )
+    expr_data = _collect_expression_payload()
+    result = submit_answer(
+        db,
+        session_id,
+        answer_text=answer,
+        answer_type=answer_type,
+        audio_data=audio_data,
+        expression_data=expr_data,
+    )
+
+    if "error" in result:
+        live_placeholder.markdown(
+            _candidate_html(display_answer)
+            + _system_html(
+                "面试官 · 分析失败",
+                "分析过程中遇到异常，请再提交一次，我会继续当前问题。",
+            ),
+            unsafe_allow_html=True,
+        )
+        st.session_state["_pending_candidate_message"] = {}
+        st.error(result["error"])
+        return
+
+    analysis_summary = _build_analysis_summary(result)
+    if analysis_summary:
+        _remember_chat_note(
             session_id,
-            answer_text=answer,
-            answer_type=answer_type,
-            audio_data=audio_data,
-            expression_data=expr_data,
+            f"{token}:analysis",
+            "面试官 · AI 分析与评价",
+            analysis_summary,
+            anchor_candidate_idx,
         )
 
-        if "error" in result:
-            status.update(label="提交失败", state="error", expanded=True)
-            st.session_state["_pending_candidate_message"] = {}
-            st.error(result["error"])
-            return
+    live_placeholder.markdown(
+        _candidate_html(display_answer)
+        + _system_html("面试官 · AI 分析与评价", analysis_summary),
+        unsafe_allow_html=True,
+    )
 
-        st.write("正在整理反馈和下一轮问题。")
-        eval_summary = _build_eval_summary(result)
-        decision_summary = _build_decision_summary(result)
-        if eval_summary:
-            _remember_chat_note(session_id, f"{token}:eval", "评估结果", eval_summary)
-        if decision_summary:
-            _remember_chat_note(session_id, f"{token}:decision", "面试官判断", decision_summary)
-
-        ev = result.get("evaluation", {})
-        if ev:
-            st.session_state["_last_eval"] = ev
-        st.session_state["_pending_candidate_message"] = {}
-        st.session_state["_last_was_followup"] = bool(result.get("followup"))
-        st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
-        clear_accumulated_expressions()
-        st.session_state.avatar_state = "idle"
-        status.update(label="分析完成", state="complete", expanded=False)
+    ev = result.get("evaluation", {})
+    if ev:
+        st.session_state["_last_eval"] = ev
+    st.session_state["_pending_candidate_message"] = {}
+    st.session_state["_last_was_followup"] = bool(result.get("followup"))
+    st.session_state["_last_followup_reason"] = result.get("followup_reason", "")
+    clear_accumulated_expressions()
+    st.session_state.avatar_state = "idle"
     st.rerun()
 
 
@@ -429,6 +566,7 @@ def main():
 
     turns = get_session_turns(db, session_id)
     candidate_turns = [turn for turn in turns if turn.get("role") == "candidate"]
+    candidate_count = len(candidate_turns)
     pending_candidate_state = st.session_state.get("_pending_candidate_message", {})
     optimistic_candidate = ""
     if pending_candidate_state.get("session_id") == session_id:
@@ -468,6 +606,7 @@ def main():
         chat_container = st.container(height=460, border=True)
         with chat_container:
             _render_chat_timeline(turns, session_id, optimistic_candidate=optimistic_candidate)
+            live_processing_placeholder = st.empty()
             _scroll_chat_to_bottom()
 
         if st.session_state.get("_last_was_followup"):
@@ -518,7 +657,20 @@ def main():
                         f"r{session.current_round}:text:"
                         f"{hashlib.sha256(answer_clean.encode('utf-8')).hexdigest()[:10]}"
                     )
-                    _submit_and_update(db, session_id, answer_clean, "text", token)
+                    live_processing_placeholder.markdown(
+                        _analysis_progress_html(answer_clean, active_step=1),
+                        unsafe_allow_html=True,
+                    )
+                    _submit_and_update(
+                        db,
+                        session_id,
+                        answer_clean,
+                        "text",
+                        token,
+                        candidate_count + 1,
+                        live_processing_placeholder,
+                        answer_clean,
+                    )
         else:
             st.caption(t("interview.audio_tip"))
             wav_audio_data = st_audiorec()
@@ -546,12 +698,19 @@ def main():
                         }
                         token = f"r{session.current_round}:audio:{audio_hash[:10]}"
                         st.session_state["_audio_submitted_round"] = session.current_round
+                        live_processing_placeholder.markdown(
+                            _analysis_progress_html(pending_text, active_step=1),
+                            unsafe_allow_html=True,
+                        )
                         _submit_and_update(
                             db,
                             session_id,
                             None,
                             "audio",
                             token,
+                            candidate_count + 1,
+                            live_processing_placeholder,
+                            pending_text,
                             audio_data=audio_data,
                         )
             st.session_state.avatar_state = "listening"
