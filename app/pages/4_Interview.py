@@ -311,6 +311,17 @@ def _analysis_progress_html(candidate_text: str, active_step: int = 1) -> str:
     return _candidate_html(candidate_text) + processing
 
 
+def _build_persistent_analysis_flow(result: dict) -> str:
+    action = "继续追问" if result.get("followup") else "进入下一题"
+    steps = [
+        "已收到回答并写入本轮面试记录。",
+        "已完成语义匹配、关键点覆盖和表达清晰度评估。",
+        "已根据评分、缺失点和上下文判断是否需要追问。",
+        f"已整理面试官评价，并决定下一步：{action}。",
+    ]
+    return "AI 分析流程：\n" + "\n".join(f"✓ {step}" for step in steps)
+
+
 def _scroll_chat_to_bottom():
     st_components.html(
         """
@@ -421,6 +432,13 @@ def _submit_and_update(
         return
 
     analysis_summary = _build_analysis_summary(result)
+    _remember_chat_note(
+        session_id,
+        f"{token}:flow",
+        "面试官 · AI 分析流程",
+        _build_persistent_analysis_flow(result),
+        anchor_candidate_idx,
+    )
     if analysis_summary:
         _remember_chat_note(
             session_id,
@@ -432,6 +450,7 @@ def _submit_and_update(
 
     live_placeholder.markdown(
         _candidate_html(display_answer)
+        + _system_html("面试官 · AI 分析流程", _build_persistent_analysis_flow(result))
         + _system_html("面试官 · AI 分析与评价", analysis_summary),
         unsafe_allow_html=True,
     )
