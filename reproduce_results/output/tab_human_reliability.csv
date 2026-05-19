@@ -1,0 +1,7 @@
+Dimension,Human Ratings,Responses,Raters,"ICC(1,k)",Human SD
+correctness,260,130,2,0.889,0.184
+depth,260,130,2,0.707,0.105
+clarity,260,130,2,0.792,0.137
+practicality,260,130,2,0.833,0.142
+tradeoffs,260,130,2,0.707,0.119
+overall_score,260,130,2,0.773,0.125

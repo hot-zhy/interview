@@ -1,0 +1,9 @@
+Group Type,Group,Sessions,Avg System Score,Avg Satisfaction,Avg Duration Min,Completion Rate (%)
+ability_bucket,Low,33,0.652,4.394,61.1,90.9
+ability_bucket,Medium,47,0.640,4.085,61.7,95.7
+ability_bucket,Unknown,64,0.706,NA,60.8,90.6
+track,JVM & Performance,17,0.701,4.250,63.5,88.2
+track,Java Backend,45,0.665,4.250,60.6,97.8
+track,Java Concurrency,40,0.679,4.318,59.9,87.5
+track,Spring & Microservices,42,0.663,4.077,62.1,92.9
+resume_available,1,144,0.672,4.213,61.2,92.4

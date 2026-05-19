@@ -114,6 +114,61 @@ def main():
             lines.append(f"% {m}: {v} (CI: {ci})")
         lines.append("")
 
+    # Score validity
+    rows = read_csv(out_dir / "tab_score_validity.csv")
+    if rows:
+        lines.append("% --- tab_score_validity ---")
+        lines.append("\\begin{tabular}{lrrrrrr}")
+        lines.append("\\toprule")
+        lines.append("\\textbf{Dimension} & \\textbf{N} & \\textbf{MAE} & \\textbf{RMSE} & \\textbf{Pearson} & \\textbf{Spearman} & \\textbf{Within@0.20 (\\%)} \\\\")
+        lines.append("\\midrule")
+        for r in rows:
+            lines.append(
+                f"{r.get('Dimension', '')} & {r.get('Overlap N', '---')} & "
+                f"{r.get('MAE', '---')} & {r.get('RMSE', '---')} & "
+                f"{r.get('Pearson r', '---')} & {r.get('Spearman rho', '---')} & "
+                f"{r.get('Within@0.20 (%)', '---')} \\\\"
+            )
+        lines.append("\\bottomrule")
+        lines.append("\\end{tabular}")
+        lines.append("")
+
+    # Human reliability
+    rows = read_csv(out_dir / "tab_human_reliability.csv")
+    if rows:
+        lines.append("% --- tab_human_reliability ---")
+        lines.append("\\begin{tabular}{lrrrr}")
+        lines.append("\\toprule")
+        lines.append("\\textbf{Dimension} & \\textbf{Ratings} & \\textbf{Responses} & \\textbf{Raters} & \\textbf{ICC(1,k)} \\\\")
+        lines.append("\\midrule")
+        for r in rows:
+            lines.append(
+                f"{r.get('Dimension', '')} & {r.get('Human Ratings', '---')} & "
+                f"{r.get('Responses', '---')} & {r.get('Raters', '---')} & "
+                f"{r.get('ICC(1,k)', '---')} \\\\"
+            )
+        lines.append("\\bottomrule")
+        lines.append("\\end{tabular}")
+        lines.append("")
+
+    # Scoring bias
+    rows = read_csv(out_dir / "tab_scoring_bias.csv")
+    if rows:
+        lines.append("% --- tab_scoring_bias ---")
+        lines.append("\\begin{tabular}{lrrrrr}")
+        lines.append("\\toprule")
+        lines.append("\\textbf{Dimension} & \\textbf{System Mean} & \\textbf{Human Mean} & \\textbf{MSE} & \\textbf{Over-score (\\%)} & \\textbf{Under-score (\\%)} \\\\")
+        lines.append("\\midrule")
+        for r in rows:
+            lines.append(
+                f"{r.get('Dimension', '')} & {r.get('System Mean', '---')} & "
+                f"{r.get('Human Mean', '---')} & {r.get('Mean Signed Error', '---')} & "
+                f"{r.get('Over-Score Rate (%)', '---')} & {r.get('Under-Score Rate (%)', '---')} \\\\"
+            )
+        lines.append("\\bottomrule")
+        lines.append("\\end{tabular}")
+        lines.append("")
+
     # Interview outcomes
     rows = read_csv(out_dir / "tab_interview_outcomes.csv")
     if rows:

@@ -26,10 +26,12 @@ from backend.agent.models import (
 from backend.agent.memory import MemoryManager
 from backend.agent.state_builder import StateBuilder
 from backend.agent.guardrails import evaluate_guardrails
-from backend.agent.eval_policy import EvalRewardSignal, compute_eval_reward
+from backend.agent.eval_policy import EvalRewardSignal, EvalRoutingAction, compute_eval_reward
+from backend.agent.judge_router import JudgeRouter
 from backend.agent.subtask_planner import build_eval_subtasks, summarize_subtask_plan
 from backend.agent.tools import ValidatorTool
 from backend.agent.trace import TraceCollector
+from backend.agent.termination_policy import TerminationAction, TerminationPolicyState, choose_termination_action
 
 
 # ---------------------------------------------------------------------------
@@ -246,3 +248,89 @@ class TestWideSeekExtensions:
             )
         )
         assert r_slow < r_fast
+
+    def test_adaptive_multi_judge_expands_for_hard_answers(self, monkeypatch):
+        from backend.core.config import settings
+
+        monkeypatch.setattr(settings, "adaptive_multi_judge_width_enabled", True)
+        monkeypatch.setattr(settings, "adaptive_multi_judge_max_width", 4)
+        monkeypatch.setattr(settings, "llm_multi_judge_max_parallel", 4)
+
+        router = JudgeRouter()
+        state = router._build_policy_state(
+            user_answer="A" * 320,
+            routing_state={
+                "recent_avg_score": 0.45,
+                "missing_points_count": 3,
+                "fallback_count": 1,
+            },
+        )
+        width, reason = router._pick_judge_count(
+            action=EvalRoutingAction.LLM_MULTI,
+            state=state,
+            rollout_variant="wideseek_w2",
+        )
+        assert width >= 3
+        assert reason in {"hard_answer_high_risk", "hard_answer_medium_risk"}
+
+    def test_adaptive_multi_judge_keeps_fast_path_for_easy_answers(self, monkeypatch):
+        from backend.core.config import settings
+
+        monkeypatch.setattr(settings, "adaptive_multi_judge_width_enabled", True)
+        monkeypatch.setattr(settings, "adaptive_multi_judge_min_width", 2)
+        monkeypatch.setattr(settings, "llm_multi_judge_max_parallel", 4)
+
+        router = JudgeRouter()
+        state = router._build_policy_state(
+            user_answer="简短回答",
+            routing_state={
+                "recent_avg_score": 0.86,
+                "missing_points_count": 0,
+                "fallback_count": 0,
+            },
+        )
+        width, reason = router._pick_judge_count(
+            action=EvalRoutingAction.LLM_MULTI,
+            state=state,
+            rollout_variant="wideseek_w2",
+        )
+        assert width == 2
+        assert reason == "easy_answer_fast_path"
+
+    def test_termination_policy_heuristic_terminates_when_excellent(self, monkeypatch):
+        from backend.core.config import settings
+
+        monkeypatch.setattr(settings, "termination_policy_strategy", "heuristic")
+        state = TerminationPolicyState(
+            round_idx=6,
+            total_rounds=8,
+            avg_score=0.90,
+            recent_avg_score=0.89,
+            std_dev=0.08,
+            difficulty_range=2,
+            chapter_coverage=3,
+            fallback_count=0,
+            recent_improvement=0.02,
+        )
+        action, reason = choose_termination_action(state)
+        assert action == TerminationAction.TERMINATE
+        assert reason.startswith("heuristic:")
+
+    def test_termination_policy_heuristic_continues_when_insufficient_signal(self, monkeypatch):
+        from backend.core.config import settings
+
+        monkeypatch.setattr(settings, "termination_policy_strategy", "heuristic")
+        state = TerminationPolicyState(
+            round_idx=4,
+            total_rounds=10,
+            avg_score=0.62,
+            recent_avg_score=0.60,
+            std_dev=0.20,
+            difficulty_range=1,
+            chapter_coverage=2,
+            fallback_count=0,
+            recent_improvement=0.01,
+        )
+        action, reason = choose_termination_action(state)
+        assert action == TerminationAction.CONTINUE
+        assert reason.startswith("heuristic:")

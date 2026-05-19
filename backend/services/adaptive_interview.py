@@ -10,6 +10,11 @@ from sqlalchemy import func
 from backend.db.models import (
     InterviewSession, AskedQuestion, Evaluation, QuestionBank
 )
+from backend.agent.termination_policy import (
+    TerminationAction,
+    TerminationPolicyState,
+    choose_termination_action,
+)
 from backend.core.config import settings
 
 try:
@@ -134,19 +139,38 @@ class AdaptiveInterviewEngine:
         chapters = set(aq.topic for aq in asked_questions if aq.topic)
         chapter_coverage = len(chapters)
         
-        # 5. 提前结束条件
-        # 5a. 表现优秀且稳定
+        # 5. 策略化结束决策（支持 heuristic/contextual_bandit）
+        if bool(getattr(settings, "enable_termination_policy_agent", False)):
+            recent_improvement = scores[-1] - scores[-2] if len(scores) >= 2 else 0.0
+            termination_state = TerminationPolicyState(
+                round_idx=int(current),
+                total_rounds=max(1, int(self.user_total_rounds)),
+                avg_score=float(avg_score),
+                recent_avg_score=float(recent_avg),
+                std_dev=float(std_dev),
+                difficulty_range=int(difficulty_range),
+                chapter_coverage=int(chapter_coverage),
+                fallback_count=0,
+                recent_improvement=float(recent_improvement),
+            )
+            action, reason = choose_termination_action(termination_state)
+            if action == TerminationAction.TERMINATE:
+                return True, (
+                    f"策略判定结束（{reason}，当前{current}轮，"
+                    f"均分{avg_score:.2f}，最近均分{recent_avg:.2f}）"
+                )
+            return False, (
+                f"策略判定继续（{reason}，当前{current}轮，"
+                f"均分{avg_score:.2f}，最近均分{recent_avg:.2f}）"
+            )
+
+        # 6. 兼容旧逻辑（仅在策略关闭时生效）
         if avg_score >= 0.85 and recent_avg >= 0.85 and std_dev < 0.15:
             return True, f"表现优秀且稳定（平均分{avg_score:.2f}），提前结束"
-        
-        # 5b. 表现很差且无改善
         if avg_score < 0.4 and recent_avg < 0.4:
             return True, f"表现较差且无改善（平均分{avg_score:.2f}），结束面试"
-        
-        # 5c. 覆盖充分且表现稳定（难度跨度≥2，章节≥3，最近平均≥0.7）
         if std_dev < 0.2 and difficulty_range >= 2 and chapter_coverage >= 3 and recent_avg >= 0.7:
             return True, f"表现稳定、覆盖充分（平均分{recent_avg:.2f}），结束面试"
-        
         return False, f"继续面试（当前{current}轮，平均分{avg_score:.2f}）"
     
     def calculate_adaptive_difficulty(self) -> int:

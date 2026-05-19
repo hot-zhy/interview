@@ -48,6 +48,7 @@ def main():
         ("calc_eval_policy_ablation", "tab_eval_policy_ablation.csv"),
         ("calc_width_policy", "tab_width_policy.csv"),
         ("calc_subtask_policy", "tab_subtask_policy.csv"),
+        ("calc_termination_policy", "tab_termination_policy.csv"),
         ("calc_wideseek_baseline", "tab_wideseek_baseline.csv"),
         ("calc_evaluation", "tab_evaluation.csv"),
         ("calc_system_performance", "tab_system_performance.csv"),
@@ -57,6 +58,7 @@ def main():
         ("calc_canary_abtest", "tab_canary_abtest.csv"),
         ("calc_go_nogo", "tab_go_nogo.csv"),
         ("calc_best_report", "tab_best_config.csv"),
+        ("calc_extended_experiments", "tab_score_validity.csv"),
     ]
 
     for mod_name, out_file in modules:

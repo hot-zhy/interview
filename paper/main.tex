@@ -1,4 +1,4 @@
-\documentclass[final,3p,times,authoryear]{elsarticle}
+﻿\documentclass[final,3p,times,authoryear]{elsarticle}
 
 \usepackage{graphicx}
 \usepackage{amsmath}
@@ -34,7 +34,7 @@
 \author{Anonymous Authors}
 
 \begin{abstract}
-\noindent Adaptive technical interviewing is a sequential decision problem: given incomplete observations of a candidate's ability, a limited question budget, and unreliable evaluation signals, the system must decide what to ask next, when to follow up, and when to stop. We formulate this problem as a closed-loop observation--memory--policy--action process and present a domain-specific, memory-aware, tool-augmented adaptive interview framework with structured control logic and constrained LLM usage. At each turn the framework maintains persistent interview memory encoding performance history, coverage state, knowledge gaps, resume-derived priors, and evaluator feedback; compresses this memory into a structured state representation; and invokes a planner/controller that selects an action from a constrained action space $a_t \in \{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$. The controller dispatches actions through a tool router that invokes specialized modules---rule-based scoring, validated LLM judging, follow-up generation, resume parsing, and report synthesis---each operating under reliability constraints with automatic fallback. We contribute four innovations: (C1)~a memory-aware agentic interview framework with an observation--memory--policy--action loop; (C2)~a \emph{joint adaptive policy under budget constraints} that couples difficulty calibration and termination with state-conditioned, evaluator-informed question selection (including an LLM-as-topic-planner with multi-objective fallback), converging within 4--5 questions without IRT calibration; (C3)~a \emph{session-level analytical report pipeline} that decomposes the full interview trace into granular signals and runs five sequential analysis steps (narrative summary, per-dimension attribution, gap root-cause analysis, learning plan, and strategy transparency), each with rule-based fallback; and (C4)~\emph{learner-centered evidence} on perceived readiness, usefulness, and experience, reported alongside technical validation of the hybrid evaluation subsystem. Empirical evaluation demonstrates effective joint calibration and selection under limited budgets, high agreement with human evaluators for hybrid judging, and graceful degradation when LLM services are unavailable; user-outcome metrics are illustrative until finalized participant data are integrated.
+\noindent Adaptive technical interviewing is a sequential decision problem: given incomplete observations of a candidate's ability, a limited question budget, and noisy evaluation signals, the system must decide what to ask next, when to follow up, and when to stop. We formulate this problem as a closed-loop observation--memory--policy--action process and present a domain-specific, memory-aware, tool-augmented adaptive interview framework with structured control logic and constrained LLM usage. At each turn the framework maintains persistent interview memory encoding performance history, coverage state, knowledge gaps, resume-derived priors, and evaluator feedback; compresses this memory into a structured state representation; and invokes a planner/controller that selects an action from a constrained action space $a_t \in \{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$. The controller dispatches actions through a tool router that invokes specialized modules---rule-based scoring, validated LLM judging, follow-up generation, resume parsing, and report synthesis---each operating under reliability constraints with automatic fallback. We contribute four elements: (C1)~a memory-aware agentic interview framework with an observation--memory--policy--action loop; (C2)~a \emph{joint adaptive policy under budget constraints} that couples difficulty calibration and termination with state-conditioned, evaluator-informed question selection; (C3)~a \emph{session-level analytical report pipeline} that decomposes the full interview trace into granular signals and runs sequential analysis steps with rule-based fallback; and (C4)~a learner-centered, psychometrically motivated evaluation protocol for AI interview systems. On the current offline project dataset, the system achieves 80.6\% calibration accuracy, 93.1\% uptime, and 4.2/5.0 satisfaction, but system--human scoring agreement remains weak on correctness, depth, tradeoff reasoning, and overall score. These results position the prototype as a training and feedback system rather than a standalone hiring decision system, and they identify scoring calibration as the main target for future improvement.
 \end{abstract}
 
 \begin{keyword}
@@ -83,7 +83,7 @@ We emphasize that this is an \emph{agentic orchestration framework} with structu
 
 \noindent \textbf{Research Questions.} This research addresses three fundamental questions:
 
-\textbf{RQ1:} How can a \emph{joint adaptive policy} couple difficulty calibration and budget-constrained termination with state-conditioned question selection---including gap targeting, resume priors, coverage, evaluator next-direction hints $\eta_t$, and optional LLM-as-topic planning---so that both control and selection read from the same persistent memory and converge within a small question budget (e.g., 4--5 questions for calibration) without IRT item calibration?
+\textbf{RQ1:} How can a \emph{joint adaptive policy} couple difficulty calibration and budget-constrained termination with state-conditioned question selection---including gap targeting, resume priors, coverage, evaluator next-direction hints $\eta_t$, and optional LLM-as-topic planning---so that both control and selection read from the same persistent memory and can be evaluated under a small interview question budget without pre-calibrated IRT item parameters?
 
 \textbf{RQ2:} How can a \emph{session-level analytical report pipeline} decompose the full interview trace (per-turn questions, responses, scores, trajectories, and gaps) and analyze it through multiple complementary lenses---summative narrative, dimensional attribution, diagnostic gap analysis, actionable learning guidance, and transparent strategy explanation---with step-wise reliability (rule fallbacks)?
 
@@ -94,7 +94,7 @@ We emphasize that this is an \emph{agentic orchestration framework} with structu
     \item \textbf{C1 (Framework)}: A memory-aware agentic interview framework with an observation--memory--policy--action loop that formulates adaptive interviewing as a sequential decision process with persistent state, structured tool invocation, and feedback-driven memory updates (Section~\ref{sec:method}).
     \item \textbf{C2 (Joint adaptive policy)}: A budget-constrained \emph{joint} adaptive policy that couples Sections~\ref{sec:adaptive_control} and~\ref{sec:selection}: the same interview memory drives sliding-window difficulty/termination control and multi-objective, evaluator-informed question selection (including LLM-as-topic-planner with priority/Fisher/UCB fallbacks), closing an evaluation-to-selection loop via $\eta_t$.
     \item \textbf{C3 (Session-level report analysis)}: A multi-step report pipeline that ingests the full session, compresses it into structured context, and runs five sequential analysis steps with independent fallbacks (Section~\ref{sec:report_pipeline}, Tables~\ref{tab:report_decomposition}--\ref{tab:report_steps}).
-    \item \textbf{C4 (Learner-centered evaluation)}: An evaluation axis foregrounding candidate/student perceived outcomes and experience, alongside technical metrics for the hybrid judge (routing, validation, fallback) treated as an \emph{online evaluation module} supporting the loop rather than a standalone headline contribution (Sections~\ref{sec:experiments}--\ref{sec:results}).
+    \item \textbf{C4 (Evaluation protocol)}: A learner-centered and psychometrically motivated evaluation protocol that combines CAT-style calibration, question-selection diagnostics, system--human scoring validity, human inter-rater reliability, satisfaction, subgroup diagnostics, and offline rollout gates (Sections~\ref{sec:experiments}--\ref{sec:results}).
 \end{itemize}
 
 The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work and positions our contribution. Section~\ref{sec:method} presents the agentic method framework, including problem formulation, memory/state design, controller, joint adaptive policy (Sections~\ref{sec:adaptive_control}--\ref{sec:selection}), hybrid judging as the online evaluation module (Section~\ref{sec:hybrid_judging}), and session-level report synthesis (Section~\ref{sec:tools}). Section~\ref{sec:implementation} describes implementation details. Section~\ref{sec:experiments} presents experimental design, and Section~\ref{sec:results} reports results. Section~\ref{sec:discussion} discusses findings, limitations, and future work. Section~\ref{sec:conclusion} concludes.
@@ -675,7 +675,7 @@ Tool-Augmented & \ding{51} & \ding{55} & \ding{55} & \ding{51} (implicit) & \din
 \midrule
 Constrained Action Space & \ding{51} (3 actions) & \ding{55} & \ding{55} & \ding{55} & \ding{55} \\
 \midrule
-Convergence & 4--5 Q & N/A & 8--12 Q & Variable & N/A \\
+Convergence & 9.2 Q (current) & N/A & 8--12 Q & Variable & N/A \\
 \bottomrule
 \end{tabular}%
 }
@@ -774,123 +774,53 @@ Security measures include password hashing (bcrypt), JWT session management, inp
 \section{Experimental Design}
 \label{sec:experiments}
 
-\subsection{Research Questions and Evaluation Axes}
+\subsection{Evaluation Philosophy and Literature Basis}
 
-\noindent The experimental evaluation is organized around four evaluation axes aligned with RQ1--RQ3 and technical validation of the online judge:
+\noindent We evaluate the system as an AI interview \emph{training and feedback} prototype rather than as an autonomous hiring decision system. The protocol combines four traditions from the literature. First, computerized adaptive testing and IRT motivate difficulty--ability calibration, convergence, and simulation-based validation \cite{van2006computerized,hambleton1991fundamentals,zhuang2024catsurvey,roarcat2025}. Second, automatic short-answer scoring and LLM-based formative assessment motivate system--human agreement, error, and bias analysis \cite{burrows2015eraser,mohler2011evaluation,llm_formative2025}. Third, AI mock-interview and HCI work motivates candidate experience, perceived usefulness, and workload/interaction metrics \cite{conversate2024,virtual_interviewers2025}. Fourth, algorithmic hiring and automated interview research motivates subgroup diagnostics and conservative claim boundaries for high-stakes assessment \cite{kumar2022fairness,kim2024interview}.
 
+\subsection{Data and Reproduction Pipeline}
+
+\noindent All numeric results in this version are produced by the local reproduction pipeline:
+\begin{center}
+\texttt{python reproduce\_results/reproduce.py --data-dir data --seed 42}
+\end{center}
+The current project dataset contains 48 participant records, 144 session records, 1,227 asked-question/evaluation records, 260 human ratings over 130 responses, 80 satisfaction responses, and 140 question-bank items. Some labels are synthetic or project-provided proxies (e.g., \texttt{source=synthetic\_expert} in \texttt{ability\_labels.csv}); therefore, results should be read as an offline reproducibility study and system audit, not as a finalized field trial.
+
+\begin{table}[H]
+\centering
+\caption{Current evaluation dataset used by the reproduction pipeline.}
+\label{tab:dataset_summary}
+\begin{tabular}{lr}
+\toprule
+\textbf{Data file} & \textbf{Rows} \\
+\midrule
+\texttt{participants.csv} & 48 \\
+\texttt{sessions.csv} & 144 \\
+\texttt{asked\_questions.csv} & 1,227 \\
+\texttt{evaluations.csv} & 1,227 \\
+\texttt{human\_evaluations.csv} & 260 \\
+\texttt{survey\_responses.csv} & 80 \\
+\texttt{question\_bank.csv} & 140 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Evaluation Axes and Metrics}
+
+\noindent The experiments are organized into five axes:
 \begin{enumerate}
-    \item \textbf{Joint adaptive policy (RQ1):} Do coupled difficulty/termination control and state-conditioned selection (including $\eta_t$ and LLM topic planning when enabled) calibrate within a limited budget and balance gap targeting, coverage, and personalization relative to baselines?
-    \item \textbf{Session-level report pipeline (RQ2):} Does the multi-step decomposition-and-analysis pipeline (Table~\ref{tab:report_steps}) produce coherent narrative, dimensional, diagnostic, and transparency outputs under LLM availability constraints, with graceful rule fallbacks?
-    \item \textbf{Learner-centered outcomes (RQ3):} What are participants' perceived usefulness, readiness/confidence, fairness, and intent to reuse? We position findings relative to prior AI mock-interview HCI studies \cite{conversate2024,virtual_interviewers2025}; metrics remain illustrative until final field data replace synthetic tables.
-    \item \textbf{Hybrid judging (technical validation):} Does routing + validation + fallback improve robustness and agreement with human evaluators vs.\ rule-only scoring? Does multi-judge aggregation reduce variance when enabled?
+    \item \textbf{Adaptive calibration}: calibration accuracy, convergence rounds, and module-level simulation MAE.
+    \item \textbf{Question selection}: gap targeting, chapter coverage, personalization relevance, Coverage@3, ability error, and cost-violation rate.
+    \item \textbf{Scoring validity}: exact agreement, MAE, RMSE, Pearson/Spearman correlation, human ICC, and signed scoring bias.
+    \item \textbf{System and user experience}: duration, questions per interview, uptime, satisfaction, and segment-level satisfaction.
+    \item \textbf{Offline policy decision}: contextual-policy reward, cost/latency/fallback deltas, and Go/No-Go rollout gates.
 \end{enumerate}
 
-\subsection{Metrics}
+\noindent These metrics deliberately separate \emph{system-internal estimates} from \emph{external or human labels}. Ability labels are used only for evaluation. Human ratings are averaged across raters before comparing with system scores; inter-rater reliability is reported separately using ICC \cite{shrout1979icc}. Fallback to rule-based evaluation counts as available service when computing uptime because it preserves end-to-end interview completion.
 
-\noindent To avoid circular definitions, we separate \emph{system-internal estimates} from \emph{external labels}:
-\begin{itemize}
-    \item \textbf{Ability label ($\hat{a}$)}: an external proxy label used only for evaluation---author-provided via independent written test, expert rating, or course grade. Not derived from the system's own predictions.
-    \item \textbf{Calibration error}: MAE between current difficulty $d_t$ and mapped ability label $\hat{a}$ after normalization.
-    \item \textbf{Gap targeting rate}: fraction of human-annotated missing concepts subsequently queried within $k$ questions ($k$=3 default).
-    \item \textbf{Coverage}: fraction of required chapters covered at least once under the fixed question budget.
-    \item \textbf{Personalization relevance}: fraction of selected questions rated as relevant to resume skills by human annotators.
-    \item \textbf{Agreement}: Cohen's $\kappa$ (ordinal) and ICC(2,1) (continuous) between system scores and human rubric scores.\footnote{We use Cohen's $\kappa$ \cite{cohen1960kappa} and intraclass correlation \cite{shrout1979icc} as standard reliability measures.}
-    \item \textbf{Calibration accuracy}: $1 - \text{MAE}(d_t, \hat{a})$ after mapping both to $[0,1]$, computed per-interview at convergence.
-    \item \textbf{Convergence}: first round $q$ such that $|d_q - d_{q-1}| < 0.5$ for two consecutive rounds.
-    \item \textbf{Uptime}: $\frac{\text{successful evaluations}}{\text{total evaluation requests}}$. Fallback to rule counts as success.
-\end{itemize}
+\subsection{Claim Boundary}
 
-\subsection{Baselines}
-
-\noindent To evaluate the effectiveness of the agentic framework, we compare against three baselines:
-
-\textbf{Baseline 1: Fixed Template (no memory, no adaptation).} Uses predefined question sequences without difficulty adjustment or personalization. No interview memory is maintained.
-
-\textbf{Baseline 2: Random Selection (no state-conditioning).} Selects questions randomly from the question bank at the current difficulty level. No gap targeting, resume matching, or coverage optimization.
-
-\textbf{Baseline 3: Rule-Based Only (no LLM routing).} Uses only rule-based evaluation without LLM judge, validation, or fallback routing. Isolates the contribution of reliability-constrained hybrid judging.
-
-\subsection{Ablation Design}
-
-\noindent We design ablations to isolate the contribution of each agentic component:
-
-\begin{itemize}
-    \item \textbf{Without resume prior}: disable Priority 2 in selection; test contribution of resume-derived personalization.
-    \item \textbf{Without gap targeting}: disable Priority 1; test contribution of missing-concept targeting.
-    \item \textbf{Without next-direction hints}: disable $\eta_t$ augmentation of $\mathcal{M}_t$; test contribution of evaluator feedback loop.
-    \item \textbf{Without follow-up policy}: disable $a_t = \textit{follow-up}$; always proceed to next question.
-    \item \textbf{Without routing / fallback}: remove validator and fallback; use LLM-only or rule-only exclusively.
-    \item \textbf{Without memory/state feedback}: reset state at each turn; do not carry forward $\mathcal{M}_t$, $\mathcal{C}_t$, or $\mathcal{D}_t$.
-    \item \textbf{Without multi-judge aggregation}: set $J=1$; test whether aggregation improves stability (if $J>1$ data available).
-    \item \textbf{Difficulty strategy ablation}: \texttt{heuristic} vs.\ \texttt{target\_score\_control}.
-    \item \textbf{Selection strategy ablation}: \texttt{weighted\_random} vs.\ \texttt{thompson\_sampling} vs.\ \texttt{personalized}.
-\end{itemize}
-
-If quantitative results are not yet available for a given ablation, we insert clearly marked TODO placeholders in the results section.
-
-\subsection{Control Variables}
-
-\noindent All conditions use the same question bank, question budget ($r_{\text{user}}$), and initialization. Interview duration is standardized at a maximum of 45 minutes. Initial difficulty levels are randomized. Resume availability is balanced across conditions (Table~\ref{tab:participants}). All interviews are conducted in quiet environments with consistent connectivity.
-
-\subsection{Participants}
-
-\noindent The evaluation involved $N$ participants with varying Java programming experience, recruited from computer science programs at three universities and professional developer communities. Table~\ref{tab:participants} presents demographics. Values are illustrative until final recruitment; see \texttt{MISSING\_DATA.md}.
-
-\begin{table}[H]
-\centering
-\caption{Participant demographics and distribution. Values are illustrative until the participant roster is provided.}
-\label{tab:participants}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Characteristic} & \textbf{Category} & \textbf{Count (\%)} \\
-\midrule
-\multirow{3}{*}{Education Level} & Undergraduate & 66 (42.3\%) \\
- & Graduate & 56 (35.9\%) \\
- & Professional & 34 (21.8\%) \\
-\midrule
-\multirow{4}{*}{Experience (years)} & $<$ 1 & 44 (28.2\%) \\
- & 1-3 & 58 (37.2\%) \\
- & 3-5 & 25 (16.0\%) \\
- & $>$ 5 & 29 (18.6\%) \\
-\midrule
-\multirow{2}{*}{Resume Available} & Yes & 98 (62.8\%) \\
- & No & 58 (37.2\%) \\
-\midrule
-\textbf{Total} & & \textbf{$N$} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Data Collection}
-
-\noindent For each interview session, the system logs: (1)~session metadata (track, initial difficulty, rounds), (2)~complete interview memory at each turn (scores, difficulties, chapters, missing concepts, follow-up decisions, evaluator hints), (3)~candidate responses (text/audio), (4)~evaluation outputs with provenance (rule/hybrid/fallback), (5)~controller decisions (difficulty adjustments, selection priorities, termination reasons), and (6)~performance metrics (coverage, trends, convergence).
-
-Human evaluation data is collected through a double-blind process: two expert evaluators (5+ years of technical interview experience) independently assess a randomly selected subset of responses across all five dimensions.
-
-Question bank statistics are shown in Table~\ref{tab:question_bank}.
-
-\begin{table}[H]
-\centering
-\caption{Question bank statistics and distribution}
-\label{tab:question_bank}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Category} & \textbf{Count} & \textbf{Percentage} \\
-\midrule
-\multirow{5}{*}{Difficulty Level} & Level 1 & 142 (18.5\%) \\
- & Level 2 & 198 (25.8\%) \\
- & Level 3 & 215 (28.0\%) \\
- & Level 4 & 156 (20.3\%) \\
- & Level 5 & 57 (7.4\%) \\
-\midrule
-\textbf{Total Questions} & & \textbf{768 (100\%)} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Reproducibility}
-
-\noindent We provide: (1)~\texttt{results\_audit.md} with all result claims, source data, and recompute scripts; (2)~\texttt{reproduce\_results/} with scripts to regenerate tables (\texttt{reproduce.py}, \texttt{calc\_*.py}); (3)~\texttt{MISSING\_DATA.md} listing required data files. Until raw data is provided, numeric values are illustrative. We apply Bonferroni correction for multiple comparisons and fix random seed via \texttt{REPRODUCE\_SEED}.
+\noindent The current experiments answer whether the implemented system produces auditable traces and useful offline diagnostics. They do not establish deployable hiring validity. In particular, system--human scoring agreement is treated as a risk signal, and subgroup diagnostics are preliminary because the dataset lacks sensitive demographic attributes needed for a full fairness audit.
 
 %% ============================================================
 %%  SECTION 6: RESULTS
@@ -898,14 +828,14 @@ Question bank statistics are shown in Table~\ref{tab:question_bank}.
 \section{Results}
 \label{sec:results}
 
-\noindent This section presents results organized by the four evaluation axes defined in Section~\ref{sec:experiments}. Results are computed from the reproduction pipeline (\texttt{reproduce\_results/reproduce.py}) using synthetic data (80 sessions, 20 participants, seed=42). See \texttt{MISSING\_DATA.md} for data schema.
+\noindent This section reports the outputs generated by the current reproduction pipeline. We focus on what the implemented code and available data support, and avoid claims that require a future controlled field study.
 
 \subsection{Joint Adaptive Policy (RQ1)}
 \label{sec:results_rq1}
 
 \subsubsection{Difficulty Calibration and Termination}
 
-\noindent We evaluate whether the state-aware controller calibrates difficulty effectively within the limited question budget. Table~\ref{tab:calibration} presents calibration accuracy across candidate ability levels. The controller achieved 67.2\% overall calibration accuracy with average convergence of 3.6 questions. A simulation study (\texttt{eval\_modules/run\_calibration\_sim.py}) with 100 synthetic sessions yielded MAE=2.06 and convergence=2.48 questions, validating the control logic under deterministic conditions.
+\noindent We evaluate whether the controller's final difficulty estimate aligns with external ability labels. Both difficulty and ability are normalized to $[0,1]$, and calibration accuracy is reported as $1-\text{MAE}$. This follows CAT-style evaluation of ability estimation and convergence \cite{van2006computerized,zhuang2024catsurvey}.
 
 \begin{table}[H]
 \centering
@@ -916,331 +846,144 @@ Question bank statistics are shown in Table~\ref{tab:question_bank}.
 \toprule
 \textbf{Ability Level} & \textbf{Calibration Accuracy (\%)} & \textbf{Avg. Convergence (questions)} & \textbf{Stability Rate (\%)} \\
 \midrule
-Low (0.0-0.4) & 59.1 & 3.6 & --- \\
-Medium (0.4-0.7) & 72.9 & 3.6 & --- \\
+Low (0.0-0.4) & 81.1 & 9.2 & --- \\
+Medium (0.4-0.7) & 80.3 & 9.2 & --- \\
 High (0.7-1.0) & --- & --- & --- \\
 \midrule
-\textbf{Overall} & \textbf{67.2} & \textbf{3.6} & --- \\
+\textbf{Overall} & \textbf{80.6} & \textbf{9.2} & --- \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-Figure~\ref{fig:convergence} illustrates the difficulty trajectory for three candidate profiles, showing how the controller's sliding-window mechanism drives rapid convergence. The trend-aware update prevents oscillation while maintaining responsiveness to performance changes---a direct consequence of conditioning difficulty updates on the recent-performance window in interview memory.
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[scale=0.9]
-\begin{axis}[
-    xlabel={Question Number},
-    ylabel={Difficulty Level},
-    xmin=0, xmax=11,
-    ymin=1, ymax=5,
-    grid=major,
-    legend pos=south east,
-    width=10cm,
-    height=6cm
-]
-\addplot[blue, thick, mark=*, mark size=2pt] coordinates {
-    (1,3) (2,3.2) (3,3.8) (4,4.0) (5,4.1) (6,4.05) (7,4.0) (8,3.95) (9,4.0) (10,4.0)
-};
-\addplot[red, thick, dashed, mark=square*, mark size=2pt] coordinates {
-    (1,2.5) (2,2.8) (3,3.5) (4,3.8) (5,4.0) (6,4.2) (7,4.3) (8,4.25) (9,4.3) (10,4.3)
-};
-\addplot[green, thick, dotted, mark=triangle*, mark size=2pt] coordinates {
-    (1,3) (2,2.8) (3,2.6) (4,2.5) (5,2.4) (6,2.5) (7,2.5) (8,2.5) (9,2.5) (10,2.5)
-};
-\legend{Candidate A (High), Candidate B (Medium-High), Candidate C (Low)}
-\draw[green!30, fill=green!10, opacity=0.3] (axis cs:5,3.5) rectangle (axis cs:10,4.5);
-\node[green!70!black, font=\scriptsize] at (axis cs:7.5,4.7) {Convergence Zone};
-\end{axis}
-\end{tikzpicture}
-\caption{Difficulty trajectory convergence under adaptive control for three candidate profiles. The controller's sliding-window mechanism drives convergence within 4--5 questions.}
-\label{fig:convergence}
-\end{figure}
-
-Table~\ref{tab:difficulty_adjustment} shows adjustment patterns. The controller maintains difficulty in 45.8\% of turns, indicating stable tracking after convergence.
-
-\begin{table}[H]
-\centering
-\caption{Controller difficulty adjustment patterns. Values are illustrative until recomputed.}
-\label{tab:difficulty_adjustment}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Adjustment Type} & \textbf{Frequency (\%)} & \textbf{Avg. Magnitude} \\
-\midrule
-Increase Difficulty & 32.4\% & +1.2 levels \\
-Maintain Difficulty & 45.8\% & 0.0 levels \\
-Decrease Difficulty & 21.8\% & -1.1 levels \\
-\midrule
-\textbf{Total Adjustments} & \textbf{1,358} & \textbf{0.18 avg. change} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsubsection{Ablation: Difficulty Update Strategy}
-
-\noindent We compare the heuristic and target-score control strategies to validate that the controller's effectiveness is robust to strategy choice (Table~\ref{tab:ablation_difficulty}). Target-score control achieves faster convergence (3.8 vs.\ 4.2 questions, Cohen's $d = 0.36$) through explicit goal-seeking behavior, while the heuristic maintains comparable accuracy with simpler implementation. Both strategies operate on the same interview memory and state representation; the difference lies in how the controller maps $\bar{s}_w$ to the difficulty update.
-
-\begin{table}[H]
-\centering
-\caption{Ablation: control strategy comparison. Values illustrative until recomputed.}
-\label{tab:ablation_difficulty}
-\adjustbox{width=\textwidth,center}{%
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Strategy} & \textbf{Calibration Accuracy (\%)} & \textbf{Convergence (questions)} & \textbf{Stability Rate (\%)} & \textbf{Avg. Adjustments} \\
-\midrule
-Heuristic (Default) & 87.3 & 4.2 & 78.5 & 5.4 \\
-Target-Score Control & 86.9 & \textbf{3.8} & 77.8 & 5.8 \\
-\midrule
-\textbf{Difference} & -0.4 & \textbf{-0.4} & -0.7 & +0.4 \\
-\textbf{Effect Size (Cohen's d)} & -0.09 & \textbf{0.36} & -0.08 & 0.12 \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
-
-Sensitivity analysis over target score $\tau$ (0.65/0.70/0.75) showed that higher targets improved calibration for high-ability candidates but reduced accuracy for low-ability candidates, supporting the default $\tau = 0.70$.
+\noindent The controller reaches 80.6\% overall calibration accuracy on the current labels. The average convergence of 9.2 questions is longer than the earlier design target, which indicates that the present controller is stable enough for full mock interviews but still needs tuning for short-form interviews. A module-level simulation with 100 synthetic sessions gives MAE=2.0622 and convergence=2.48 rounds, suggesting that the algorithmic mechanism can converge faster under controlled assumptions than in the logged project data.
 
 \subsubsection{Selection Quality and Priority Balance}
 \label{sec:results_selection}
 
-\noindent We evaluate whether the state-conditioned selection policy effectively balances gap targeting, coverage, and personalization. Table~\ref{tab:selection} presents selection metrics. The policy achieved 8.2\% gap targeting (missing concepts queried within $k=3$ rounds), 23.0\% chapter coverage, and 100\% personalization relevance. Baseline comparisons require simulated selection runs; values are shown for the integrated system.
+\noindent We evaluate whether the selector asks questions that cover the bank, target missing concepts, and remain relevant to the candidate profile. This follows personalized question selection and misconception-aware adaptive learning work \cite{chen2022personalization,verma2025edge}.
 
 \begin{table}[H]
 \centering
 \caption{State-aware selection metrics. Generated by \texttt{reproduce\_results/calc\_selection.py}.}
 \label{tab:selection}
 \adjustbox{width=\textwidth,center}{%
-\begin{tabular}{lcccc}
+\begin{tabular}{lcccccc}
 \toprule
-\textbf{Strategy} & \textbf{Gap Targeting (\%)} & \textbf{Coverage (\%)} & \textbf{Personalization (\%)} & \textbf{Avg. Relevance Score} \\
+\textbf{Strategy} & \textbf{Gap (\%)} & \textbf{Coverage (\%)} & \textbf{Personal. (\%)} & \textbf{Coverage@3 (\%)} & \textbf{Ability Error} & \textbf{Cost Viol. (\%)} \\
 \midrule
-State-Aware (Ours) & 8.2 & 23.0 & 100.0 & 1.00 \\
-\midrule
-Random Selection & --- & --- & --- & --- \\
-Fixed Template & --- & --- & --- & --- \\
-Difficulty-Only & --- & --- & --- & --- \\
+State-Aware (Ours) & 8.2 & 26.4 & 100.0 & 83.8 & 0.750 & 99.7 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-Table~\ref{tab:priority_distribution} shows the distribution of priority application, demonstrating balanced state-conditioned action selection across the three priority levels.
+\noindent The 100\% personalization score indicates that the logged selections are relevant under the available expert relevance labels. However, gap targeting (8.2\%) and chapter coverage (26.4\%) are low, and the cost-violation rate is high. We therefore interpret selection as personalized but insufficiently diagnostic. This is an improvement target rather than evidence of deployment-ready adaptive selection.
+
+\subsubsection{Offline Policy Learning}
+
+\noindent We additionally evaluate the contextual bandit artifacts used by the selector and judge router. These experiments should be read as offline policy diagnostics, not randomized online A/B tests.
 
 \begin{table}[H]
 \centering
-\caption{Priority application distribution in state-aware selection. Generated by \texttt{reproduce\_results/calc\_selection.py}.}
-\label{tab:priority_distribution}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Priority Level} & \textbf{Application Rate (\%)} & \textbf{Avg. Questions per Interview} \\
-\midrule
-P1 (Gap targeting / missing concepts) & 31.6 & 1.7 \\
-P2 (Resume-derived personalization) & 35.0 & 1.9 \\
-P3 (Coverage-driven exploration) & 33.4 & 1.8 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The near-uniform distribution (31.6\% / 35.0\% / 33.4\%) indicates that the state-conditioned policy effectively balances competing objectives rather than collapsing to a single priority. The balance emerges naturally from the interaction between interview memory (which tracks gaps and coverage) and the priority cascade---when memory contains many missing concepts, P1 fires more frequently; when resume skills are well-covered, P2 yields to P3.
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    ybar,
-    bar width=0.6cm,
-    width=10cm,
-    height=6cm,
-    xlabel={Priority Level},
-    ylabel={Application Rate (\%)},
-    ymin=0, ymax=40,
-    xtick={1,2,3},
-    xticklabels={P1\\Gap Targeting, P2\\Resume Prior, P3\\Coverage},
-    xticklabel style={align=center, font=\small},
-    legend style={at={(0.5,-0.15)}, anchor=north, legend columns=-1},
-    grid=major
-]
-\addplot[fill=blue!50, draw=blue!70, thick] coordinates {
-    (1,31.6)
-    (2,35.0)
-    (3,33.4)
-};
-\addplot[fill=green!50, draw=green!70, thick] coordinates {
-    (1,1.7)
-    (2,1.9)
-    (3,1.8)
-};
-\legend{Application Rate (\%), Avg. Questions per Interview}
-\end{axis}
-\end{tikzpicture}
-\caption{State-aware selection: priority application distribution showing balanced state-conditioned action selection.}
-\label{fig:priority}
-\end{figure}
-
-\subsubsection{Ablation: Selection Strategy}
-
-\noindent Table~\ref{tab:ablation_selection} compares weighted random vs.\ Thompson sampling for Priority 3. Thompson sampling with difficulty-conditioned context achieves modest personalization improvement (Cohen's $d = 0.32$), consistent with its ability to learn chapter--difficulty associations from memory.
-
-\begin{table}[H]
-\centering
-\caption{Ablation: P3 strategy comparison. Values illustrative until recomputed.}
-\label{tab:ablation_selection}
+\caption{Offline policy diagnostics generated by the reproduction pipeline.}
+\label{tab:offline_policy}
 \adjustbox{width=\textwidth,center}{%
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \toprule
-\textbf{P3 Strategy} & \textbf{Gap Targeting (\%)} & \textbf{Coverage (\%)} & \textbf{Personalization (\%)} & \textbf{Avg. Relevance} \\
+\textbf{Policy} & \textbf{Train Samples} & \textbf{Eval Samples} & \textbf{Avg Reward} & \textbf{Avg Regret} & \textbf{Top1 Match (\%)} \\
 \midrule
-Weighted Random (Default) & 73.8 & 85.2 & 68.4 & 0.76 \\
-Thompson Sampling & 74.1 & 84.8 & \textbf{71.2} & \textbf{0.79} \\
-\midrule
-\textbf{Difference} & +0.3 & -0.4 & \textbf{+2.8} & \textbf{+0.03} \\
-\textbf{Effect Size} & 0.04 & -0.05 & \textbf{0.32} & \textbf{0.28} \\
+Eval Routing & 1,227 & --- & 0.5641 & 0.0000 & 100.0 \\
+Width Policy & 897 & 330 & 0.5656 & 0.0000 & 100.0 \\
+Subtask Policy & 897 & 330 & 0.7872 & 0.0000 & 100.0 \\
+Termination Policy & 897 & 330 & 0.9104 & 0.0000 & 100.0 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-\subsubsection{Ablation: State-Conditioned Components}
-
-\noindent To isolate the contribution of each state signal, we report ablations that disable specific components:
-
-\begin{itemize}
-    \item \textbf{Without resume prior (P2 disabled):} \textit{TODO --- Run selection with P2 disabled; report gap targeting, coverage, personalization relevance. Expected: personalization drops significantly; gap targeting and coverage remain stable.}
-    \item \textbf{Without gap targeting (P1 disabled):} \textit{TODO --- Run selection with P1 disabled; report gap targeting rate, coverage, and concept recall. Expected: gap targeting drops; coverage may improve slightly due to more uniform sampling.}
-    \item \textbf{Without next-direction hints ($\eta_t$ disabled):} \textit{TODO --- Disable evaluator hint augmentation of $\mathcal{M}_t$; report gap targeting rate and selection relevance. Expected: modest drop in gap targeting when LLM hints are unavailable.}
-    \item \textbf{Without memory/state feedback (stateless):} \textit{TODO --- Reset $\mathcal{M}_t$, $\mathcal{C}_t$, and $\mathcal{D}_t$ at each turn; report gap targeting, coverage, and calibration. Expected: significant degradation across all metrics, confirming the value of persistent memory.}
-\end{itemize}
-
-\noindent \textbf{Summary (RQ1):} Jointly, the control and selection halves of the policy operate on shared interview memory: the controller achieves rapid difficulty convergence within 4--5 questions (sliding window, trend-aware updates), while the state-conditioned selection policy balances gap targeting, personalization, and coverage through the priority cascade and evaluator hint augmentation ($\eta_t$). Control effectiveness is robust to heuristic vs.\ target-score strategies; selection balance emerges from memory-driven priority logic rather than fixed weights.
+\noindent The learned policies are internally consistent with the logged actions in the offline snapshot. The next step is online randomization or counterfactual evaluation with stronger baselines; current Top1 match alone does not prove superiority over fixed policies.
 
 \subsection{Session-Level Report Pipeline (RQ2)}
 \label{sec:results_report}
 
-\noindent Qualitative inspection of generated reports (with LLM API access enabled) shows that the five-step pipeline (Table~\ref{tab:report_steps}) surfaces distinct analytic roles: Step~1 anchors narrative in per-question scores; Step~2 yields structured per-dimension rationales; Steps~3--4 translate accumulated missing concepts into diagnostic and learning guidance; Step~5 narrates difficulty/chapter trajectories for transparency. Step-wise fallbacks populate markdown with rule-based strengths/weaknesses when LLM calls fail, preserving a usable artifact. \textbf{Automated metrics} for report quality (e.g., rubric-based human rating of faithfulness and actionability) are left for future work pending annotated gold reports.
+\noindent The report pipeline is implemented and consumes the full interview trace, but the current dataset does not yet include expert annotations of report faithfulness or learning-plan usefulness. We therefore treat RQ2 as an implementation contribution with a defined future evaluation protocol: claim traceability to session turns, expert-rated diagnostic usefulness, hallucination rate, and learning-plan actionability.
 
 \subsection{Learner-Centered Outcomes (RQ3)}
 \label{sec:results_user}
 
-\noindent Table~\ref{tab:participants} lists illustrative demographics. \textbf{Target instruments} include post-session usefulness and ease-of-use (SUS-style items), self-reported readiness/confidence for technical interviews, perceived fairness, and behavioral intention to reuse---aligned with themes in prior AI mock-interview HCI work \cite{conversate2024,virtual_interviewers2025}. Numeric outcome tables are placeholders until full recruitment and IRB-approved deployment replace illustrative values; learner-centered claims should be read as \emph{design-level commitments} alongside the technical metrics above.
+\noindent Following AI mock-interview HCI studies \cite{conversate2024,virtual_interviewers2025}, we report satisfaction and segment-level experience diagnostics. The current data include 80 satisfaction responses. Average satisfaction is 4.2/5.0, while satisfaction is weakly correlated with duration ($r=-0.094$), number of questions ($r=-0.032$), and system score ($r=0.091$). This suggests that perceived experience is not explained by score or length alone; a field study should add readiness, confidence, realism, fairness, and intent-to-reuse items.
 
 \subsection{Hybrid Judging: Technical Validation}
 \label{sec:results_hybrid}
 
-\noindent We evaluate whether the routing, validation, and fallback architecture improves robustness while preserving agreement with human evaluators. Table~\ref{tab:evaluation} presents exact agreement with human evaluators. The hybrid judging framework achieved 93.8\% overall exact agreement.
+\noindent We evaluate whether automatic scoring aligns with human rubric scores. This experiment follows automated scoring practice: human ratings are treated as the reference criterion, while system scores are evaluated using error, agreement, and correlation metrics \cite{burrows2015eraser,llm_formative2025}. The result is a critical limitation: system--human agreement is weak except for clarity and practicality.
 
 \begin{table}[H]
 \centering
-\caption{Hybrid judging: exact agreement (\%) with human evaluators. Generated by \texttt{reproduce\_results/calc\_evaluation.py}.}
+\caption{Exact agreement with human evaluators by dimension. Generated by \texttt{reproduce\_results/calc\_evaluation.py}.}
 \label{tab:evaluation}
 \begin{tabular}{lc}
 \toprule
-\textbf{Evaluation Dimension} & \textbf{Exact Agreement (\%)} \\
+\textbf{Dimension} & \textbf{Exact Agreement (\%)} \\
 \midrule
-Correctness & 93.1 \\
-Depth & 93.1 \\
-Clarity & 92.3 \\
-Practicality & 93.8 \\
-Tradeoffs & 90.8 \\
-\midrule
-\textbf{Overall} & \textbf{93.8} \\
+Correctness & 10.8 \\
+Depth & 0.8 \\
+Clarity & 45.4 \\
+Practicality & 32.3 \\
+Tradeoffs & 10.0 \\
+\textbf{Overall} & \textbf{8.5} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:evaluation_reliability} presents inter-rater reliability metrics.
-
 \begin{table}[H]
 \centering
-\caption{Inter-rater reliability: hybrid judge vs.\ human evaluators. ICC(2,1) form. Values illustrative until recomputed.}
-\label{tab:evaluation_reliability}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Dimension} & \textbf{Cohen's $\kappa$} & \textbf{ICC (95\% CI)} \\
-\midrule
-Correctness & 0.78 & 0.85 (0.81-0.89) \\
-Depth & 0.72 & 0.82 (0.77-0.87) \\
-Clarity & 0.75 & 0.83 (0.79-0.87) \\
-Practicality & 0.71 & 0.80 (0.75-0.85) \\
-Tradeoffs & 0.58 & 0.68 (0.62-0.74) \\
-\midrule
-\textbf{Overall} & \textbf{0.71} & \textbf{0.80 (0.75-0.85)} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    ybar,
-    bar width=0.2cm,
-    width=12cm,
-    height=7cm,
-    xlabel={Evaluation Dimension},
-    ylabel={Agreement with Human Evaluators (\%)},
-    ymin=50, ymax=95,
-    xtick={1,2,3,4,5},
-    xticklabels={Correctness, Depth, Clarity, Practicality, Tradeoffs},
-    xticklabel style={align=center, font=\small},
-    legend style={at={(0.5,-0.2)}, anchor=north, legend columns=1},
-    grid=major,
-    enlarge x limits=0.3
-]
-\addplot[fill=blue!50, draw=blue!70] coordinates {
-    (1,93.1) (2,93.1) (3,92.3) (4,93.8) (5,90.8)
-};
-\legend{Hybrid (System vs. Human)}
-\end{axis}
-\end{tikzpicture}
-\caption{Reliability-constrained hybrid judging: agreement with human evaluators across evaluation dimensions.}
-\label{fig:agreement}
-\end{figure}
-
-Tradeoff analysis shows slightly lower agreement (90.8\%), consistent with the subjective nature of this dimension. The lower $\kappa$ for tradeoffs (0.58) suggests that this dimension benefits most from LLM augmentation but also exhibits the highest inter-rater variability even among human evaluators.
-
-\subsubsection{Ablation: Routing and Fallback}
-
-\noindent Table~\ref{tab:ablation_evaluation} compares the full hybrid framework (routing + validation + fallback) against rule-only evaluation. The hybrid approach achieves significantly higher agreement (Cohen's $d = 0.82$ overall), with the largest gains in depth (+12.3\%) and tradeoff analysis (+15.7\%)---dimensions requiring the nuanced understanding that LLM judges provide. The automatic fallback mechanism ensured continuous operation with a 17.6\% fallback rate when LLM services were unavailable.
-
-\begin{table}[H]
-\centering
-\caption{Ablation: rule-only vs.\ hybrid judging with routing and fallback. Values illustrative; fallback rate requires provenance log.}
-\label{tab:ablation_evaluation}
+\caption{System-vs-human scoring validity. Generated by \texttt{calc\_extended\_experiments.py}.}
+\label{tab:score_validity}
 \adjustbox{width=\textwidth,center}{%
-\begin{tabular}{lcccc}
+\begin{tabular}{lrrrrrr}
 \toprule
-\textbf{Judging Mode} & \textbf{Overall Agreement (\%)} & \textbf{Depth Agreement (\%)} & \textbf{Tradeoff Agreement (\%)} & \textbf{Fallback Rate (\%)} \\
+\textbf{Dimension} & \textbf{N} & \textbf{MAE} & \textbf{RMSE} & \textbf{Pearson} & \textbf{Spearman} & \textbf{Within@0.20 (\%)} \\
 \midrule
-Rule-Only (no routing) & 76.3 & 74.1 & 57.1 & 0.0 \\
-Hybrid (routing + validation + fallback) & \textbf{84.7} & \textbf{86.4} & \textbf{72.8} & 17.6 \\
-\midrule
-\textbf{Improvement} & \textbf{+8.4} & \textbf{+12.3} & \textbf{+15.7} & - \\
-\textbf{Effect Size} & \textbf{0.82} & \textbf{0.85} & \textbf{0.72} & - \\
+correctness & 130 & 0.363 & 0.406 & 0.031 & 0.032 & 21.5 \\
+depth & 130 & 0.505 & 0.520 & -0.035 & -0.011 & 0.8 \\
+clarity & 130 & 0.128 & 0.158 & 0.014 & -0.011 & 78.5 \\
+practicality & 130 & 0.176 & 0.210 & 0.072 & 0.039 & 60.0 \\
+tradeoffs & 130 & 0.308 & 0.338 & -0.070 & -0.106 & 26.9 \\
+overall & 130 & 0.275 & 0.305 & 0.022 & 0.029 & 30.8 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-\subsubsection{Ablation: Multi-Judge Aggregation and CoT}
+\noindent Correlations are near zero, which means the system scores do not yet preserve the human ranking of responses. This is the strongest evidence that the current scorer should be used for formative feedback, not for high-stakes hiring.
 
-\noindent \textit{TODO --- When \texttt{llm\_multi\_judge\_count} $> 1$ data is available: report variance reduction, agreement improvement, and latency overhead for $J \in \{1, 3\}$. Expected: aggregation reduces score variance and improves ICC, at the cost of increased latency.}
+\begin{table}[H]
+\centering
+\caption{Human inter-rater reliability. Generated by \texttt{calc\_extended\_experiments.py}.}
+\label{tab:human_reliability}
+\adjustbox{width=\textwidth,center}{%
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Dimension} & \textbf{Ratings} & \textbf{Responses} & \textbf{Raters} & \textbf{ICC(1,k)} \\
+\midrule
+correctness & 260 & 130 & 2 & 0.889 \\
+depth & 260 & 130 & 2 & 0.707 \\
+clarity & 260 & 130 & 2 & 0.792 \\
+practicality & 260 & 130 & 2 & 0.833 \\
+tradeoffs & 260 & 130 & 2 & 0.707 \\
+overall & 260 & 130 & 2 & 0.773 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
 
-\noindent \textit{TODO --- When \texttt{llm\_use\_cot} data is available: report agreement and interpretability comparison for CoT-enabled vs.\ standard judging.}
-
-\subsubsection{Ablation: Without Follow-up Policy}
-
-\noindent \textit{TODO --- Disable follow-up action ($a_t \neq \textit{follow-up}$ always); report gap coverage, concept recall, and overall assessment quality. Expected: reduced identification of specific misconceptions, lower gap targeting in subsequent questions.}
-
-\noindent \textbf{Summary (hybrid judging):} The reliability-constrained hybrid judging framework achieves significantly higher agreement with human evaluators than rule-only evaluation, with the routing and fallback mechanism ensuring continuous operation. The largest improvements occur in dimensions requiring nuanced understanding, confirming the value of validated LLM augmentation.
+\noindent Human raters are reasonably consistent with one another. Thus, low system--human agreement is not simply explained by noisy human labels; it reflects scorer calibration and rubric-alignment problems. The scorer is systematically lenient: overall system scores exceed human scores by 0.274 on average, with an over-score rate of 91.5\%. Depth is the most severe case (mean signed error 0.505; over-score rate 99.2\%).
 
 \subsection{Memory-Aware Integration}
 
-\noindent We analyze the integrated system to assess whether the memory-aware orchestration---where joint adaptive control/selection and reliability-constrained judging operate on shared interview memory---produces benefits beyond the sum of individual components.
-
-Table~\ref{tab:system_performance} presents overall system performance.
+\noindent Table~\ref{tab:system_performance} summarizes end-to-end system behavior. The system completes full mock interviews with high availability and positive satisfaction, but the average duration is long for a lightweight training tool.
 
 \begin{table}[H]
 \centering
@@ -1252,18 +995,16 @@ Table~\ref{tab:system_performance} presents overall system performance.
 \toprule
 \textbf{Metric} & \textbf{Value} & \textbf{95\% CI} & \textbf{Description} \\
 \midrule
-Avg. Interview Duration & 25.8 min & --- & Average time per interview \\
-Avg. Questions per Interview & 5.4 & --- & Average questions (including follow-ups) \\
-Calibration Accuracy & 67.2\% & --- & Difficulty--ability alignment \\
-Selection Relevance & 100\% & --- & State-conditioned relevance \\
-Judging Agreement & 93.8\% & --- & Hybrid judge vs.\ human \\
+Avg. Interview Duration & 61.2 min & --- & Average time per interview \\
+Avg. Questions per Interview & 8.5 & --- & Average questions \\
+Calibration Accuracy & 80.6\% & --- & Difficulty--ability alignment \\
+Selection Personalization & 100\% & --- & Expert relevance proxy \\
+Overall Exact Agreement & 8.5\% & --- & System score vs. human \\
 System Uptime & 93.1\% & --- & Continuous operation rate \\
 User Satisfaction & 4.2/5.0 & --- & Average satisfaction rating \\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-Table~\ref{tab:interview_outcomes} shows interview outcome distribution by termination type, demonstrating that the controller's state-aware termination policy effectively categorizes sessions.
 
 \begin{table}[H]
 \centering
@@ -1273,19 +1014,61 @@ Table~\ref{tab:interview_outcomes} shows interview outcome distribution by termi
 \toprule
 \textbf{Termination Type} & \textbf{Count} & \textbf{Percentage} & \textbf{Avg. Rounds} \\
 \midrule
-Normal (state-triggered) & 59 & 73.8\% & 5.3 \\
-Forced (budget exhausted) & 21 & 26.2\% & 5.9 \\
+Normal & 59 & 73.8\% & 5.3 \\
+Forced (Max Rounds) & 21 & 26.2\% & 5.9 \\
 \midrule
 \textbf{Total} & \textbf{80} & \textbf{100\%} & \textbf{5.4} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 73.8\% state-triggered termination rate indicates that the controller's termination conditions---which depend on performance stability, coverage, and difficulty range stored in memory---enable efficient interviews that conclude based on assessment sufficiency rather than budget exhaustion alone.
+\noindent Normal termination accounts for 73.8\% of these logged outcomes. This suggests that the controller can end many sessions before exhausting the maximum-round budget, although stronger claims require a controlled comparison against fixed-round interviews.
 
-\noindent \textit{TODO --- Cross-component mediation analysis: does selection relevance mediate the relationship between calibration accuracy and judging agreement? Planned analysis: bootstrapped mediation with interview-level metrics.}
+\subsection{Subgroup and Content Diagnostics}
 
-\noindent \textbf{Summary (Integration):} The integrated results demonstrate that joint adaptive control/selection, session-level reporting, and hybrid judging operate coherently through shared interview memory. Current results primarily demonstrate component effectiveness; full end-to-end superiority over baselines requires the planned ablation experiments.
+\noindent Because AI interview systems are high-stakes, we add preliminary subgroup diagnostics inspired by algorithmic hiring fairness audits \cite{kumar2022fairness}. The current data do not include sensitive demographics, so we group only by available ability bucket and technical track.
+
+\begin{table}[H]
+\centering
+\caption{Selected subgroup diagnostics. Generated by \texttt{calc\_extended\_experiments.py}.}
+\label{tab:subgroup_diagnostics}
+\adjustbox{width=\textwidth,center}{%
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Group} & \textbf{Sessions} & \textbf{Avg System Score} & \textbf{Avg Satisfaction} & \textbf{Completion Rate (\%)} \\
+\midrule
+Low ability & 33 & 0.652 & 4.394 & 90.9 \\
+Medium ability & 47 & 0.640 & 4.085 & 95.7 \\
+Java Backend & 45 & 0.665 & 4.250 & 97.8 \\
+Java Concurrency & 40 & 0.679 & 4.318 & 87.5 \\
+Spring \& Microservices & 42 & 0.663 & 4.077 & 92.9 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Lowest-scoring chapters in the logged interview data.}
+\label{tab:chapter_diagnostics}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Chapter} & \textbf{Asked Count} & \textbf{Avg Difficulty} & \textbf{Avg Overall} \\
+\midrule
+Collections & 24 & 3.25 & 0.620 \\
+Caching & 64 & 2.48 & 0.631 \\
+Memory Model & 68 & 3.46 & 0.655 \\
+Microservices & 61 & 3.07 & 0.655 \\
+Database & 112 & 2.80 & 0.657 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Chapter diagnostics support the report pipeline: low-scoring chapters such as Collections, Caching, and Memory Model should be prioritized in feedback and remediation plans. This connects the interview system to ITS-style diagnostic feedback \cite{vanlehn2011relative}.
+
+\subsection{Rollout Gate}
+
+\noindent The canary simulation recommends a 10\% rollout stage: quality delta is +12.38\%, cost delta is 0.0\%, P95 latency delta is 0.0\%, and fallback delta is 0.0\%. We retain this only as an offline rollout gate; real deployment requires live monitoring and a human override path.
 
 %% ============================================================
 %%  SECTION 7: DISCUSSION
@@ -1293,95 +1076,41 @@ The 73.8\% state-triggered termination rate indicates that the controller's term
 \section{Discussion}
 \label{sec:discussion}
 
+\subsection{What Is Supported by the Current Evidence}
+
+\noindent The current evidence supports three conservative claims. First, the code implements a memory-aware, tool-augmented interview loop with structured control, selection, scoring, fallback, and report generation. Second, the offline data show useful process-level performance: 80.6\% calibration accuracy, 93.1\% uptime, and 4.2/5.0 satisfaction. Third, the evaluation framework successfully exposes weaknesses that a simple demo would hide, especially low scorer validity and systematic over-scoring.
+
+\subsection{What Is Not Yet Supported}
+
+\noindent The current evidence does not support autonomous hiring use. System--human agreement is weak, ranking correlation is near zero, and the scorer overestimates candidate performance. In addition, the subgroup analysis is only preliminary because sensitive attributes and larger balanced samples are absent. The report pipeline also lacks expert faithfulness annotations.
+
 \subsection{Implemented Agentic Elements}
 
-\noindent The current system implements the following agentic elements, all operational in the deployed codebase:
-
+\noindent The current system implements the following agentic elements, all operational in the codebase:
 \begin{itemize}
-    \item \textbf{Persistent interview memory} (Section~\ref{sec:memory}): the system maintains structured memory across turns, encoding score trajectories, coverage state, missing concepts, and evaluator hints. All controller and selection decisions are conditioned on this memory.
-    \item \textbf{Structured state representation} (Section~\ref{sec:state}): memory is compressed into a state tuple that conditions the controller's action selection.
-    \item \textbf{Constrained action space}: the controller selects from $\{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$ using deterministic, auditable logic.
-    \item \textbf{Joint adaptive policy} (Sections~\ref{sec:adaptive_control}--\ref{sec:selection}): difficulty update and termination use sliding-window performance aggregation from memory; question selection uses the same memory for multi-objective priorities, optional LLM-as-topic-planner validation, and $\eta_t$-augmented gap targeting.
-    \item \textbf{Memory-aware follow-up generation}: follow-up questions are generated with full interview context (score history, trajectory, identified gaps), enabling misconception-aware probing that adapts to the candidate's performance arc.
-    \item \textbf{Feedback-driven memory update}: evaluation outputs (scores, missing concepts, next-direction hints) are written back into memory, closing the observation--memory--policy--action loop.
-    \item \textbf{Reliability-constrained hybrid judging} (Section~\ref{sec:hybrid_judging}): routing between rule-based and LLM judges with validation and automatic fallback.
-    \item \textbf{Session-level multi-step report generation} (Section~\ref{sec:report_pipeline}): hierarchical decomposition of the full session (Table~\ref{tab:report_decomposition}) followed by five sequential analysis steps (Table~\ref{tab:report_steps}) with independent fallbacks.
-    \item \textbf{Tool-augmented architecture} (Section~\ref{sec:tools}): specialized tools (resume parser, follow-up generator, speech/expression analyzers, report synthesizer, LLM topic planner) each with defined interfaces and fallback behavior.
+    \item \textbf{Persistent interview memory}: score trajectories, coverage state, missing concepts, and evaluator hints are carried across turns.
+    \item \textbf{Structured state representation}: memory is compressed into decision state for the controller and selector.
+    \item \textbf{Constrained action space}: the controller selects from $\{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$.
+    \item \textbf{Joint adaptive policy}: difficulty/termination and question selection read from the same memory.
+    \item \textbf{Reliability-constrained judging}: scoring modules validate structured output and fall back when LLM services fail.
+    \item \textbf{Session-level report generation}: the final report uses the full trace to produce diagnosis and recommendations.
 \end{itemize}
 
-\subsection{Prototype Features in Code}
+\subsection{Limitations and Improvement Plan}
 
-\noindent The following features are implemented in the codebase as configurable extensions but have not yet been rigorously validated under the experimental protocol:
-
+\noindent The main improvement priorities are:
 \begin{itemize}
-    \item \textbf{Chain-of-thought judging} (\texttt{llm\_use\_cot}): requests structured reasoning traces from the LLM judge. Implemented and toggleable; validation under the Section~\ref{sec:experiments} protocol is pending.
-    \item \textbf{Multi-judge aggregation} (\texttt{llm\_multi\_judge\_count}): runs $J$ independent LLM evaluations and aggregates scores. Implemented; impact on variance reduction and agreement improvement is pending evaluation.
-    \item \textbf{Thompson sampling for selection} (\texttt{selector\_strategy=thompson\_sampling}): contextual bandit over chapters conditioned on difficulty. Implemented; preliminary comparison with weighted random shows modest personalization improvement (Table~\ref{tab:ablation_selection}).
-    \item \textbf{Personalized IRT-inspired selection} (\texttt{selector\_strategy=personalized}): integrates Fisher information maximization and UCB exploration. Implemented; serves as the default strategy.
+    \item \textbf{Scoring calibration}: redesign the rubric into checklist-style subcriteria, add examples for each dimension, and calibrate scores against human labels.
+    \item \textbf{Human annotation expansion}: increase the human-rated subset, retain at least two raters per response, and report ICC/Kappa before system comparison.
+    \item \textbf{Selection diagnostics}: reduce cost violations, improve gap targeting, and add stronger baselines for random, fixed-template, and difficulty-only selection.
+    \item \textbf{Report faithfulness}: annotate whether report claims can be traced to session turns and whether learning plans are actionable.
+    \item \textbf{Fairness audit}: collect or simulate approved subgroup attributes, then compare scoring error, completion rate, satisfaction, and fallback rate by subgroup.
+    \item \textbf{Short interview mode}: tune convergence and termination for 15-minute and 30-minute practice sessions.
 \end{itemize}
-
-\subsection{Addressing Research Questions}
-
-\noindent \textbf{RQ1 (Joint adaptive policy):} Sections~\ref{sec:adaptive_control}--\ref{sec:selection} specify a coupled policy on shared memory. Empirically, memory-conditioned sliding-window calibration converges within 4--5 questions without IRT calibration, and selection exhibits balanced priority application (Section~\ref{sec:results_rq1}, \ref{sec:results_selection}). Strategy choice (heuristic vs.\ target-score) chiefly affects control dynamics; the evaluator-to-selection loop ($\eta_t$ augmenting $\mathcal{M}_t$) ties judging signals to the next topic.
-
-\noindent \textbf{RQ2 (Session-level report analysis):} The report pipeline hierarchically decomposes the session and runs five analysis passes over a shared compressed context (Tables~\ref{tab:report_decomposition}--\ref{tab:report_steps}), with step-wise fallbacks (Section~\ref{sec:results_report}). Faithfulness metrics await annotated evaluation.
-
-\noindent \textbf{RQ3 (Learner-centered outcomes):} Intended measures (usefulness, readiness/confidence, fairness, reuse) follow HCI practice \cite{conversate2024,virtual_interviewers2025}; Section~\ref{sec:results_user} holds placeholders until field data are available.
-
-\noindent \textbf{Hybrid judging (technical validation):} Routing + validation + fallback improves agreement with human evaluators over rule-only scoring (Section~\ref{sec:results_hybrid}), with automatic fallback preserving uptime.
-
-\subsection{Trade-off: LLM Autonomy vs.\ Reproducibility}
-
-\noindent A central design tension in agentic interview systems is the trade-off between richer LLM autonomy and reproducibility / reliability / auditability. Fully autonomous LLM agents (e.g., ReAct-style free-form reasoning) could potentially make more flexible decisions, but at the cost of:
-\begin{itemize}
-    \item \textbf{Reproducibility}: identical inputs may produce different decisions across runs.
-    \item \textbf{Auditability}: free-form reasoning traces are harder to verify than deterministic logic.
-    \item \textbf{Reliability}: LLM failures propagate to all decisions, not just evaluation.
-    \item \textbf{Fairness}: non-deterministic decision logic complicates fairness audits.
-\end{itemize}
-
-Our design deliberately constrains LLM usage to evaluation, follow-up generation, optional topic planning, and session-level report steps (where nuance adds value) while keeping core control logic (difficulty update, termination, selection priority cascade) deterministic. This hybrid approach preserves the benefits of LLM sophistication for subjective tasks while maintaining the reproducibility required for high-stakes assessment.
-
-\subsection{Limitations}
-
-\noindent Several limitations should be acknowledged:
-
-\begin{itemize}
-    \item \textbf{Domain specificity}: the system is currently optimized for Chinese-language Java technical interviews. The state representation, question bank structure, and evaluation rubrics are domain-specific. Generalization to other languages, domains, or interview formats requires adaptation.
-    \item \textbf{Constrained action space}: the action space $\{\textit{ask-next}, \textit{follow-up}, \textit{terminate}\}$ does not include actions such as providing hints, adjusting evaluation criteria mid-session, or branching into sub-topics. Expanding the action space is a future direction.
-    \item \textbf{Not a learned planner}: the controller uses deterministic logic, not a learned policy. While this ensures reproducibility, it may miss adaptive strategies that a learned planner could discover.
-    \item \textbf{Not a free-form autonomous agent}: the system does not perform unconstrained reasoning, tool discovery, or goal decomposition. It is an agentic orchestration framework with structured control logic.
-    \item \textbf{LLM dependency}: LLM enhancement requires API access; despite fallback mechanisms, rule-only evaluation has lower agreement on subjective dimensions.
-    \item \textbf{Parameter sensitivity}: thresholds (0.85, 0.4, 0.15 for termination; 70\% for matching) are heuristics. Sensitivity analysis is provided (Section~\ref{sec:results_rq1}) but pre-registration or validation-set tuning was not performed.
-    \item \textbf{Illustrative results}: numeric values are computed from synthetic data and are illustrative until recomputed from real participant data (see \texttt{reproduce\_results/}); learner-centered outcome tables are explicitly pending (Section~\ref{sec:results_user}).
-    \item \textbf{Speech/expression signals}: auxiliary modalities (speech rate, facial expression) are treated as supplementary and not used for scoring decisions. Cross-accent, cross-device fairness analysis is needed before any scoring integration.
-\end{itemize}
-
-\subsection{Future Extensions}
-
-\noindent \textbf{Validated prototype features.} The immediate next step is rigorous validation of chain-of-thought judging (\texttt{llm\_use\_cot}) and multi-judge aggregation (\texttt{llm\_multi\_judge\_count}) under the experimental protocol, measuring agreement gains, variance reduction, and latency overhead.
-
-\noindent \textbf{Richer agent actions.} The action space can be extended with: hint provision (scaffolding for struggling candidates), dynamic rubric adjustment, and code execution tools for practical programming assessment.
-
-\noindent \textbf{Learned control policies.} Reinforcement learning could optimize the controller's difficulty update and termination decisions based on historical interview data, potentially discovering strategies that the current heuristic/control-theoretic approaches miss.
-
-\noindent \textbf{Conversation memory and multi-turn coherence.} Context-aware prompting could enable more coherent multi-turn follow-ups that reference earlier answers, building on the existing interview memory.
-
-\noindent \textbf{Full ReAct-style traces.} Explicit Thought--Action--Observation loops with LLM reasoning could provide interpretable decision traces for research, though production use may prefer the current deterministic logic for reliability.
-
-\noindent \textbf{Multi-language and multi-domain generalization.} Extending the framework to other programming languages, non-technical domains, and multiple natural languages.
 
 \subsection{Ethics, Privacy, and Fairness}
 
-\noindent AI-assisted interviewing is a high-stakes setting. We include explicit safeguards:
-\begin{itemize}
-    \item \textbf{Informed consent}: participants are informed that responses may be processed by automated components and optionally by an external LLM API.
-    \item \textbf{Data minimization}: only minimum required fields are stored; audio is short-lived or encrypted.
-    \item \textbf{De-identification}: direct identifiers are removed; pseudonymous IDs separate identity from evaluation.
-    \item \textbf{LLM compliance}: data sent to external APIs is documented; a no-LLM mode is available.
-    \item \textbf{Fairness risks}: speech-derived indicators can be biased by accent, disability, and device quality. Speech features are auxiliary and not used for scoring.
-    \item \textbf{Human-in-the-loop}: when evaluation confidence is low (rule--LLM disagreement, validation failure), cases are flagged for human review. System outputs are decision support, not the sole basis for hiring.
-\end{itemize}
+\noindent AI-assisted interviewing is a high-stakes setting. System outputs should be framed as decision support and training feedback, not as the sole basis for hiring. Speech and expression signals should remain auxiliary until cross-device, cross-accent, and disability fairness analyses are available. Candidates should be informed when LLM services are used, and a no-LLM fallback mode should remain available.
 
 %% ============================================================
 %%  SECTION 8: CONCLUSION
@@ -1389,27 +1118,21 @@ Our design deliberately constrains LLM usage to evaluation, follow-up generation
 \section{Conclusion}
 \label{sec:conclusion}
 
-\noindent Technical interviews are a high-stakes gatekeeper in software hiring, yet most AI-powered systems replicate the same failures at scale: one-size-fits-all difficulty, context-blind question sequences, and evaluation that is either shallow or unreliable. We argued that adaptive interviewing is fundamentally a sequential decision problem and presented a memory-aware, tool-augmented agentic interview framework that addresses core design gaps through a closed-loop observation--memory--policy--action process.
-
-\noindent \textbf{Summary of contributions.} \textbf{C1:} We specified the agentic loop with persistent memory and tool routing. \textbf{C2:} We formalized a joint adaptive policy coupling difficulty/termination with state-conditioned selection (including $\eta_t$ and LLM-as-topic-planner fallbacks) on shared memory. \textbf{C3:} We described session-level report analysis via trace decomposition and five sequential LLM steps with independent fallbacks. \textbf{C4:} We foreground learner-centered evaluation (Section~\ref{sec:results_user}) alongside technical validation of hybrid judging (Section~\ref{sec:results_hybrid}). The online judge is a supporting module, not a standalone headline contribution.
-
-\noindent \textbf{Claim boundary.} We describe the system as a domain-specific, memory-aware, tool-augmented adaptive interviewer with structured control logic and constrained LLM usage. It is not a fully autonomous general-purpose LLM agent. The action space is fixed, core control and priority logic are deterministic, and LLM components operate under validation and fallback constraints. Many numeric results are illustrative (synthetic reproduction); learner-outcome claims await field data.
-
-\noindent \textbf{Broader impact.} The agentic formulation---observation, memory, state, controller, tool router, feedback loop---provides a principled architecture for adaptive assessment that can be extended beyond technical interviews to educational assessment, certification, and skill evaluation. The design demonstrates that agentic principles can be applied to high-stakes domains while preserving the reproducibility, auditability, and reliability that such domains require.
+\noindent We presented a memory-aware, tool-augmented adaptive interview framework and aligned it with a reproducible evaluation protocol drawn from CAT, automatic scoring, AI mock-interview HCI, and algorithmic hiring fairness literature. The current offline evaluation shows that the system can run complete mock interviews with useful calibration, high availability, and positive satisfaction. At the same time, the evaluation reveals a major limitation: automatic scoring is not yet aligned with human rubric judgments and systematically over-scores. The system is therefore best positioned as a practice and feedback tool while scoring calibration, report faithfulness, and fairness audits are strengthened.
 
 \appendix
 \section{Module-Level Technical Evaluation}
 \label{app:module_eval}
 
-\noindent In addition to the integrated evaluation (Section~\ref{sec:results}), we conduct module-level technical evaluation to validate individual tools independently. Scripts are in \texttt{reproduce\_results/eval\_modules/}.
+\noindent In addition to the integrated evaluation (Section~\ref{sec:results}), scripts in \texttt{reproduce\_results/eval\_modules/} support module-level checks.
 
-\paragraph{Adaptive control simulation.} We ran \texttt{run\_calibration\_sim.py} with 100 synthetic sessions (seed=42), simulating candidates with true ability $\theta \in \{1,\ldots,5\}$ and replaying the target-score control algorithm. Results: MAE(final difficulty, $\theta$) = 2.06, average convergence = 2.48 questions. This validates the controller's calibration logic under deterministic conditions.
+\paragraph{Adaptive control simulation.} We ran \texttt{run\_calibration\_sim.py} with 100 synthetic sessions (seed=42), simulating candidates with true ability $\theta \in \{1,\ldots,5\}$ and replaying the target-score control algorithm. Results: MAE(final difficulty, $\theta$) = 2.0622, average convergence = 2.48 questions. This validates the controller mechanism under deterministic conditions, but it is not directly comparable to the logged-data calibration accuracy.
 
-\paragraph{Rule/LLM judge evaluation.} Scripts \texttt{eval\_rule\_scorer.py} and \texttt{eval\_llm\_scorer.py} compute $\kappa$ and ICC against human evaluations when \texttt{human\_evaluations.csv} is available. With synthetic human labels, the integrated pipeline reports 93.8\% exact agreement.
+\paragraph{Scoring evaluation.} \texttt{calc\_extended\_experiments.py} computes system--human MAE/RMSE/correlation, human ICC, and signed scoring bias. On the current data, human ICC is acceptable but system--human agreement is weak and the system over-scores, especially on depth and overall score.
 
-\paragraph{Resume parser, speech analyzer, expression analyzer.} Scripts \texttt{eval\_resume\_parser.py}, \texttt{eval\_speech\_analyzer.py}, and \texttt{eval\_expression\_fer.py} require external datasets (ResumeBench, annotated audio, FER2013). Placeholder outputs are written when data is absent. See \texttt{paper/EVALUATION\_PLAN.md} for dataset requirements.
-
+\paragraph{Resume parser, speech analyzer, expression analyzer.} Scripts \texttt{eval\_resume\_parser.py}, \texttt{eval\_speech\_analyzer.py}, and \texttt{eval\_expression\_fer.py} require external datasets (ResumeBench, annotated audio, FER2013). Placeholder outputs are written when data is absent. These modules should remain auxiliary until dataset-specific validation is complete.
 \bibliographystyle{elsarticle-harv}
 \bibliography{references}
 
 \end{document}
+

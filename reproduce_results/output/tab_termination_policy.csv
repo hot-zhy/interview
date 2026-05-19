@@ -1,0 +1,2 @@
+Strategy,Train Samples,Eval Samples,Terminate Rate (%),Avg Stop Round,Avg Reward,Avg Regret,Top1 Match (%),Policy Artifact
+Termination Policy (LinUCB),897,330,99.7,8.93,0.9104,0.0000,100.0,contextual_termination_policy.json

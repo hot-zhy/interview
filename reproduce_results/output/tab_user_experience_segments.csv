@@ -1,0 +1,13 @@
+Segment,Group,Sessions,Avg Satisfaction,Avg System Score,Avg Questions,Avg Duration Min
+duration_bucket,45-60 min,52,4.200,0.675,7.7,53.5
+duration_bucket,<45 min,14,4.500,0.690,7.3,41.8
+duration_bucket,>60 min,78,4.182,0.668,9.3,69.8
+question_bucket,7-9,86,4.163,0.677,7.9,58.7
+question_bucket,<=6,9,4.400,0.686,3.8,52.0
+question_bucket,>=10,49,4.250,0.662,10.5,67.2
+ability_bucket,Low,33,4.394,0.652,8.6,61.1
+ability_bucket,Medium,47,4.085,0.640,8.6,61.7
+ability_bucket,Unknown,64,NA,0.706,8.4,60.8
+correlation,satisfaction_vs_duration_min,80,NA,NA,NA,-0.094
+correlation,satisfaction_vs_n_questions,80,NA,NA,NA,-0.032
+correlation,satisfaction_vs_avg_system_score,80,NA,NA,NA,0.091

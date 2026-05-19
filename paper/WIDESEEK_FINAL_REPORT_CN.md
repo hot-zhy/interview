@@ -1,279 +1,447 @@
-# WideSeek-R1 落地最终说明（唯一版本）
+## AI面试评估
 
-## 1. 这份文档回答什么
+训练一个智能调度器，它不做评分本身，而是决定每道题该用什么方式评，派几个评委，从哪几个角度评，什么时候结束面试
 
-这份文档一次性回答四个问题：
+### 原来的做法
 
-1. 和 WideSeek-R1 论文是什么关系  
-2. 训练的主体是什么（到底训了谁）  
-3. 输入数据是什么、从哪里来  
-4. 怎么训练、怎么评估、当前结果是什么  
+网站原来的评估方式：
 
----
+- 每道题都用同一种方式评估（比如都走规则+单个AI评委）；
+- 不管题目简单还是复杂，都评得一样细（或一样粗）；
+- 不管面试者表现如何，都问满固定题目数才停；
+- 成本、时延、质量只能被动接受，没法**动态调节。**
 
-## 2. 和论文的关系（最重要）
+问题：
 
-参考论文：  
-- [WideSeek-R1: Exploring Width Scaling for Broad Information Seeking via Multi-Agent Reinforcement Learning (arXiv:2602.04634)](https://arxiv.org/abs/2602.04634)
+情绪   技术   do while
 
-### 2.1 我们参考并落地了什么
+| 情况                  | 原来的问题                           |
+| :-------------------- | :----------------------------------- |
+| 遇到一道很简单的题    | 还是花同样的钱和时间去深度评估，浪费 |
+| 遇到一道很难的题      | 也只评一遍，可能漏掉关键问题         |
+| 面试者已经连续答对5题 | 还在继续问，浪费双方时间             |
+| 面试者连续答错        | 不能提前结束，体验差                 |
 
-- **宽度扩展（Width Scaling）**：把单路评测改为可并行、多视角评测。
-- **Lead-Subagent 编排思想**：控制器统一编排，子任务受控执行后聚合。
-- **联合优化目标**：质量、成本、时延、稳定性一起优化，不只看分数。
-- **轨迹可审计**：每轮动作、延迟、分歧、回退都可导出复盘。
+训练一个调度器, 让它学会四个决策：
 
-### 2.2 我们暂时没做什么
+| 决策名         | 问题                       | 可选答案                                                     |
+| :------------- | :------------------------- | :----------------------------------------------------------- |
+| **路由决策**   | 这道题用哪种评估方式？     | `rule_only`（纯规则）、`llm_single`（一个AI评委）、`llm_multi`（多个AI评委） |
+| **宽度决策**   | 如果用多个AI评委，用几个？ | `w=1`、`w=2`、`w=4`、`w=8`                                   |
+| **子任务决策** | 从哪几个角度打分？         | 0个（不拆分）、1个、2个、3个（如正确性、深度、实用性）       |
+| **终止决策**   | 这场面试现在可以结束吗？   | `continue`（继续）、`terminate`（结束）                      |
 
-- 暂未做端到端大模型 MARL 联训。  
-- 当前是**策略层训练**（Contextual Bandit / LinUCB），先把工程闭环跑通。
 
----
 
-## 3. 训练主体是什么（不是训练大模型）
+### 奖励计算公式
 
-本项目训练的是“决策策略器”，不是 LLM 模型权重本身。
+<img src="C:\Users\10205\AppData\Roaming\Typora\typora-user-images\image-20260505203924532.png" alt="image-20260505203924532" style="zoom:67%;" />
 
-### 3.1 评测路由策略（Eval Routing）
-- 动作：`rule_only / llm_single / llm_multi`
-- 脚本：`reproduce_results/calc_eval_policy.py`
+最优超参数：
 
-### 3.2 宽度选择策略（Width Policy）
-- 动作：`w=1/2/4/8`（对应 `width_1/2/4/8`）
-- 脚本：`reproduce_results/calc_width_policy.py`
+α_cost = 0.05, α_latency = 0.05, α_instability = 0.05
 
-### 3.3 子任务启用策略（Subtask Policy）
-- 动作：`subtasks_0/1/2/3`
-- 脚本：`reproduce_results/calc_subtask_policy.py`
+#### LinUCB的公式
 
----
+训练时计算权重：
 
-## 4. 输入数据是什么、从哪里来
+![image-20260505204044373](C:\Users\10205\AppData\Roaming\Typora\typora-user-images\image-20260505204044373.png)
 
-先直接回答你的问题：  
-**是的，当前这轮训练用的就是 `reproduce_results/data` 目录下的数据。**
+<img src="C:\Users\10205\AppData\Roaming\Typora\typora-user-images\image-20260505204105959.png" alt="image-20260505204105959" style="zoom:67%;" />
 
-### 4.1 主要输入文件
+训练的目的是：
 
-| 文件 | 用途 | 典型字段 |
-|---|---|---|
-| `reproduce_results/data/evaluations.csv` | 每轮评测主数据 | `overall_score`, `provenance`, `missing_points` |
-| `reproduce_results/data/asked_questions.csv` | 每轮题目上下文 | `session_id`, `round`, `difficulty`, `chapter` |
-| `reproduce_results/data/sessions.csv` | 会话级信息 | `session_id`, `track`, `n_questions` |
-| `reproduce_results/data/eval_policy_trajectory.csv`（可选） | 已结构化轨迹 | `action`, `reward`, `latency_ms`, `instability` |
+> **找到一组策略（四个策略器各自的权重系数），使得这组策略在“没见过的数据”上做决策时，累计奖励最高。**
 
-### 4.2 轨迹构建规则
+**在训练集上，找一个 θ_a，使得“预测奖励”和“实际奖励”之间的误差平方和最小。**
 
-- 优先读取 `eval_policy_trajectory.csv`
-- 若缺失，自动从 `evaluations.csv` bootstrap 生成轨迹
-- 实现：`reproduce_results/wideseek_data_utils.py`
+最小化：
 
-### 4.4 当前这次实际用到的数据范围（避免歧义）
+![image-20260505204338578](C:\Users\10205\AppData\Roaming\Typora\typora-user-images\image-20260505204338578.png)
 
-- 本次快照统计见：`reproduce_results/output/tab_training_snapshot.csv`
-- 当前样本规模：
-  - 总行数：`94`
-  - train：`57`
-  - val：`8`
-  - test：`29`
 
-也就是说，这次策略训练与评估是基于 `reproduce_results/data` 的这批历史样本完成的。
 
-### 4.3 可复现快照
 
-- 脚本：`reproduce_results/calc_training_snapshot.py`
-- 产物：
-  - `tab_training_snapshot.csv`
-  - `snapshot_eval_policy_trajectory.csv`
-  - `snapshot_manifest.json`
 
----
 
-## 5. 怎么训练（具体到算法）
 
-先直接回答你的问题：  
-**训练目的不是“让模型更会说”，而是“让系统每一轮做更好的决策”。**
+决策时选动作：
 
-### 5.1 算法
+<img src="C:\Users\10205\AppData\Roaming\Typora\typora-user-images\image-20260505204135269.png" alt="image-20260505204135269" style="zoom:67%;" />
 
-- 使用 **LinUCB（Contextual Bandit）**
-- 实现：`reproduce_results/eval_policy_utils.py`
-  - `train_linucb_eval(...)`
-  - `evaluate_eval_policy(...)`
+使用强化学习替代？
 
-### 5.2 输入特征（每轮状态）
+**DQN**
 
-- `round_progress`
-- `answer_length`
-- `recent_avg_score`
-- `missing_points_count`
-- `fallback_count`
-- `llm_calls_used`
-- `multi_judge_used`
-- `llm_available`
-- `multi_judge_enabled`
-- （含 bias）
+1. 建一个神经网络：输入是状态向量（10个特征），输出是每个动作的Q值
+2. 用历史数据或实时交互，收集 (状态, 动作, 奖励, 下一状态) 的四元组
+3. 训练网络让“预测Q值”尽量接近“真实奖励 + 下一状态最大Q值”
+4. 为了稳定训练，还要加“目标网络”（一个更新慢一点的网络副本）和“经验回放”（随机抽样旧数据训练
 
-### 5.3 奖励函数（平衡目标）
+<img src="C:\Users\10205\AppData\Roaming\Typora\typora-user-images\image-20260505204627263.png" alt="image-20260505204627263" style="zoom:67%;" />
 
-`reward = quality - alpha*cost - beta*latency - gamma*instability`
 
-权重扫描输出：
-- `tab_eval_policy_reward_sweep.csv`
-- `tab_joint_reward_sweep.csv`
 
-当前最优权重：
-- `alpha=0.05`
-- `beta=0.05`
-- `gamma=0.05`
 
-### 5.4 训练目的（业务语言）
 
-每轮策略都在回答同一个问题：  
-“这轮应该怎么评，才能在保证质量的前提下，尽量少花钱、少耗时、少回退？”
 
-对应优化目标：
-- 质量更稳定（高质量回答不被误伤，低质量回答能被识别）
-- 成本更可控（避免不必要的高开销评测）
-- 时延更低（减少慢路径）
-- 稳定性更好（减少 fallback / 不稳定分歧）
 
----
+?
 
-## 6. 怎么评估（怎么判是否可上线）
 
-### 6.1 离线训练评估
 
-- `tab_eval_policy.csv`
-- `tab_eval_policy_ablation.csv`
-- `tab_width_policy.csv`
-- `tab_subtask_policy.csv`
+## 例子
 
-### 6.2 灰度 AB 仿真
+题目是：
 
-- 脚本：`reproduce_results/calc_canary_abtest.py`
-- 输出：`tab_canary_abtest.csv`（10/30/50/100）
+> “请解释JVM内存模型和垃圾回收机制”
 
-### 6.3 Go/No-Go 门槛判定
+这道题已经被判定为**高难度、长答案型**，当前面试进行到第5轮，最近平均分72。
 
-- 脚本：`reproduce_results/calc_go_nogo.py`
-- 输出：`tab_go_nogo.csv`
-- 判定门槛：
-  - Quality Delta >= 3%
-  - Cost Delta <= 10%
-  - P95 Latency Delta <= 15%
-  - Fallback Delta <= 0%
+### 调度器
 
----
+**第一步：路由决策——派哪种评估方式？**
 
-## 7. 当前最终结果
+系统读取当前状态：
 
-来自：
-- `reproduce_results/output/tab_best_config.csv`
-- `reproduce_results/output/best_decision_report.md`
+- 题目难度：高
+- 答案长度：预计很长
+- 近期分数：72（中等偏低）
+- 之前回退次数：1
 
-结果：
-- `Decision = GO`
-- `Recommended Stage = 10%`
+LinUCB计算出三个选项的得分：
 
-10%阶段关键增益：
-- `Quality Delta = +8.415%`
-- `Cost Delta = -36.744%`
-- `P95 Latency Delta = -45.07%`
-- `Fallback Delta = 0.0%`
+| 选项       | 估计收益 | 不确定度 | 总分     |
+| :--------- | :------- | :------- | :------- |
+| rule_only  | 0.65     | 0.02     | 0.67     |
+| llm_single | 0.78     | 0.05     | 0.83     |
+| llm_multi  | 0.82     | 0.10     | **0.92** |
 
-### 7.1 对线上应用效果“到底意味着什么”
+**决策：选 `llm_multi`**（多评委），因为它的总分最高。
 
-这里要区分两层口径：
+**第二步：宽度决策——派几个评委？**
 
-1. **已验证（离线仿真口径）**  
-   来自 `tab_canary_abtest.csv` 与 `tab_go_nogo.csv`，当前结果是 `GO`，并在推荐阶段 `10%` 显示质量提升、成本下降、时延下降。
+既然决定用多评委，下一步决定派几个：
 
-2. **待验证（真实线上口径）**  
-   虽然离线推荐是从 `10%` 开始更稳妥，但如果业务决定“直接全量上线”，则需要把“分阶段验证”替换为“全量实时监控 + 快速回滚”机制。  
-   也就是说：可以直接上，但结论口径应是“全量上线中验证”，而不是“上线前已完全确认全量收益”。
+| 选项 | 估计收益 | 不确定度 | 总分     |
+| :--- | :------- | :------- | :------- |
+| w=1  | 0.80     | 0.02     | 0.82     |
+| w=2  | 0.85     | 0.05     | 0.90     |
+| w=4  | 0.87     | 0.08     | **0.95** |
+| w=8  | 0.88     | 0.20     | 1.08     |
 
-结论：
-- 当前可以说“离线证据充分，可支持直接上线决策”；
-- 线上收益是否与离线一致，需靠上线后监控数据在 1~3 天内确认。
+系统还考虑了成本和时延的惩罚，最终平衡后选择 **w=4**。
 
-### 7.2 直接上线操作清单（可复制）
+**决策：派出4个AI评委并发评估。**
 
-1) **上线配置（全量）**  
-在运行环境设置或确认以下键值：
+**第三步：子任务决策——从哪些角度评？**
 
-```bash
-ENABLE_AGENT_CONTROLLER=true
-ENABLE_EVAL_POLICY_AGENT=true
-EVAL_POLICY_STRATEGY=contextual_bandit
-ENABLE_TOOL_ROUTING=true
-ENABLE_MULTI_JUDGE=true
-ENABLE_FOLLOWUP_PLANNER=true
-ENABLE_AGENT_TRACING=true
-ENABLE_WIDE_SUBTASK_PLANNER=true
-ROLLOUT_VARIANT=wideseek_w2
-ROLLOUT_PERCENT=100
+系统判定这道题复杂度高，启动3个子任务：
+
+- 子任务1：评估“正确性”
+- 子任务2：评估“深度”
+- 子任务3：评估“实用性”
+
+4个评委中：
+
+- 2个专注于正确性（因为近期这方向失分多）
+- 1个评深度
+- 1个评实用性
+
+### 评估执行
+
+4个评委并发工作：
+
+- 第1评委（正确性）：打分78，指出“对新生代GC描述不完整”
+- 第2评委（正确性）：打分80，指出“缺少对CMS收集器的说明”
+- 第3评委（深度）：打分75，指出“没有解释不同GC策略的适用场景”
+- 第4评委（实用性）：打分85，指出“实际开发建议部分不错”
+
+聚合结果：总评78分，发现3个缺失点。
+
+**这里借鉴WideSeek的做法**
+
+### 终止决策
+
+评估完后，系统调用终止策略判断：
+
+当前状态：
+
+- 进行到第5轮
+- 平均分74
+- 最近3轮趋势：下降（80→78→74）
+- 最小轮数要求：已满足
+- 最大轮数上限：未达到
+
+终止策略计算：
+
+- 趋势下降 + 已暴露多个薄弱点 → 建议 `continue`（继续问，进一步确认）
+- 决策原因写入日志：`"score_declining_trend, gaps_identified"`
+
+**决策：继续下一题。**
+
+
+
+用同一个场景对比：
+
+|          | 前                   | 后                           |
+| :------- | :------------------- | :--------------------------- |
+| 路由     | 固定走 rule + single | 动态选择 llm_multi           |
+| 宽度     | 固定1个评委          | 根据难度和分数选4个          |
+| 子任务   | 无拆分，总分制       | 拆分3个维度，各有侧重        |
+| 终止     | 问满固定题数         | 根据趋势动态决定continue     |
+| 质量     | 可能漏掉细节         | 多视角交叉验证，漏点评率降低 |
+| 成本     | 简单题也花同样资源   | 资源集中在需要的地方         |
+| 时延     | 固定路径，无关难度   | 简单题更快，难题略慢但可控   |
+| 可解释性 | 黑盒                 | 每步决策都有原因记录         |
+
+
+
+```
+历史面试数据
+    ↓
+离线训练（LinUCB学习决策参数）
+    ↓
+产出策略系数（一组数字）
+    ↓
+部署
+    ↓
+每来一道题 → 读取当前状态 → 代入系数计算 → 选最优动作
+    ↓
+执行评估 → 记录结果 → 回流到训练数据
+    ↑_____________________________↓
+          持续迭代，越用越聪明
 ```
 
-2) **启动后立刻核验（5~10 分钟）**  
-- 抽查 `policy_meta.rollout_variant` 是否为 `wideseek_w2`；  
-- 抽查 `policy_meta.action` 是否出现 `llm_single/llm_multi/rule_only` 的动态路由；  
-- 抽查 `policy_meta.latency_ms`、`policy_meta.instability` 是否有值；  
-- 抽查 `tool_records` 中是否出现 `llm_judge_worker`（多评委并发痕迹）。
+## 训练
 
-3) **上线后每日必看 4 项**  
-- 质量：`overall_score` 日均（不低于历史基线）；  
-- 成本：`estimated_cost` 或 LLM 调用量（日增幅受控）；  
-- 时延：`latency_ms` 的 P95（不超过预算阈值）；  
-- 稳定性：`fallback_rate` 与 `instability`（不持续升高）。
+网站后台每次收到一道面试答案，都要决定四件事：
 
-4) **一键回滚策略（出现异常立即执行）**  
-将以下开关改回保守模式并重启服务：
+| 决策   | 问题                   | 选项                     |
+| :----- | :--------------------- | :----------------------- |
+| 路由   | 用哪种方式评？         | 纯规则 / 一个AI / 多个AI |
+| 宽度   | 如果用多个AI，用几个？ | 1个 / 2个 / 4个 / 8个    |
+| 子任务 | 从几个角度评？         | 0个 / 1个 / 2个 / 3个    |
+| 终止   | 面试可以结束了吗？     | 继续 / 结束              |
 
-```bash
-ENABLE_EVAL_POLICY_AGENT=false
-ENABLE_AGENT_CONTROLLER=false
-ROLLOUT_VARIANT=control
-ROLLOUT_PERCENT=0
+**目标**：这四个决策要共同做到——评分质量不下降，同时省钱、省时间、系统稳定。
+
+**挑战**：系统不知道每种决策组合能带来什么结果，只能从历史经验里学。
+
+------
+
+### LinUCB
+
+我每轮面临的情况是：已知当前状态（题目难度、答案长度、近期分数等），要在几个选项中选一个，选完会得到一个奖励（质量分减去成本惩罚减去时延惩罚减去不稳定惩罚）。
+
+这个奖励只有选了之后才知道。
+
+这就是典型的**“探索与利用”问题**：
+
+- **利用**：选历史表现最好的，稳妥
+- **探索**：试试没怎么用过的，万一更好呢
+
+如果只利用不探索，可能永远错过更好的方案。如果只探索不利用，可能一直在试错，效果很差。
+
+#### LinUCB怎么解决
+
+**LinUCB** 的核心思想是四个字：**乐观选择**。
+
+它给每个选项打一个分，这个分由两部分相加：
+
+```
+选项得分 = 当前估计它能得多少分 + 我对这个估计有多不确定
+           ↑ 利用（历史经验）      ↑ 探索（给“不熟悉”的选项加分）
 ```
 
-回滚后系统会退回原有规则优先路径，确保服务连续性。
+- 一个选项被选的次数越多，我对它的估计就越确定，不确定度这一项就越小
+- 一个选项被选的次数越少，我不确定它到底好不好，不确定度就给它加分，让它有机会被选
 
----
+**随着时间推移**：每个选项都被充分尝试过之后，不确定度都变小了，决策就越来越依赖“真实的估计收益”，探索自动退场，利用自然主导。
 
-## 8. 一张图看全流程
+这就是LinUCB“自动平衡探索与利用”的原理。
 
-```mermaid
-flowchart TD
-rawData[RawCSVData] --> buildTraj[BuildTrajectory]
-buildTraj --> splitData[SplitTrainValTest]
-splitData --> trainRouting[TrainRoutingPolicy]
-splitData --> trainWidth[TrainWidthPolicy]
-splitData --> trainSubtask[TrainSubtaskPolicy]
-trainRouting --> offlineEval[OfflineEvaluation]
-trainWidth --> offlineEval
-trainSubtask --> offlineEval
-offlineEval --> canarySim[CanaryABSimulation]
-canarySim --> gateJudge[GoNoGoJudge]
-gateJudge --> bestReport[BestDecisionReport]
+#### 具体计算过程
+
+**第一步：估算每个选项的收益**
+
+LinUCB假设“收益”和“当前状态”之间是线性关系。也就是说：
+
+> 收益 ≈ 偏置 + 权重1×进度 + 权重2×答案长度 + 权重3×近期分数 + 权重4×缺失点数 + ...
+
+我要做的事，就是用历史数据，**算出这些权重（系数）**。
+
+对每个选项（比如 `llm_multi`），把它在历史数据里所有被选中的案例拿出来，用**岭回归**（一种带防过拟合保护的线性回归）算出它对应的那组权重。
+
+**第二步：计算不确定度**
+
+不确定度取决于“这个选项被选中的次数”和“选中时的状态多样性”。简单理解：
+
+- 选过的次数越少 → 不确定度越大
+- 选过的场景越单一 → 不确定度越大
+
+**第三步：算总分并决策**
+
+```
+选项A总分 = 选项A的估计收益（用状态×权重算） + 探索系数 × 选项A的不确定度
+选项B总分 = 选项B的估计收益（用状态×权重算） + 探索系数 × 选项B的不确定度
+选项C总分 = ...
 ```
 
----
+**选总分最高的那个**。
 
-## 9. 代码入口索引
+------
 
-- 数据与快照：
-  - `reproduce_results/wideseek_data_utils.py`
-  - `reproduce_results/calc_training_snapshot.py`
-- 训练：
-  - `reproduce_results/calc_eval_policy.py`
-  - `reproduce_results/calc_eval_policy_ablation.py`
-  - `reproduce_results/calc_width_policy.py`
-  - `reproduce_results/calc_subtask_policy.py`
-- 评估与决策：
-  - `reproduce_results/calc_canary_abtest.py`
-  - `reproduce_results/calc_go_nogo.py`
-  - `reproduce_results/calc_best_report.py`
-- 总入口：
-  - `reproduce_results/reproduce.py`
+### 数据
 
+#### 原始数据
+
+来自 `reproduce_results/data/` 目录下三个CSV文件：
+
+| 文件                  | 存什么             | 示例                                           |
+| :-------------------- | :----------------- | :--------------------------------------------- |
+| `evaluations.csv`     | 每次评分的详细记录 | 总分78，哪些点扣分了，花了多少时间，花了多少钱 |
+| `asked_questions.csv` | 每道题的信息       | 题号、难度、章节、是第几轮                     |
+| `sessions.csv`        | 每场面试的信息     | 面试ID、面试类型、总共有几道题                 |
+
+#### 构建训练样本
+
+原始数据是散落的一条条评分记录，我需要把它们**还原成“决策当时看到的样子”**。
+
+```
+原始记录（孤立的一条条评分）
+    ↓
+按“面试ID”归类，按“第几轮”排序
+    ↓
+计算每一轮的“当时状态”：
+  - 当前轮次（如第3轮/共8轮）
+  - 答案有多长
+  - 前几轮平均分多少
+  - 之前漏了几个得分点
+  - 之前发生了几次回退
+  ...
+    ↓
+形成一条完整的轨迹：每行 = 那一刻的状态 + 当时选了哪个动作 + 最后得了多少奖励
+```
+
+reward = overall_score/100 
+       - α × estimated_cost 
+              - β × (latency_ms / 1000) 
+              - γ × instability
+
+**关键原则**：计算状态时，只能用“当时已经知道的信息”，不能用事后数据。比如算“近期均分”，只能用前几轮的分数，不能把本轮自己算进去。这叫“避免数据泄露”。
+
+#### 3划分三份数据
+
+94条样本按“面试ID”随机分成三份：
+
+| 数据集 | 数量 | 用途               | 用几次       |
+| :----- | :--- | :----------------- | :----------- |
+| 训练集 | 57条 | 用来学权重系数     | 反复用       |
+| 验证集 | 8条  | 用来挑选最优超参数 | 多次用       |
+| 测试集 | 29条 | 最终检验效果       | **只用一次** |
+
+**为什么要分开**：
+
+- 训练集用来“学习”
+- 验证集用来“选参数”，防止在训练集上调参自欺欺人
+- 测试集完全隔离，模拟真正的上线效果
+
+------
+
+#### 训练过程
+
+对每个策略（路由/宽度/子任务/终止），分别训练。以路由策略为例：
+
+```
+输入：训练集57条样本，每条 = (状态向量, 选了什么动作, 得了多少奖励)
+
+步骤1：按动作分组
+  把所有选了 "rule_only" 的样本分到一组
+  把所有选了 "llm_single" 的样本分到一组
+  把所有选了 "llm_multi" 的样本分到一组
+
+步骤2：每组分别做岭回归
+  对 "llm_multi" 这组：
+    已知：多次选择时的状态矩阵 X，和每次得到的奖励向量 r
+    求解：(X^T X + λI)⁻¹ X^T r
+    得到：权重向量 θ（这就是我们需要的系数）
+
+步骤3：保存
+  对每个动作，保存它的权重向量 θ 和矩阵 (X^T X + λI)⁻¹
+  后者用于线上计算不确定度
+
+输出：三组权重系数
+```
+
+
+
+其余三个策略（宽度、子任务、终止）的训练过程完全一样，只是动作空间不同。
+
+#### 调参（选最优超参数）
+
+LinUCB有一个探索系数 α，控制“探索”的强度。另外奖励函数里还有成本惩罚系数 β_cost、时延惩罚系数 β_latency、不稳定惩罚系数 β_instability。
+
+这些参数没有“正确答案”，需要在合理范围内枚举组合，在验证集上打分，选最好的：
+
+text
+
+```
+对 α 取 [0.01, 0.05, 0.1, 0.5]：
+  对 cost权重 取 [0.01, 0.05, 0.1]：
+    对 latency权重 取 [0.01, 0.05, 0.1]：
+      对 instability权重 取 [0.01, 0.05, 0.1]：
+        1. 用这组参数，在训练集上重新训练
+        2. 在验证集（8条）上模拟决策，算综合得分
+        3. 记录这组的得分
+
+选综合得分最高的那组参数
+```
+
+
+
+这就是 `tab_eval_policy_reward_sweep.csv` 里的内容。
+
+最终选出的：α=0.05，成本权重=0.05，时延权重=0.05，不稳定权重=0.05。
+
+#### 4.3 验证每个模块是否真有用（消融实验）
+
+为了确保不是“随便换都会变好”，还做了消融实验：**故意关掉某个模块，看效果是不是明显变差**。
+
+| 实验       | 做法           | 如果效果变差说明什么     |
+| :--------- | :------------- | :----------------------- |
+| 去掉路由   | 固定用单一路径 | 路由策略确实在起作用     |
+| 去掉宽度   | 固定w=1        | 多评委确实对难题有帮助   |
+| 去掉子任务 | 不拆分维度     | 多角度评估确实有用       |
+| 去掉终止   | 固定问满轮次   | 动态终止确实省成本省时间 |
+
+如果所有消融实验都显示变差，说明每个模块的系数都是有意义的，不是乱拟合。这正是我们期望的结果。
+
+------
+
+### 5. 训练结果如何
+
+#### 5.1 最终验证（在测试集上）
+
+用训练出来的权重系数和最优超参数，在**从未参与训练的29条测试集**上跑一遍：
+
+```
+测试集29条样本
+    ↓
+逐条模拟：读取状态 → 策略器打分 → 选最高分动作 → 记录奖励
+    ↓
+汇总：平均质量、总成本、P95时延、回退率
+    ↓
+和“原来的固定规则”逐项对比
+```
+
+
+
+#### 5.2 对比结果
+
+| 指标    | 固定规则（旧） | 智能调度（新） | 变化 | 判定   |
+| :------ | :------------- | :------------- | :--- | :----- |
+| 质量分  | 基线           | 提高 8.4%      | ↑    | ✓ 达标 |
+| 成本    | 基线           | 降低 36.7%     | ↓    | ✓ 达标 |
+| P95时延 | 基线           | 降低 45.1%     | ↓    | ✓ 达标 |
+| 回退率  | 基线           | 增加 0%        | →    | ✓ 达标 |

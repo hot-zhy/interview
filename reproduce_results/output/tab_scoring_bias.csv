@@ -1,0 +1,7 @@
+Dimension,System Mean,Human Mean,Mean Signed Error,Over-Score Rate (%),Under-Score Rate (%)
+correctness,0.659,0.298,0.361,89.2,0.0
+depth,0.635,0.130,0.505,99.2,0.0
+clarity,0.637,0.583,0.054,37.7,16.9
+practicality,0.651,0.502,0.149,62.3,5.4
+tradeoffs,0.645,0.337,0.308,90.0,0.0
+overall_score,0.640,0.366,0.274,91.5,0.0

@@ -175,6 +175,20 @@ class Settings(BaseSettings):
     wide_subtask_max_workers: int = 3
     rollout_variant: str = "wideseek_w2"  # control | wideseek_w2 | wideseek_w4 | wideseek_w8
     rollout_percent: int = 100
+    adaptive_multi_judge_width_enabled: bool = True
+    adaptive_multi_judge_min_width: int = 2
+    adaptive_multi_judge_max_width: int = 4
+    adaptive_multi_judge_missing_points_threshold: int = 2
+    adaptive_multi_judge_low_score_threshold: float = 0.55
+    adaptive_multi_judge_long_answer_threshold: int = 260
+    adaptive_multi_judge_fallback_threshold: int = 1
+    adaptive_multi_judge_short_answer_threshold: int = 80
+    adaptive_multi_judge_high_score_threshold: float = 0.75
+    # Agentic-RL (termination policy module)
+    enable_termination_policy_agent: bool = True
+    termination_policy_strategy: str = "contextual_bandit"  # "heuristic" | "contextual_bandit"
+    termination_policy_artifact_path: str = "reproduce_results/output/contextual_termination_policy.json"
+    termination_policy_alpha: float = 0.20
     rollout_hash_salt: str = "wideseek-r1-rollout"
     guardrail_max_llm_calls_per_session: int = 10
     guardrail_max_multi_judge_per_session: int = 4
@@ -186,4 +200,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

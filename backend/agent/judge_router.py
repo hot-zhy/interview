@@ -61,7 +61,11 @@ class JudgeRouter:
             )
             return rule_result, records
 
-        judge_count = self._pick_judge_count(policy_action)
+        judge_count, judge_count_reason = self._pick_judge_count(
+            action=policy_action,
+            state=state,
+            rollout_variant=guardrail.rollout_variant,
+        )
         llm_result, llm_rec = self._invoke_llm_with_judge_count(
             question=question,
             correct_answer=correct_answer,
@@ -85,6 +89,8 @@ class JudgeRouter:
                     guardrail_reason=guardrail.reason,
                     rollout_variant=guardrail.rollout_variant,
                     subtask_plan=routing_state.get("subtask_plan"),
+                    judge_count=judge_count,
+                    judge_count_reason=judge_count_reason,
                 )
                 return llm_result, records
 
@@ -104,6 +110,8 @@ class JudgeRouter:
                 guardrail_reason=guardrail.reason,
                 rollout_variant=guardrail.rollout_variant,
                 subtask_plan=routing_state.get("subtask_plan"),
+                judge_count=judge_count,
+                judge_count_reason=judge_count_reason,
             )
             return rule_result, records
 
@@ -117,6 +125,8 @@ class JudgeRouter:
             guardrail_reason=guardrail.reason,
             rollout_variant=guardrail.rollout_variant,
             subtask_plan=routing_state.get("subtask_plan"),
+            judge_count=judge_count,
+            judge_count_reason=judge_count_reason,
         )
         return rule_result, records
 
@@ -165,18 +175,64 @@ class JudgeRouter:
             return EvalRoutingAction.LLM_SINGLE if state.llm_available else EvalRoutingAction.RULE_ONLY
         return choose_eval_action(state)
 
-    def _pick_judge_count(self, action: EvalRoutingAction) -> int:
-        variant = str(getattr(settings, "rollout_variant", "control"))
+    def _pick_judge_count(
+        self,
+        action: EvalRoutingAction,
+        state: EvalPolicyState,
+        rollout_variant: str = "control",
+    ) -> tuple[int, str]:
+        variant = str(rollout_variant or getattr(settings, "rollout_variant", "control"))
         variant_width = {
             "wideseek_w2": 2,
             "wideseek_w4": 4,
             "wideseek_w8": 8,
         }.get(variant)
-        if action == EvalRoutingAction.LLM_MULTI:
-            if variant_width is not None:
-                return max(2, int(variant_width))
-            return max(2, int(getattr(settings, "llm_multi_judge_count", 1)))
-        return 1
+        if action != EvalRoutingAction.LLM_MULTI:
+            return 1, "single_or_rule"
+
+        base_width = (
+            max(2, int(variant_width))
+            if variant_width is not None
+            else max(2, int(getattr(settings, "llm_multi_judge_count", 1)))
+        )
+        if not bool(getattr(settings, "adaptive_multi_judge_width_enabled", True)):
+            return base_width, "fixed_width"
+
+        max_width = max(base_width, int(getattr(settings, "adaptive_multi_judge_max_width", 4)))
+        max_parallel = max(1, int(getattr(settings, "llm_multi_judge_max_parallel", max_width)))
+        max_width = max(2, min(max_width, max_parallel))
+        min_width = max(2, int(getattr(settings, "adaptive_multi_judge_min_width", 2)))
+        min_width = min(min_width, max_width)
+
+        hard_signals = 0
+        if state.missing_points_count >= int(getattr(settings, "adaptive_multi_judge_missing_points_threshold", 2)):
+            hard_signals += 1
+        if state.recent_avg_score <= float(getattr(settings, "adaptive_multi_judge_low_score_threshold", 0.55)):
+            hard_signals += 1
+        if state.answer_length >= int(getattr(settings, "adaptive_multi_judge_long_answer_threshold", 260)):
+            hard_signals += 1
+        if state.fallback_count >= int(getattr(settings, "adaptive_multi_judge_fallback_threshold", 1)):
+            hard_signals += 1
+
+        target = base_width
+        reason = "base_width"
+        if hard_signals >= 3:
+            target = min(max_width, max(base_width, 4))
+            reason = "hard_answer_high_risk"
+        elif hard_signals == 2:
+            target = min(max_width, max(base_width, 3))
+            reason = "hard_answer_medium_risk"
+        elif (
+            state.answer_length <= int(getattr(settings, "adaptive_multi_judge_short_answer_threshold", 80))
+            and state.recent_avg_score >= float(getattr(settings, "adaptive_multi_judge_high_score_threshold", 0.75))
+            and state.missing_points_count == 0
+            and state.fallback_count == 0
+        ):
+            target = min_width
+            reason = "easy_answer_fast_path"
+
+        target = max(min_width, min(max_width, int(target)))
+        return target, reason
 
     def _invoke_llm_with_judge_count(
         self,
@@ -201,6 +257,8 @@ class JudgeRouter:
         guardrail_reason: str = "",
         rollout_variant: str = "control",
         subtask_plan: Optional[Dict] = None,
+        judge_count: int = 1,
+        judge_count_reason: str = "single_or_rule",
     ) -> None:
         existing_meta = dict(result.policy_meta or {})
         reward = compute_eval_reward(
@@ -220,6 +278,8 @@ class JudgeRouter:
             "reward": round(float(reward), 5),
             "action": action.value,
             "rollout_variant": rollout_variant,
+            "judge_count_requested": int(max(1, judge_count)),
+            "judge_count_reason": str(judge_count_reason or "single_or_rule"),
             "state": {
                 "round_idx": state.round_idx,
                 "answer_length": state.answer_length,

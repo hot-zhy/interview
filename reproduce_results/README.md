@@ -60,6 +60,7 @@ python calc_eval_policy.py
 python calc_eval_policy_ablation.py
 python calc_width_policy.py
 python calc_subtask_policy.py
+python calc_termination_policy.py
 python calc_wideseek_baseline.py
 python calc_evaluation.py
 python calc_system_performance.py
@@ -94,6 +95,9 @@ python eval_modules/run_calibration_sim.py --seed 42
 - `output/width_policy_training_samples.csv` — width policy training samples
 - `output/tab_subtask_policy.csv` — Subtask enablement policy metrics
 - `output/contextual_subtask_policy.json` — Offline-trained subtask policy artifact
+- `output/tab_termination_policy.csv` — Interview stop/continue policy metrics
+- `output/contextual_termination_policy.json` — Offline-trained termination policy artifact
+- `output/termination_policy_training_samples.csv` — stop/continue policy training samples
 - `output/tab_wideseek_baseline.csv` — Width cohort baseline (quality/cost/latency/instability)
 - `output/tab_evaluation.csv` — Evaluation agreement table
 - `output/tab_system_performance.csv` — System performance table
@@ -104,6 +108,14 @@ python eval_modules/run_calibration_sim.py --seed 42
 - `output/tab_go_nogo.csv` — Go/No-Go decision table from rollout gates
 - `output/tab_best_config.csv` — Best configuration summary for decision making
 - `output/best_decision_report.md` — Final markdown report with rollout recommendation
+- `output/tab_score_validity.csv` — System-vs-human scoring validity metrics (MAE/RMSE/correlation/tolerance agreement)
+- `output/tab_human_reliability.csv` — Human inter-rater reliability diagnostics
+- `output/tab_scoring_bias.csv` — System over/under-scoring bias by rubric dimension
+- `output/tab_subgroup_diagnostics.csv` — Ability/track/resume subgroup diagnostics
+- `output/tab_user_experience_segments.csv` — User satisfaction segmented by duration, question count, and ability
+- `output/tab_chapter_diagnostics.csv` — Question chapter coverage and score diagnostics
+- `output/tab_difficulty_curve.csv` — Score curve by difficulty
+- `output/tab_gap_targeting_by_chapter.csv` — Missing-concept hit rate by chapter
 
 ## Table Caption Annotation
 
