@@ -687,14 +687,14 @@ def main():
                         return
             try:
                 with st.spinner(t("interview.preparing")):
+                    session_track = f"{track} · 简历专项" if resume_qa_mode else track
                     session = create_session(
                         db=db,
                         user_id=user_id,
-                        track=track,
+                        track=session_track,
                         level=level,
                         resume_id=resume_id if use_resume else None,
                         total_rounds=3 if resume_qa_mode else total_rounds,
-                        interview_mode="resume_qa" if resume_qa_mode else "standard",
                     )
                     st.session_state.current_session_id = session.id
                     result = start_interview(db, session.id)
