@@ -2,8 +2,8 @@
 import pytest
 from sqlalchemy.orm import Session
 from backend.db.base import Base, engine, SessionLocal
-from backend.db.models import User, InterviewSession, QuestionBank
-from backend.services.interview_engine import create_session, start_interview, submit_answer
+from backend.db.models import User, InterviewSession, QuestionBank, Resume, AskedQuestion
+from backend.services.interview_engine import create_session, start_interview, submit_answer, is_resume_qa_session
 from backend.core.security import get_password_hash
 
 
@@ -123,4 +123,55 @@ def test_submit_answer(db_session: Session, test_user, test_questions):
     # Verify session updated
     db_session.refresh(session)
     assert session.current_round > 1
+
+
+def test_resume_qa_stops_after_resume_probe(db_session: Session, test_user, test_questions):
+    """Resume-only interview should end instead of moving into the question bank."""
+    resume = Resume(
+        user_id=test_user.id,
+        filename="resume.pdf",
+        parsed_json={
+            "skills": ["Java", "Spring Boot", "MySQL"],
+            "projects": ["Order service with Spring Boot and MySQL"],
+            "experience": [],
+            "education": [],
+        },
+    )
+    db_session.add(resume)
+    db_session.commit()
+    db_session.refresh(resume)
+
+    session = create_session(
+        db=db_session,
+        user_id=test_user.id,
+        track="Java Backend",
+        level=3,
+        resume_id=resume.id,
+        total_rounds=3,
+        interview_mode="resume_qa",
+    )
+
+    assert is_resume_qa_session(session)
+
+    start_result = start_interview(db_session, session.id)
+    assert "error" not in start_result
+
+    asked_q = (
+        db_session.query(AskedQuestion)
+        .filter(AskedQuestion.session_id == session.id)
+        .order_by(AskedQuestion.created_at.desc())
+        .first()
+    )
+    assert asked_q is not None
+    assert asked_q.qbank_id is None
+
+    result = submit_answer(
+        db=db_session,
+        session_id=session.id,
+        answer_text=asked_q.correct_answer_text,
+    )
+
+    db_session.refresh(session)
+    assert "evaluation" in result
+    assert session.status == "completed"
 

@@ -20,6 +20,21 @@ from backend.services.interview_phrases import (
     get_followup_phrase,
 )
 
+RESUME_QA_SUFFIX = " · 简历专项"
+
+
+def base_track(track: str) -> str:
+    """Strip persisted mode suffixes from the display track."""
+    value = str(track or "")
+    if value.endswith(RESUME_QA_SUFFIX):
+        return value[: -len(RESUME_QA_SUFFIX)]
+    return value
+
+
+def is_resume_qa_session(session: InterviewSession) -> bool:
+    """Whether the interview should stop after resume-focused probing ends."""
+    return bool(session and session.resume_id and str(session.track or "").endswith(RESUME_QA_SUFFIX))
+
 
 def create_session(
     db: Session,
@@ -27,13 +42,17 @@ def create_session(
     track: str,
     level: int,
     resume_id: Optional[int] = None,
-    total_rounds: int = 10
+    total_rounds: int = 10,
+    interview_mode: str = "standard",
 ) -> InterviewSession:
     """Create a new interview session."""
+    stored_track = track
+    if interview_mode == "resume_qa" and resume_id and not stored_track.endswith(RESUME_QA_SUFFIX):
+        stored_track = f"{track}{RESUME_QA_SUFFIX}"
     session = InterviewSession(
         user_id=user_id,
         resume_id=resume_id,
-        track=track,
+        track=stored_track,
         level=level,
         total_rounds=total_rounds,
         current_round=0,
@@ -55,6 +74,7 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
     session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
     if not session or session.status != "active":
         return None
+    session_track = base_track(session.track)
 
     # Get resume data if available
     resume_skills = None
@@ -72,15 +92,18 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
             from backend.services.llm_provider import generate_resume_question_llm
             llm_q = generate_resume_question_llm(
                 resume_parsed=resume_parsed,
-                track=session.track,
+                track=session_track,
                 difficulty=session.level,
             )
         except Exception:
             pass
 
+    if is_resume_qa_session(session) and not llm_q and resume_parsed:
+        llm_q = _generate_resume_question_fallback(resume_parsed, session_track, session.level)
+
     if llm_q:
         # LLM-generated question (not from bank)
-        chapter = _infer_chapter_from_question(llm_q["question"], session.track)
+        chapter = _infer_chapter_from_question(llm_q["question"], session_track)
         asked_q = AskedQuestion(
             session_id=session_id,
             qbank_id=None,
@@ -91,10 +114,17 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
         )
         db.add(asked_q)
 
-        intro_content = (
-            f"你好！我看了你的简历，结合你的技术背景，我们从一个相关问题开始：\n\n"
-            f"{llm_q['question']}"
-        )
+        if is_resume_qa_session(session):
+            intro_content = (
+                "你好，我看了你的简历。接下来我们只围绕这份简历做针对性问答；"
+                "如果需要我会继续追问，追问结束后本次专项问答就会停止。\n\n"
+                f"{llm_q['question']}"
+            )
+        else:
+            intro_content = (
+                f"你好！我看了你的简历，结合你的技术背景，我们从一个相关问题开始：\n\n"
+                f"{llm_q['question']}"
+            )
         interviewer_turn = InterviewTurn(
             session_id=session_id, role="interviewer", content=intro_content
         )
@@ -156,6 +186,37 @@ def _infer_chapter_from_question(question_text: str, track: str) -> str:
             best_score = score
             best_ch = ch
     return best_ch
+
+
+def _generate_resume_question_fallback(resume_parsed: Dict, track: str, difficulty: int) -> Dict[str, str]:
+    """Create a resume-focused question without calling an LLM."""
+    skills = [
+        str(item).strip()
+        for item in (resume_parsed.get("skills") or [])
+        if str(item).strip() and "未识别" not in str(item)
+    ]
+    projects = [
+        str(item).strip()
+        for item in (resume_parsed.get("projects") or [])
+        if str(item).strip() and "未识别" not in str(item)
+    ]
+    experiences = [
+        str(item).strip()
+        for item in (resume_parsed.get("experience") or [])
+        if str(item).strip() and "未识别" not in str(item)
+    ]
+    skill_hint = "、".join(skills[:3]) if skills else f"{track} 相关技术"
+    project_hint = (projects or experiences or ["你简历中最有代表性的项目"])[0][:120]
+    focus = "核心设计、技术权衡和落地效果" if difficulty >= 3 else "具体实现过程和遇到的问题"
+    question = (
+        f"你简历里提到了 {skill_hint}。请结合「{project_hint}」，"
+        f"讲讲你在其中负责的{focus}。"
+    )
+    reference_answer = (
+        "回答应包含项目背景、本人职责、关键技术选型、具体实现细节、遇到的问题、"
+        "解决方案及结果。重点观察候选人是否能把简历经历讲具体，而不是泛泛描述技术名词。"
+    )
+    return {"question": question, "reference_answer": reference_answer}
 
 
 def submit_answer(
@@ -365,6 +426,17 @@ def submit_answer(
             "round": session.current_round,
             "followup_reason": followup_reason
         }
+    elif is_resume_qa_session(session) and asked_q.qbank_id is None:
+        end_result = end_interview(db, session_id)
+        end_result.update(
+            {
+                "evaluation": evaluation_result,
+                "followup": False,
+                "round": session.current_round,
+                "followup_reason": "简历专项追问已结束，停止本次专项问答",
+            }
+        )
+        return end_result
     else:
         # Move to next question
         # Double check if should end (adaptive check)
@@ -690,7 +762,16 @@ def _submit_answer_agentic(
     agent_action = agent_result.get("_agent_action", "terminate")
 
     if agent_action == "terminate":
-        return end_interview(db, session_id)
+        end_result = end_interview(db, session_id)
+        end_result.update(
+            {
+                "evaluation": evaluation_result,
+                "followup": False,
+                "round": session.current_round,
+                "followup_reason": agent_result.get("_agent_reason", ""),
+            }
+        )
+        return end_result
 
     if agent_action == "follow_up":
         followup_content = agent_result.get("followup_text", "")

@@ -19,6 +19,15 @@ from backend.services.selection_rl import (
     choose_chapter_with_contextual_bandit,
 )
 
+RESUME_QA_SUFFIX = " · 简历专项"
+
+
+def _base_track(track: str) -> str:
+    value = str(track or "")
+    if value.endswith(RESUME_QA_SUFFIX):
+        return value[: -len(RESUME_QA_SUFFIX)]
+    return value
+
 try:
     from rapidfuzz import fuzz as _rf_fuzz  # type: ignore
 except Exception:  # pragma: no cover
@@ -153,7 +162,8 @@ def select_question(
         Selected question or None
     """
     # Get track chapter weights
-    track_chapters = settings.track_chapters.get(session.track, {})
+    track_name = _base_track(session.track)
+    track_chapters = settings.track_chapters.get(track_name, {})
     
     asked_chapters = _get_asked_chapters(db, session.id)
 
@@ -181,7 +191,7 @@ def select_question(
         ch_avg = {ch: sum(sc) / len(sc) for ch, sc in ch_scores.items()}
         all_scores = [float(aq.evaluation.overall_score) for aq in asked_qs if aq.evaluation]
         llm_ctx = {
-            "track": session.track,
+            "track": track_name,
             "chapter_scores": ch_avg,
             "missing_concepts": list(missing_chapters or []),
             "current_difficulty": current_difficulty,

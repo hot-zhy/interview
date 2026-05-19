@@ -40,6 +40,7 @@ from backend.db.models import (
     Resume,
 )
 from backend.services.adaptive_interview import AdaptiveInterviewEngine
+from backend.services.interview_engine import is_resume_qa_session
 from backend.services.question_selector import select_question
 
 
@@ -200,6 +201,12 @@ class AgentController:
                 action=ActionType.FOLLOW_UP,
                 reason=followup_plan.reason,
                 followup_text=followup_plan.followup_text,
+            )
+
+        if is_resume_qa_session(self.session) and asked_question.qbank_id is None:
+            return ActionDecision(
+                action=ActionType.TERMINATE,
+                reason="resume-focused probing completed",
             )
 
         # Default: ask next

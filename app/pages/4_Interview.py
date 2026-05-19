@@ -507,6 +507,13 @@ def main():
 
         resumes = db.query(Resume).filter(Resume.user_id == user_id).all()
         use_resume = st.checkbox(t("interview.use_resume"), key="use_resume")
+        resume_qa_mode = st.checkbox(
+            "简历专项问答（追问结束即停止）",
+            key="resume_qa_mode",
+            help="只围绕所选简历进行一组针对性问答；不再切换到题库下一题。",
+        )
+        if resume_qa_mode:
+            use_resume = True
         resume_id = None
         if use_resume and resumes:
             resume_options = {
@@ -521,8 +528,12 @@ def main():
         elif use_resume and not resumes:
             st.warning(t("interview.upload_resume_first"))
             use_resume = False
+            resume_qa_mode = False
 
         if st.button(t("interview.start_interview"), use_container_width=True, type="primary"):
+            if resume_qa_mode and not resume_id:
+                st.error("请先选择一份简历，再开始简历专项问答。")
+                return
             if use_resume and resume_id:
                 resume = db.query(Resume).filter(Resume.id == resume_id).first()
                 if resume:
@@ -539,7 +550,8 @@ def main():
                         track=track,
                         level=level,
                         resume_id=resume_id if use_resume else None,
-                        total_rounds=total_rounds,
+                        total_rounds=3 if resume_qa_mode else total_rounds,
+                        interview_mode="resume_qa" if resume_qa_mode else "standard",
                     )
                     st.session_state.current_session_id = session.id
                     result = start_interview(db, session.id)
@@ -568,10 +580,11 @@ def main():
 
     progress_ratio = session.current_round / session.total_rounds if session.total_rounds else 0
     remain = max(session.total_rounds - session.current_round, 0)
+    display_track = session.track
     st.markdown(
         f"""
         <div class="interview-topbar">
-            <div class="interview-title">{html.escape(session.track)}</div>
+            <div class="interview-title">{html.escape(display_track)}</div>
             <div class="interview-meta">
                 <span>{t("interview.round")} <strong>{session.current_round}/{session.total_rounds}</strong></span>
                 <span>{t("interview.difficulty")} <strong>{session.level}</strong></span>
@@ -746,7 +759,7 @@ def main():
 
     with st.sidebar:
         st.markdown(f"### {t('interview.session_info')}")
-        st.text(f"{t('interview.direction')}: {session.track}")
+        st.text(f"{t('interview.direction')}: {display_track}")
         st.text(f"{t('interview.difficulty')}: {current_difficulty}/5")
         st.text(f"{t('interview.status')}: {session.status}")
         st.text(f"{t('interview.rounds_count')}: {session.current_round}/{session.total_rounds}")
