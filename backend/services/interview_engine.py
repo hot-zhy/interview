@@ -85,7 +85,7 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
             resume_parsed = resume.parsed_json
             resume_skills = resume_parsed.get("skills", [])
 
-    if is_resume_qa_session(session) and resume_parsed:
+    if is_resume_qa_session(session):
         from backend.agent.resume_qa_agent import ResumeQAAgent
 
         resume_agent = ResumeQAAgent(db, session)
@@ -116,6 +116,7 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
                 "turn_id": interviewer_turn.id,
                 "round": session.current_round,
             }
+        return {"error": "简历专项问答需要可读取的简历内容，请先重新上传或检查简历解析结果。"}
 
     # Strategy 1: LLM-generated first question from resume (most personalized)
     llm_q = None

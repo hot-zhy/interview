@@ -31,7 +31,7 @@ from app.components.styles import inject_global_styles
 from app.i18n import t
 from backend.core.config import settings
 from backend.db.base import get_db
-from backend.db.models import AskedQuestion, InterviewSession, Resume
+from backend.db.models import AskedQuestion, Evaluation, InterviewSession, Resume
 from backend.services.interview_engine import (
     create_session,
     get_session_turns,
@@ -267,6 +267,7 @@ def _remember_chat_note(
     title: str,
     content: str,
     anchor_candidate_idx: int,
+    render_html: bool = False,
 ):
     notes = _get_chat_notes(session_id)
     if any(note.get("token") == token for note in notes):
@@ -277,15 +278,41 @@ def _remember_chat_note(
             "title": title,
             "content": content,
             "anchor_candidate_idx": anchor_candidate_idx,
+            "html": render_html,
         }
     )
 
 
-def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""):
+def _render_note(note: dict):
+    if note.get("html"):
+        st.markdown(note.get("content", ""), unsafe_allow_html=True)
+    else:
+        _bubble(note.get("title", "系统"), note.get("content", ""), "system")
+
+
+def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = "", saved_notes=None):
     notes_by_anchor = {}
     unanchored_notes = []
+    saved_notes = saved_notes or []
+    saved_anchors = {
+        note.get("anchor_candidate_idx")
+        for note in saved_notes
+        if isinstance(note.get("anchor_candidate_idx"), int)
+    }
+    for note in saved_notes:
+        anchor = note.get("anchor_candidate_idx")
+        if isinstance(anchor, int) and anchor > 0:
+            notes_by_anchor.setdefault(anchor, []).append(note)
+        else:
+            unanchored_notes.append(note)
+
     for note in _get_chat_notes(session_id):
         anchor = note.get("anchor_candidate_idx")
+        if (
+            anchor in saved_anchors
+            and str(note.get("title", "")).startswith("面试官 · AI 分析")
+        ):
+            continue
         if isinstance(anchor, int) and anchor > 0:
             notes_by_anchor.setdefault(anchor, []).append(note)
         else:
@@ -297,7 +324,7 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
             _bubble("你", turn["content"], "candidate", align_right=True)
             candidate_idx += 1
             for note in notes_by_anchor.get(candidate_idx, []):
-                _bubble(note.get("title", "系统"), note.get("content", ""), "system")
+                _render_note(note)
         else:
             _bubble(t("interview.interviewer"), turn["content"], "interviewer")
 
@@ -305,13 +332,26 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
         st.markdown(_candidate_html(optimistic_candidate), unsafe_allow_html=True)
         candidate_idx += 1
         for note in notes_by_anchor.get(candidate_idx, []):
-            _bubble(note.get("title", "系统"), note.get("content", ""), "system")
+            _render_note(note)
 
     for note in unanchored_notes:
-        _bubble(note.get("title", "系统"), note.get("content", ""), "system")
+        _render_note(note)
 
 
 def _analysis_progress_html(candidate_text: str, active_step: int = 1) -> str:
+    return _candidate_html(candidate_text) + _analysis_steps_bubble_html(
+        title="面试官 · AI 分析中",
+        subtitle="我正在分析你的回答，请稍等。",
+        active_step=active_step,
+    )
+
+
+def _analysis_steps_bubble_html(
+    title: str = "面试官 · AI 分析中",
+    subtitle: str = "我正在分析你的回答，请稍等。",
+    active_step: int = 1,
+    completed: bool = False,
+) -> str:
     steps = [
         "收到回答并写入本轮记录",
         "评估语义匹配、关键点覆盖和表达清晰度",
@@ -320,7 +360,7 @@ def _analysis_progress_html(candidate_text: str, active_step: int = 1) -> str:
     ]
     rows = []
     for idx, label in enumerate(steps, start=1):
-        if idx < active_step:
+        if completed or idx < active_step:
             state = "done"
             marker = "✓"
         elif idx == active_step:
@@ -336,13 +376,13 @@ def _analysis_progress_html(candidate_text: str, active_step: int = 1) -> str:
             f'</div>'
         )
     processing = (
-        '<div class="chat-role">面试官 · AI 分析中</div>'
+        f'<div class="chat-role">{html.escape(title)}</div>'
         '<div class="chat-bubble system">'
-        '<div class="analysis-title">我正在分析你的回答，请稍等。</div>'
+        f'<div class="analysis-title">{html.escape(subtitle)}</div>'
         f'<div class="analysis-steps">{"".join(rows)}</div>'
         '</div>'
     )
-    return _candidate_html(candidate_text) + processing
+    return processing
 
 
 def _build_persistent_analysis_flow(result: dict) -> str:
@@ -422,6 +462,64 @@ def _build_analysis_summary(result: dict) -> str:
     return "\n\n".join(lines)
 
 
+def _build_saved_analysis_notes(db, session_id: int):
+    asked_questions = (
+        db.query(AskedQuestion)
+        .filter(AskedQuestion.session_id == session_id)
+        .order_by(AskedQuestion.created_at)
+        .all()
+    )
+    notes = []
+    candidate_idx = 0
+    for asked_q in asked_questions:
+        evaluation = (
+            db.query(Evaluation)
+            .filter(Evaluation.asked_question_id == asked_q.id)
+            .first()
+        )
+        if not evaluation:
+            continue
+        candidate_idx += 1
+        result = {
+            "evaluation": {
+                "scores": evaluation.scores_json or {},
+                "overall_score": evaluation.overall_score,
+                "feedback": evaluation.feedback_text,
+                "missing_points": evaluation.missing_points_json or [],
+                "next_direction": evaluation.next_direction,
+            },
+            "followup": False,
+            "followup_reason": evaluation.next_direction or "",
+        }
+        flow_html = _analysis_steps_bubble_html(
+            title="面试官 · AI 分析中（已完成）",
+            subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
+            active_step=4,
+            completed=True,
+        )
+        summary = _build_analysis_summary(result)
+        notes.append(
+            {
+                "token": f"db:{evaluation.id}:flow",
+                "title": "面试官 · AI 分析中（已完成）",
+                "content": flow_html,
+                "anchor_candidate_idx": candidate_idx,
+                "html": True,
+            }
+        )
+        if summary:
+            notes.append(
+                {
+                    "token": f"db:{evaluation.id}:summary",
+                    "title": "面试官 · AI 分析与评价",
+                    "content": summary,
+                    "anchor_candidate_idx": candidate_idx,
+                    "html": False,
+                }
+            )
+    return notes
+
+
 def _collect_expression_payload():
     accumulated = get_accumulated_expressions()
     return {"analyses": accumulated} if accumulated else None
@@ -469,9 +567,15 @@ def _submit_and_update(
     _remember_chat_note(
         session_id,
         f"{token}:flow",
-        "面试官 · AI 分析流程",
-        _build_persistent_analysis_flow(result),
+        "面试官 · AI 分析中（已完成）",
+        _analysis_steps_bubble_html(
+            title="面试官 · AI 分析中（已完成）",
+            subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
+            active_step=4,
+            completed=True,
+        ),
         anchor_candidate_idx,
+        render_html=True,
     )
     if analysis_summary:
         _remember_chat_note(
@@ -484,7 +588,12 @@ def _submit_and_update(
 
     live_placeholder.markdown(
         _candidate_html(display_answer)
-        + _system_html("面试官 · AI 分析流程", _build_persistent_analysis_flow(result))
+        + _analysis_steps_bubble_html(
+            title="面试官 · AI 分析中（已完成）",
+            subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
+            active_step=4,
+            completed=True,
+        )
         + _system_html("面试官 · AI 分析与评价", analysis_summary),
         unsafe_allow_html=True,
     )
@@ -578,14 +687,14 @@ def main():
                         return
             try:
                 with st.spinner(t("interview.preparing")):
-                    session_track = f"{track} · 简历专项" if resume_qa_mode else track
                     session = create_session(
                         db=db,
                         user_id=user_id,
-                        track=session_track,
+                        track=track,
                         level=level,
                         resume_id=resume_id if use_resume else None,
                         total_rounds=3 if resume_qa_mode else total_rounds,
+                        interview_mode="resume_qa" if resume_qa_mode else "standard",
                     )
                     st.session_state.current_session_id = session.id
                     result = start_interview(db, session.id)
@@ -671,7 +780,13 @@ def main():
     with col_main:
         chat_container = st.container(height=460, border=True)
         with chat_container:
-            _render_chat_timeline(turns, session_id, optimistic_candidate=optimistic_candidate)
+            saved_analysis_notes = _build_saved_analysis_notes(db, session_id)
+            _render_chat_timeline(
+                turns,
+                session_id,
+                optimistic_candidate=optimistic_candidate,
+                saved_notes=saved_analysis_notes,
+            )
             live_processing_placeholder = st.empty()
             _scroll_chat_to_bottom()
 

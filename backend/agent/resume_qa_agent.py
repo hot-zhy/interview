@@ -48,6 +48,28 @@ class ResumeQAAgent:
         self.resume = self._load_resume()
         self.resume_data = self.resume.parsed_json if self.resume and self.resume.parsed_json else {}
         self.probes = build_resume_probes(self.resume_data, max_items=max(1, session.total_rounds or 3))
+        if not self.probes and self.resume and self.resume.raw_text:
+            text = " ".join(str(self.resume.raw_text).split())[:220]
+            if text:
+                self.probes = [
+                    ResumeProbe(
+                        index=0,
+                        topic=f"{RESUME_TOPIC_PREFIX}:0",
+                        evidence_type="resume_text",
+                        evidence=text,
+                        skills=[],
+                    )
+                ]
+        if not self.probes:
+            self.probes = [
+                ResumeProbe(
+                    index=0,
+                    topic=f"{RESUME_TOPIC_PREFIX}:0",
+                    evidence_type="resume_overview",
+                    evidence="候选人上传的简历内容",
+                    skills=[],
+                )
+            ]
 
     def has_resume_context(self) -> bool:
         return bool(self.resume_data)

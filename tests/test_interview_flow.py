@@ -198,3 +198,40 @@ def test_resume_qa_uses_only_resume_probes_until_complete(db_session: Session, t
         == 0
     )
 
+
+def test_resume_qa_never_falls_back_to_question_bank(db_session: Session, test_user, test_questions):
+    """Resume QA must not ask generic bank questions even when parsed fields are sparse."""
+    resume = Resume(
+        user_id=test_user.id,
+        filename="sparse_resume.pdf",
+        raw_text="Candidate built an order reconciliation service and optimized database queries.",
+        parsed_json={},
+    )
+    db_session.add(resume)
+    db_session.commit()
+    db_session.refresh(resume)
+
+    session = create_session(
+        db=db_session,
+        user_id=test_user.id,
+        track="Java Backend",
+        level=3,
+        resume_id=resume.id,
+        total_rounds=3,
+        interview_mode="resume_qa",
+    )
+
+    result = start_interview(db_session, session.id)
+    assert "error" not in result
+
+    asked_q = (
+        db_session.query(AskedQuestion)
+        .filter(AskedQuestion.session_id == session.id)
+        .order_by(AskedQuestion.created_at.desc())
+        .first()
+    )
+    assert asked_q is not None
+    assert asked_q.qbank_id is None
+    assert "What is Java?" not in asked_q.question_text
+    assert "What is Spring?" not in asked_q.question_text
+
