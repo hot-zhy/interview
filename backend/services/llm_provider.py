@@ -662,6 +662,93 @@ def generate_resume_question_llm(
     return None
 
 
+def generate_resume_probe_question_llm(
+    resume_parsed: Dict,
+    probe: Dict,
+    track: str,
+    difficulty: int,
+) -> Optional[Dict[str, str]]:
+    """Generate one resume-evidence question for resume QA mode."""
+    if not settings.zhipuai_api_key:
+        return None
+
+    skills = probe.get("skills") or resume_parsed.get("skills", [])
+    evidence = str(probe.get("evidence", "")).strip()
+    evidence_type = str(probe.get("evidence_type", "resume")).strip()
+    skills_str = "、".join(str(s) for s in skills[:6]) if skills else "未提供"
+    diff_desc = {1: "入门", 2: "初级", 3: "中级", 4: "高级", 5: "专家"}.get(difficulty, "中级")
+
+    system = """你是资深技术面试官，正在做简历专项问答。你必须只围绕给定简历证据提问。
+输出严格 JSON：{"question": "...", "reference_answer": "..."}
+不要输出 markdown 或其他文字。"""
+    user = f"""面试方向：{track}
+难度：{diff_desc}（{difficulty}/5）
+简历证据类型：{evidence_type}
+简历证据：{evidence}
+相关技能：{skills_str}
+
+请生成一道针对这条简历证据的面试问题。
+要求：
+- 问题必须点名或明显指向这条简历证据，不能泛泛问八股题
+- 要验证候选人是否真实参与、负责了什么、怎么做、为什么这么做、结果如何
+- 题目 40-100 字
+- reference_answer 写 120-220 字，列出优秀回答应覆盖的证据点、技术点、权衡和结果指标"""
+
+    content = _call_zhipuai(system, user, temperature=0.45, label="resume_probe_question")
+    if not content:
+        return None
+    try:
+        if content.startswith("```"):
+            content = re.sub(r"^```\w*\n?", "", content)
+            content = re.sub(r"\n?```$", "", content)
+        data = json.loads(content.strip())
+        q = str(data.get("question", "")).strip()
+        a = str(data.get("reference_answer", "")).strip()
+        if q and a:
+            return {"question": q, "reference_answer": a}
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+def generate_resume_probe_followup_llm(
+    resume_evidence: str,
+    skills: List[str],
+    original_question: str,
+    user_answer: str,
+    feedback: str,
+    missing_points: List[str],
+    followup_count: int = 0,
+) -> Optional[str]:
+    """Generate a follow-up that stays anchored to the same resume evidence."""
+    if not settings.zhipuai_api_key:
+        return None
+
+    skills_str = "、".join(str(s) for s in skills[:5]) if skills else "未提供"
+    missing_str = "、".join(str(m) for m in missing_points[:4]) if missing_points else "回答细节不足"
+    system = "你是资深技术面试官。生成一句简历专项追问，只输出追问本身。"
+    user = f"""简历证据：{resume_evidence}
+相关技能：{skills_str}
+原问题：{original_question}
+候选人回答：{user_answer[:700]}
+面试官评价：{feedback}
+还需要验证的点：{missing_str}
+追问次数：{followup_count + 1}
+
+请生成一句追问：
+- 必须继续围绕这条简历证据，不能切到题库或通用知识题
+- 优先追问真实职责、关键实现、线上问题、指标结果、技术权衡
+- 针对候选人刚才回答中最模糊的一处问
+- 35-90 字，语气自然，直接输出问题"""
+
+    content = _call_zhipuai(system, user, temperature=0.5, label="resume_probe_followup")
+    if content:
+        content = content.strip().strip('"').strip("'")
+        if 8 <= len(content) <= 160:
+            return content
+    return None
+
+
 def generate_deep_report_analysis(
     track: str,
     rounds: int,

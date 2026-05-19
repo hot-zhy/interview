@@ -85,6 +85,38 @@ def start_interview(db: Session, session_id: int) -> Optional[Dict]:
             resume_parsed = resume.parsed_json
             resume_skills = resume_parsed.get("skills", [])
 
+    if is_resume_qa_session(session) and resume_parsed:
+        from backend.agent.resume_qa_agent import ResumeQAAgent
+
+        resume_agent = ResumeQAAgent(db, session)
+        resume_question = resume_agent.first_question(session_track, session.level)
+        if resume_question:
+            asked_q = AskedQuestion(
+                session_id=session_id,
+                qbank_id=None,
+                topic=resume_question.topic,
+                difficulty=session.level,
+                question_text=resume_question.question,
+                correct_answer_text=resume_question.reference_answer,
+            )
+            db.add(asked_q)
+            intro_content = (
+                "你好，我看完了你的简历。接下来这段是简历专项问答，我会只围绕简历中的经历、"
+                "项目和技能追问；当这条简历证据链问清楚后，本次专项问答就会停止。\n\n"
+                f"{resume_question.question}"
+            )
+            interviewer_turn = InterviewTurn(
+                session_id=session_id, role="interviewer", content=intro_content
+            )
+            db.add(interviewer_turn)
+            session.current_round = 1
+            db.commit()
+            return {
+                "question": resume_question.question,
+                "turn_id": interviewer_turn.id,
+                "round": session.current_round,
+            }
+
     # Strategy 1: LLM-generated first question from resume (most personalized)
     llm_q = None
     if resume_parsed and settings.zhipuai_api_key:
@@ -785,6 +817,41 @@ def _submit_answer_agentic(
             "evaluation": evaluation_result,
             "followup": True,
             "interviewer_message": followup_content,
+            "round": session.current_round,
+            "followup_reason": agent_result.get("_agent_reason", ""),
+        }
+
+    if agent_action == "ask_resume_next":
+        next_resume_q = agent_result.get("next_resume_question")
+        if not next_resume_q:
+            return end_interview(db, session_id)
+
+        new_diff = agent_result.get("new_difficulty", session.level)
+        next_asked_q = AskedQuestion(
+            session_id=session_id,
+            qbank_id=None,
+            topic=next_resume_q.topic,
+            difficulty=new_diff,
+            question_text=next_resume_q.question,
+            correct_answer_text=next_resume_q.reference_answer,
+        )
+        db.add(next_asked_q)
+        interviewer_turn = InterviewTurn(
+            session_id=session_id,
+            role="interviewer",
+            content=(
+                "我们继续沿着你的简历往下核验。"
+                f"\n\n{next_resume_q.question}"
+            ),
+        )
+        db.add(interviewer_turn)
+        session.current_round += 1
+        db.commit()
+        return {
+            "evaluation": evaluation_result,
+            "followup": False,
+            "next_question": next_resume_q.question,
+            "interviewer_message": interviewer_turn.content,
             "round": session.current_round,
             "followup_reason": agent_result.get("_agent_reason", ""),
         }

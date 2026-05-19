@@ -125,8 +125,8 @@ def test_submit_answer(db_session: Session, test_user, test_questions):
     assert session.current_round > 1
 
 
-def test_resume_qa_stops_after_resume_probe(db_session: Session, test_user, test_questions):
-    """Resume-only interview should end instead of moving into the question bank."""
+def test_resume_qa_uses_only_resume_probes_until_complete(db_session: Session, test_user, test_questions):
+    """Resume-only interview should keep asking resume probes and never enter the question bank."""
     resume = Resume(
         user_id=test_user.id,
         filename="resume.pdf",
@@ -165,13 +165,36 @@ def test_resume_qa_stops_after_resume_probe(db_session: Session, test_user, test
     assert asked_q is not None
     assert asked_q.qbank_id is None
 
-    result = submit_answer(
-        db=db_session,
-        session_id=session.id,
-        answer_text=asked_q.correct_answer_text,
-    )
+    result = {}
+    for _ in range(4):
+        asked_q = (
+            db_session.query(AskedQuestion)
+            .filter(AskedQuestion.session_id == session.id)
+            .order_by(AskedQuestion.created_at.desc())
+            .first()
+        )
+        assert asked_q is not None
+        assert asked_q.qbank_id is None
+
+        result = submit_answer(
+            db=db_session,
+            session_id=session.id,
+            answer_text=(
+                f"{asked_q.correct_answer_text} In this project I owned the implementation, "
+                "made the technical tradeoffs, verified the result with metrics, and handled rollout risks."
+            ),
+        )
+        db_session.refresh(session)
+        if session.status == "completed":
+            break
 
     db_session.refresh(session)
     assert "evaluation" in result
     assert session.status == "completed"
+    assert (
+        db_session.query(AskedQuestion)
+        .filter(AskedQuestion.session_id == session.id, AskedQuestion.qbank_id.isnot(None))
+        .count()
+        == 0
+    )
 

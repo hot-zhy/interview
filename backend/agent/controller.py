@@ -36,6 +36,7 @@ from backend.core.config import settings
 from backend.db.models import (
     AskedQuestion,
     InterviewSession,
+    InterviewTurn,
     QuestionBank,
     Resume,
 )
@@ -173,6 +174,9 @@ class AgentController:
         eval_result: EvaluationResult,
         answer_text: str = "",
     ) -> ActionDecision:
+        if is_resume_qa_session(self.session):
+            return self._choose_resume_qa_action(state, asked_question, eval_result, answer_text)
+
         # Check termination (reuse existing logic)
         should_end, end_reason = self.adaptive_engine.should_end_interview()
         if should_end:
@@ -226,6 +230,71 @@ class AgentController:
             new_difficulty=new_difficulty,
         )
 
+    def _choose_resume_qa_action(
+        self,
+        state: InterviewState,
+        asked_question: AskedQuestion,
+        eval_result: EvaluationResult,
+        answer_text: str,
+    ) -> ActionDecision:
+        from backend.agent.resume_qa_agent import ResumeQAAgent
+
+        resume_agent = ResumeQAAgent(self.db, self.session)
+        eval_dict = {
+            "overall_score": eval_result.overall_score,
+            "feedback": eval_result.feedback,
+            "missing_points": eval_result.missing_points,
+        }
+        followup_count = self._count_resume_followups(asked_question)
+        should_follow, reason = resume_agent.should_follow_up(
+            asked_question=asked_question,
+            evaluation=eval_dict,
+            answer_text=answer_text,
+            followup_count=followup_count,
+        )
+        if should_follow and state.remaining_budget > 0:
+            followup_text = resume_agent.make_follow_up(
+                asked_question=asked_question,
+                answer_text=answer_text,
+                evaluation=eval_dict,
+                followup_count=followup_count,
+            )
+            return ActionDecision(
+                action=ActionType.FOLLOW_UP,
+                reason=reason,
+                followup_text=followup_text,
+            )
+
+        if self.session.current_round >= (self.session.total_rounds or 1):
+            return ActionDecision(
+                action=ActionType.TERMINATE,
+                reason="resume QA planned rounds completed",
+            )
+
+        return ActionDecision(
+            action=ActionType.ASK_NEXT,
+            reason="resume_qa_next_probe",
+            new_difficulty=self.adaptive_engine.calculate_adaptive_difficulty(),
+        )
+
+    def _count_resume_followups(self, asked_question: AskedQuestion) -> int:
+        if not asked_question:
+            return 0
+        interviewer_turns = (
+            self.db.query(InterviewTurn)
+            .filter(
+                InterviewTurn.session_id == self.session.id,
+                InterviewTurn.role == "interviewer",
+                InterviewTurn.created_at > asked_question.created_at,
+            )
+            .all()
+        )
+        return sum(
+            1
+            for turn in interviewer_turns
+            if asked_question.question_text not in (turn.content or "")
+        )
+
     # ------------------------------------------------------------------
     # Action execution
     # ------------------------------------------------------------------
@@ -268,6 +337,31 @@ class AgentController:
 
         # ASK_NEXT
         new_difficulty = action.new_difficulty or state.current_difficulty
+
+        if is_resume_qa_session(self.session):
+            from backend.agent.resume_qa_agent import ResumeQAAgent
+            from backend.services.interview_engine import base_track
+
+            resume_agent = ResumeQAAgent(self.db, self.session)
+            next_resume_question = resume_agent.next_question_after_current(
+                track=base_track(self.session.track),
+                difficulty=new_difficulty,
+            )
+            if not next_resume_question:
+                return {
+                    "_agent_action": "terminate",
+                    "_agent_reason": "resume QA evidence probes completed",
+                    "evaluation": eval_dict,
+                }
+            return {
+                "_agent_action": "ask_resume_next",
+                "_agent_reason": action.reason,
+                "evaluation": eval_dict,
+                "followup": False,
+                "next_resume_question": next_resume_question,
+                "new_difficulty": new_difficulty,
+            }
+
         resume_skills = self.memory.resume_skills
 
         # Collect missing chapters from memory
