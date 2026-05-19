@@ -3,13 +3,21 @@ import os
 import sys
 from pathlib import Path
 
+import streamlit as st
+
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Page configuration
+st.set_page_config(
+    page_title="AI Interview System",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 from app.components.secrets_bridge import bridge_secrets; bridge_secrets()
 
-import streamlit as st
 from app.components.auth_utils import init_session_state
 from app.components.auth_loader import load_auth_on_page_load
 from app.components.styles import inject_global_styles
@@ -27,13 +35,6 @@ def _auto_init_db():
         print(f"[auto_init_db] {e}")
 
 _auto_init_db()
-
-# Page configuration
-st.set_page_config(
-    page_title="AI Interview System",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Inject global styles
 inject_global_styles()

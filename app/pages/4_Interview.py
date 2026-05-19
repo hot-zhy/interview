@@ -11,6 +11,9 @@ import streamlit.components.v1 as st_components
 from st_audiorec import st_audiorec
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+st.set_page_config(page_title="Interview", layout="wide")
+
 from app.components.secrets_bridge import bridge_secrets
 
 bridge_secrets()
@@ -37,8 +40,6 @@ from backend.services.interview_engine import (
 )
 from backend.services.resume_track_matcher import check_resume_track_match
 
-
-st.set_page_config(page_title="Interview", layout="wide")
 inject_global_styles()
 load_auth_on_page_load()
 init_session_state()
@@ -50,7 +51,7 @@ def _inject_interview_styles():
         <style>
         section.main > div.block-container {
             max-width: 1280px;
-            padding-top: 0.75rem !important;
+            padding-top: 0.85rem !important;
             padding-bottom: 1rem !important;
         }
 
@@ -59,22 +60,44 @@ def _inject_interview_styles():
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            margin-bottom: 6px;
+            margin-bottom: 10px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(116, 139, 171, 0.24);
+            border-radius: 8px;
+            box-shadow: 0 18px 50px rgba(33, 56, 96, 0.10);
+            backdrop-filter: blur(16px);
         }
         .interview-title {
-            font-size: 1.05rem;
-            font-weight: 750;
+            font-size: 1.08rem;
+            font-weight: 800;
             color: #172033;
+            letter-spacing: 0;
         }
         .interview-meta {
             display: flex;
             flex-wrap: wrap;
             justify-content: flex-end;
-            gap: 10px;
+            gap: 8px;
             color: #64748b;
             font-size: 0.82rem;
         }
+        .interview-meta span {
+            background: rgba(8, 145, 178, 0.08);
+            border: 1px solid rgba(8, 145, 178, 0.16);
+            border-radius: 8px;
+            padding: 5px 8px;
+        }
         .interview-meta strong { color: #172033; }
+
+        [data-testid="stProgress"] > div {
+            background: rgba(148, 163, 184, 0.18);
+            border-radius: 999px;
+            height: 9px;
+        }
+        [data-testid="stProgress"] div div div {
+            background: linear-gradient(90deg, #2563eb 0%, #0891b2 55%, #7c3aed 100%) !important;
+        }
 
         .chat-panel {
             min-height: 420px;
@@ -87,34 +110,35 @@ def _inject_interview_styles():
         }
         .chat-role.right { text-align: right; }
         .chat-bubble {
-            border-radius: 14px;
+            border-radius: 8px;
             font-size: 0.94rem;
             line-height: 1.62;
             margin: 0 0 10px;
             max-width: 88%;
-            padding: 11px 14px;
+            padding: 12px 14px;
             white-space: normal;
             word-break: break-word;
         }
         .chat-bubble.interviewer {
-            background: #f8fafc;
-            border: 1px solid #dbe3ef;
-            border-bottom-left-radius: 5px;
+            background: rgba(255, 255, 255, 0.90);
+            border: 1px solid rgba(116, 139, 171, 0.24);
             color: #1e293b;
             margin-right: auto;
+            box-shadow: 0 12px 34px rgba(33, 56, 96, 0.08);
         }
         .chat-bubble.candidate {
-            background: #eef2ff;
-            border: 1px solid #c7d2fe;
-            border-bottom-right-radius: 5px;
-            color: #1e1b4b;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.92) 0%, rgba(8, 145, 178, 0.88) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            color: #ffffff;
             margin-left: auto;
+            box-shadow: 0 14px 36px rgba(37, 99, 235, 0.18);
         }
         .chat-bubble.system {
-            background: #ecfeff;
-            border: 1px solid #a5f3fc;
-            color: #155e75;
+            background: rgba(236, 254, 255, 0.88);
+            border: 1px solid rgba(8, 145, 178, 0.24);
+            color: #164e63;
             max-width: 92%;
+            box-shadow: 0 12px 34px rgba(8, 145, 178, 0.10);
         }
         .analysis-steps {
             display: grid;
@@ -129,7 +153,7 @@ def _inject_interview_styles():
         .analysis-dot {
             align-items: center;
             background: #cbd5e1;
-            border-radius: 999px;
+            border-radius: 8px;
             color: #fff;
             display: inline-flex;
             flex: 0 0 18px;
@@ -159,27 +183,37 @@ def _inject_interview_styles():
         .followup-chip {
             display: inline-flex;
             align-items: center;
-            background: #eef2ff;
-            border: 1px solid #c7d2fe;
-            border-radius: 999px;
-            color: #3730a3;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(37, 99, 235, 0.24);
+            border-radius: 8px;
+            color: #1d4ed8;
             font-size: 0.78rem;
             font-weight: 650;
             margin: 0 0 8px;
             padding: 4px 10px;
         }
         .side-note {
-            color: #64748b;
+            color: #526176;
             font-size: 0.82rem;
             line-height: 1.5;
             margin-top: 0.5rem;
+            border: 1px solid rgba(116, 139, 171, 0.20);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.72);
         }
         div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-color: #e2e8f0;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.72);
+            border-color: rgba(116, 139, 171, 0.22);
+            border-radius: 8px;
+            box-shadow: 0 18px 55px rgba(33, 56, 96, 0.10);
+            backdrop-filter: blur(14px);
         }
         .stTextArea textarea {
             min-height: 108px !important;
+        }
+        [data-testid="column"] > div {
+            gap: 0.7rem;
         }
         @media (max-width: 900px) {
             .interview-topbar {
