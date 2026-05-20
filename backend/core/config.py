@@ -3,6 +3,58 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 
+AI_TECH_TRACK_CHAPTERS = {
+    "AI Agent Engineer": {
+        "Agent架构": 0.25,
+        "工具调用": 0.20,
+        "RAG": 0.18,
+        "LLM应用": 0.17,
+        "评测与观测": 0.12,
+        "系统设计": 0.08,
+    },
+    "LLM Application Engineer": {
+        "LLM应用": 0.26,
+        "Prompt工程": 0.18,
+        "RAG": 0.20,
+        "向量数据库": 0.14,
+        "评测与观测": 0.12,
+        "系统设计": 0.10,
+    },
+    "RAG & Knowledge Base": {
+        "RAG": 0.30,
+        "向量数据库": 0.22,
+        "检索优化": 0.18,
+        "LLM应用": 0.12,
+        "评测与观测": 0.10,
+        "系统设计": 0.08,
+    },
+    "Agentic RL Engineer": {
+        "Agentic RL": 0.28,
+        "强化学习": 0.20,
+        "奖励建模": 0.18,
+        "Agent架构": 0.14,
+        "评测与观测": 0.12,
+        "系统设计": 0.08,
+    },
+    "AI Evaluation Engineer": {
+        "评测与观测": 0.28,
+        "LLM应用": 0.18,
+        "RAG": 0.14,
+        "奖励建模": 0.14,
+        "数据集构建": 0.14,
+        "系统设计": 0.12,
+    },
+    "LLMOps / AI Platform": {
+        "模型部署": 0.22,
+        "LLM应用": 0.18,
+        "评测与观测": 0.18,
+        "数据管道": 0.14,
+        "系统设计": 0.14,
+        "Python": 0.14,
+    },
+}
+
+
 class Settings(BaseSettings):
     """Application settings."""
     
@@ -224,3 +276,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+settings.track_chapters = {
+    **(settings.track_chapters or {}),
+    **AI_TECH_TRACK_CHAPTERS,
+}
