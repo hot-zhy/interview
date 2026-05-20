@@ -39,6 +39,22 @@ TRACK_SKILL_KEYWORDS = {
         "FAISS", "Qdrant", "Elasticsearch", "BM25", "重排",
         "Rerank", "检索", "召回", "LangChain", "LlamaIndex",
     ],
+    "Agentic RL Engineer": [
+        "Agentic RL", "强化学习", "Reinforcement Learning", "RL",
+        "Reward", "奖励模型", "奖励建模", "Policy", "PPO",
+        "DPO", "GRPO", "RLHF", "RLAIF", "Bandit", "Agent",
+        "多智能体", "评测", "Evals",
+    ],
+    "AI Evaluation Engineer": [
+        "评测", "Evals", "Benchmark", "数据集", "标注",
+        "Reward", "奖励模型", "LLM", "RAG", "Agent",
+        "观测", "Tracing", "Telemetry", "LangSmith",
+    ],
+    "LLMOps / AI Platform": [
+        "LLMOps", "MLOps", "模型部署", "模型服务", "LLM",
+        "OpenAI", "智谱", "ZhipuAI", "Kubernetes", "Docker",
+        "评测", "监控", "Tracing", "Python", "数据管道",
+    ],
     "ML Platform / MLOps": [
         "MLOps", "机器学习", "模型部署", "模型服务", "特征工程",
         "数据管道", "Airflow", "Kubeflow", "MLflow", "Docker",
