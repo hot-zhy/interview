@@ -1,6 +1,4 @@
 """Resume parser service."""
-import pdfplumber
-from docx import Document
 from typing import Dict, Any, Optional
 import re
 
@@ -137,6 +135,11 @@ def extract_text_from_pdf(file_path: str) -> str:
     """Extract text from PDF file."""
     text = ""
     try:
+        try:
+            import pdfplumber
+        except ModuleNotFoundError:
+            return _extract_text_from_pdf_with_pymupdf(file_path)
+
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
                 text += page.extract_text() or ""
@@ -145,9 +148,34 @@ def extract_text_from_pdf(file_path: str) -> str:
     return text
 
 
+def _extract_text_from_pdf_with_pymupdf(file_path: str) -> str:
+    """Fallback PDF extraction when pdfplumber is not installed."""
+    try:
+        import fitz
+    except ModuleNotFoundError as exc:
+        raise ValueError(
+            "Missing PDF parser dependency. Install pdfplumber or PyMuPDF: "
+            "pip install pdfplumber PyMuPDF"
+        ) from exc
+
+    try:
+        with fitz.open(file_path) as doc:
+            return "\n".join(page.get_text() or "" for page in doc)
+    except Exception as e:
+        raise ValueError(f"Failed to extract text from PDF with PyMuPDF: {str(e)}")
+
+
 def extract_text_from_docx(file_path: str) -> str:
     """Extract text from DOCX file."""
     try:
+        try:
+            from docx import Document
+        except ModuleNotFoundError as exc:
+            raise ValueError(
+                "Missing DOCX parser dependency. Install python-docx: "
+                "pip install python-docx"
+            ) from exc
+
         doc = Document(file_path)
         text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
         return text
