@@ -202,13 +202,6 @@ def _inject_interview_styles():
             padding: 10px 12px;
             background: rgba(255, 255, 255, 0.72);
         }
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            background: rgba(255, 255, 255, 0.72);
-            border-color: rgba(116, 139, 171, 0.22);
-            border-radius: 8px;
-            box-shadow: 0 18px 55px rgba(33, 56, 96, 0.10);
-            backdrop-filter: blur(14px);
-        }
         .stTextArea textarea {
             min-height: 108px !important;
         }
