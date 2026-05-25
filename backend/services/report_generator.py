@@ -50,8 +50,9 @@ def generate_report(db: Session, session_id: int) -> Dict:
             "markdown": "# 面试报告\n\n暂无评价数据。"
         }
     
-    # Re-score with LLM if original scores came from rules (upgrade old interviews)
-    _rescore_with_llm_if_needed(db, evaluations)
+    # Report-grade scoring: always try the configured LLM first. If the LLM is
+    # unavailable or a call fails, keep the original interview-time score.
+    llm_scoring = _rescore_with_llm_for_report(db, evaluations)
 
     # Calculate overall score (now reflects LLM scores if available)
     overall_score = sum(e.overall_score for e in evaluations) / len(evaluations)
@@ -92,6 +93,12 @@ def generate_report(db: Session, session_id: int) -> Dict:
 
     # Analyze expression patterns
     expression_summary = _analyze_expression_patterns(evaluations, session)
+    visual_analytics = _build_visual_analytics(
+        evaluations=evaluations,
+        dimension_scores=dimension_scores,
+        per_question_scores=per_question_scores,
+        difficulty_trajectory=[],
+    )
 
     # Multi-step agentic deep analysis (innovation)
     asked_qs = db.query(AskedQuestion).filter(
@@ -151,12 +158,22 @@ def generate_report(db: Session, session_id: int) -> Dict:
             overall_score, strengths, weaknesses, missing_knowledge,
             session.track, session.current_round or 0
         )
+
+    visual_analytics = _build_visual_analytics(
+        evaluations=evaluations,
+        dimension_scores=dimension_scores,
+        per_question_scores=per_question_scores,
+        difficulty_trajectory=difficulty_trajectory,
+        chapter_trace=chapter_trace,
+    )
     
     summary: Dict[str, Any] = {
         "overall_score": round(overall_score, 2),
         "dimension_scores": dimension_scores,
         "per_question_scores": per_question_scores,
         "overall_summary": overall_summary,
+        "llm_scoring": llm_scoring,
+        "visual_analytics": visual_analytics,
         "dimension_analysis": dimension_analysis,
         "gap_analysis": gap_analysis,
         "strategy_trace": strategy_trace,
@@ -181,7 +198,7 @@ def generate_report(db: Session, session_id: int) -> Dict:
     }
 
 
-def _rescore_with_llm_if_needed(db: Session, evaluations: List[Evaluation]) -> None:
+def _rescore_with_llm_for_report(db: Session, evaluations: List[Evaluation]) -> Dict[str, Any]:
     """Re-score evaluations with LLM if they were originally rule-scored.
 
     Checks each evaluation — if it looks like pure rule scoring (the telltale
@@ -191,49 +208,66 @@ def _rescore_with_llm_if_needed(db: Session, evaluations: List[Evaluation]) -> N
     """
     from backend.core.config import settings
     if not settings.zhipuai_api_key:
-        return
+        return {
+            "enabled": False,
+            "model": getattr(settings, "zhipuai_model", ""),
+            "rescored": 0,
+            "failed": 0,
+            "total": len(evaluations),
+            "message": "未配置大语言模型 API Key，报告沿用面试过程评分。",
+        }
 
     from backend.services.llm_provider import evaluate_with_llm
 
+    rescored = 0
+    failed = 0
     for ev in evaluations:
-        scores = ev.scores_json or {}
-        # Detect if this was rule-scored (no LLM)
-        is_rule_scored = (
-            scores.get("_provenance") == "rule"
-            or (not ev.next_direction and not scores.get("_provenance"))
-        )
-
-        if not is_rule_scored:
-            continue
-
-        # Get the question text for re-evaluation
         aq = ev.asked_question
         if not aq:
             continue
 
         try:
-            print(f"[report] re-scoring Q{aq.id} with LLM...")
+            print(f"[report] report-grade LLM scoring Q{aq.id}...")
             llm_result = evaluate_with_llm(
                 aq.question_text or "",
                 aq.correct_answer_text or "",
                 ev.answer_text or "",
             )
             if llm_result and llm_result.get("overall_score") is not None:
-                ev.scores_json = llm_result["scores"]
+                scores = dict(llm_result.get("scores", {}) or {})
+                scores["_report_scoring"] = "llm"
+                scores["_report_model"] = getattr(settings, "zhipuai_model", "")
+                ev.scores_json = scores
                 ev.overall_score = llm_result["overall_score"]
                 ev.feedback_text = llm_result.get("feedback", ev.feedback_text)
                 ev.missing_points_json = llm_result.get("missing_points", ev.missing_points_json)
                 ev.next_direction = llm_result.get("next_direction", ev.next_direction)
                 db.flush()
-                print(f"[report] Q{aq.id} re-scored: {llm_result['overall_score']:.2f}")
+                rescored += 1
+                print(f"[report] Q{aq.id} LLM report score: {llm_result['overall_score']:.2f}")
         except Exception as e:
-            print(f"[report] re-scoring Q{aq.id} failed: {e}")
+            failed += 1
+            print(f"[report] LLM report scoring Q{aq.id} failed: {e}")
             continue
 
     try:
         db.commit()
     except Exception:
         pass
+
+    return {
+        "enabled": True,
+        "model": getattr(settings, "zhipuai_model", ""),
+        "rescored": rescored,
+        "failed": failed,
+        "total": len(evaluations),
+        "message": f"报告阶段已使用大语言模型重新评分 {rescored}/{len(evaluations)} 题。",
+    }
+
+
+def _rescore_with_llm_if_needed(db: Session, evaluations: List[Evaluation]) -> None:
+    """Backward-compatible wrapper for older callers."""
+    _rescore_with_llm_for_report(db, evaluations)
 
 
 def _get_per_question_scores(evaluations: List[Evaluation]) -> List[Dict[str, Any]]:
@@ -249,8 +283,77 @@ def _get_per_question_scores(evaluations: List[Evaluation]) -> List[Dict[str, An
             "practicality": round(scores.get("practicality", 0), 2),
             "tradeoffs": round(scores.get("tradeoffs", 0), 2),
             "overall": round(eval_obj.overall_score, 2),
+            "chapter": getattr(eval_obj.asked_question, "topic", "") if eval_obj.asked_question else "",
+            "difficulty": getattr(eval_obj.asked_question, "difficulty", 0) if eval_obj.asked_question else 0,
+            "scoring": scores.get("_report_scoring") or scores.get("_provenance") or "original",
         })
     return result
+
+
+def _build_visual_analytics(
+    evaluations: List[Evaluation],
+    dimension_scores: Dict[str, float],
+    per_question_scores: List[Dict[str, Any]],
+    difficulty_trajectory: List[int],
+    chapter_trace: List[str] | None = None,
+) -> Dict[str, Any]:
+    """Prepare chart-friendly analytics for the Streamlit report page."""
+    overall_values = [float(e.overall_score or 0.0) for e in evaluations]
+    first = overall_values[0] if overall_values else 0.0
+    last = overall_values[-1] if overall_values else 0.0
+    best_idx = max(range(len(overall_values)), key=lambda i: overall_values[i]) if overall_values else 0
+    worst_idx = min(range(len(overall_values)), key=lambda i: overall_values[i]) if overall_values else 0
+
+    chapter_scores: Dict[str, List[float]] = {}
+    difficulty_scores: Dict[str, List[float]] = {}
+    heatmap_rows = []
+    for idx, ev in enumerate(evaluations, start=1):
+        aq = ev.asked_question
+        chapter = (aq.topic if aq else "") or "未分类"
+        difficulty = int(aq.difficulty if aq else 0)
+        score = float(ev.overall_score or 0.0)
+        chapter_scores.setdefault(chapter, []).append(score)
+        difficulty_scores.setdefault(str(difficulty), []).append(score)
+        scores = ev.scores_json or {}
+        heatmap_rows.append({
+            "round": idx,
+            "chapter": chapter,
+            "difficulty": difficulty,
+            "correctness": round(float(scores.get("correctness", 0.0) or 0.0), 2),
+            "depth": round(float(scores.get("depth", 0.0) or 0.0), 2),
+            "clarity": round(float(scores.get("clarity", 0.0) or 0.0), 2),
+            "practicality": round(float(scores.get("practicality", 0.0) or 0.0), 2),
+            "tradeoffs": round(float(scores.get("tradeoffs", 0.0) or 0.0), 2),
+            "overall": round(score, 2),
+        })
+
+    chapter_summary = [
+        {"chapter": ch, "avg_score": round(sum(vals) / len(vals), 2), "count": len(vals)}
+        for ch, vals in sorted(chapter_scores.items(), key=lambda item: sum(item[1]) / len(item[1]))
+    ]
+    difficulty_summary = [
+        {"difficulty": int(diff), "avg_score": round(sum(vals) / len(vals), 2), "count": len(vals)}
+        for diff, vals in sorted(difficulty_scores.items(), key=lambda item: int(item[0]) if item[0].isdigit() else 0)
+    ]
+
+    strongest_dimension = max(dimension_scores, key=dimension_scores.get) if dimension_scores else ""
+    weakest_dimension = min(dimension_scores, key=dimension_scores.get) if dimension_scores else ""
+
+    return {
+        "score_delta": round(last - first, 2) if len(overall_values) >= 2 else 0.0,
+        "best_round": best_idx + 1 if overall_values else None,
+        "best_score": round(overall_values[best_idx], 2) if overall_values else 0.0,
+        "weakest_round": worst_idx + 1 if overall_values else None,
+        "weakest_score": round(overall_values[worst_idx], 2) if overall_values else 0.0,
+        "strongest_dimension": strongest_dimension,
+        "weakest_dimension": weakest_dimension,
+        "chapter_summary": chapter_summary,
+        "difficulty_summary": difficulty_summary,
+        "heatmap_rows": heatmap_rows,
+        "per_question_scores": per_question_scores,
+        "difficulty_trajectory": difficulty_trajectory,
+        "chapter_trace": chapter_trace or [],
+    }
 
 
 def _get_avg_scores(evaluations: List[Evaluation]) -> Dict[str, float]:
@@ -494,6 +597,13 @@ def _generate_markdown(
 - **综合得分**: {summary['overall_score']:.2f} / 1.0
 
 """
+    llm_scoring = summary.get("llm_scoring") or {}
+    if llm_scoring:
+        md += "## 大语言模型评分\n\n"
+        md += f"- **评分模型**: {llm_scoring.get('model') or '未配置'}\n"
+        md += f"- **LLM 重评分题数**: {llm_scoring.get('rescored', 0)} / {llm_scoring.get('total', 0)}\n"
+        md += f"- **状态**: {llm_scoring.get('message', '')}\n\n"
+
     # Add dimension scores table
     dim_scores = summary.get("dimension_scores", {})
     if dim_scores:

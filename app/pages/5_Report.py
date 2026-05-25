@@ -37,6 +37,138 @@ load_auth_on_page_load()
 # Initialize session state
 init_session_state()
 
+
+def _score_band(score: float) -> str:
+    if score >= 0.8:
+        return "优秀"
+    if score >= 0.65:
+        return "良好"
+    if score >= 0.5:
+        return "可提升"
+    return "风险"
+
+
+def _render_ai_visual_report(summary: dict):
+    visual = summary.get("visual_analytics") or {}
+    llm_scoring = summary.get("llm_scoring") or {}
+    dim_scores = summary.get("dimension_scores", {}) or {}
+    per_q_scores = summary.get("per_question_scores", []) or []
+
+    st.subheader("AI 评分仪表盘")
+    score = float(summary.get("overall_score", 0) or 0)
+    cols = st.columns(5)
+    cols[0].metric("LLM 综合评分", f"{score:.2f}", _score_band(score))
+    cols[1].metric("趋势变化", f"{visual.get('score_delta', 0):+.2f}")
+    cols[2].metric("最佳轮次", visual.get("best_round") or "-", f"{visual.get('best_score', 0):.2f}")
+    cols[3].metric("短板轮次", visual.get("weakest_round") or "-", f"{visual.get('weakest_score', 0):.2f}")
+    cols[4].metric("LLM 重评分", f"{llm_scoring.get('rescored', 0)}/{llm_scoring.get('total', 0)}")
+
+    if llm_scoring:
+        st.caption(f"评分模型：{llm_scoring.get('model') or '未配置'} · {llm_scoring.get('message', '')}")
+
+    try:
+        import plotly.graph_objects as go
+        import plotly.express as px
+
+        gauge_col, radar_col = st.columns([1, 1])
+        with gauge_col:
+            gauge = go.Figure(go.Indicator(
+                mode="gauge+number+delta",
+                value=score,
+                delta={"reference": 0.65},
+                number={"valueformat": ".2f"},
+                gauge={
+                    "axis": {"range": [0, 1]},
+                    "bar": {"color": "#2563eb"},
+                    "steps": [
+                        {"range": [0, 0.5], "color": "#fee2e2"},
+                        {"range": [0.5, 0.75], "color": "#fef3c7"},
+                        {"range": [0.75, 1], "color": "#dcfce7"},
+                    ],
+                    "threshold": {"line": {"color": "#ef4444", "width": 4}, "value": 0.6},
+                },
+                title={"text": "综合能力评分"},
+            ))
+            gauge.update_layout(height=330, margin=dict(l=20, r=20, t=60, b=20))
+            st.plotly_chart(gauge, use_container_width=True)
+
+        with radar_col:
+            dim_order = ["correctness", "depth", "clarity", "practicality", "tradeoffs"]
+            names = [DIM_LABELS.get(k, k) for k in dim_order]
+            vals = [float(dim_scores.get(k, 0) or 0) for k in dim_order]
+            radar = go.Figure()
+            radar.add_trace(go.Scatterpolar(
+                r=vals + [vals[0]],
+                theta=names + [names[0]],
+                fill="toself",
+                name="能力画像",
+                line_color="#0891b2",
+            ))
+            radar.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                showlegend=False,
+                title="五维能力雷达",
+                height=330,
+                margin=dict(l=30, r=30, t=60, b=20),
+            )
+            st.plotly_chart(radar, use_container_width=True)
+
+        if per_q_scores:
+            df = pd.DataFrame(per_q_scores)
+            trend = px.line(
+                df,
+                x="round",
+                y=["overall", "correctness", "depth", "clarity", "practicality", "tradeoffs"],
+                markers=True,
+                title="逐轮评分趋势",
+                labels={"value": "得分", "round": "轮次", "variable": "维度"},
+            )
+            trend.update_yaxes(range=[0, 1])
+            st.plotly_chart(trend, use_container_width=True)
+
+        heatmap_rows = visual.get("heatmap_rows") or []
+        if heatmap_rows:
+            heat_df = pd.DataFrame(heatmap_rows)
+            z_cols = ["correctness", "depth", "clarity", "practicality", "tradeoffs", "overall"]
+            heat = go.Figure(data=go.Heatmap(
+                z=heat_df[z_cols].values,
+                x=[DIM_LABELS.get(c, "综合") if c != "overall" else "综合" for c in z_cols],
+                y=[f"第{r}轮" for r in heat_df["round"]],
+                colorscale="RdYlGn",
+                zmin=0,
+                zmax=1,
+                colorbar=dict(title="得分"),
+            ))
+            heat.update_layout(title="逐题维度热力图", height=max(320, 42 * len(heat_df) + 120))
+            st.plotly_chart(heat, use_container_width=True)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            chapter_summary = visual.get("chapter_summary") or []
+            if chapter_summary:
+                ch_df = pd.DataFrame(chapter_summary)
+                fig = px.bar(ch_df, x="avg_score", y="chapter", orientation="h", color="avg_score",
+                             range_x=[0, 1], color_continuous_scale="Tealgrn",
+                             title="章节掌握度排行")
+                st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            diff_summary = visual.get("difficulty_summary") or []
+            if diff_summary:
+                diff_df = pd.DataFrame(diff_summary)
+                fig = px.bar(diff_df, x="difficulty", y="avg_score", color="avg_score",
+                             range_y=[0, 1], color_continuous_scale="Bluered",
+                             title="不同难度表现")
+                st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as exc:
+        st.caption(f"高级图表加载失败，已降级显示基础图表：{exc}")
+
+    insight_cols = st.columns(3)
+    insight_cols[0].info(f"强项维度：{DIM_LABELS.get(visual.get('strongest_dimension'), visual.get('strongest_dimension') or '-')}")
+    insight_cols[1].warning(f"短板维度：{DIM_LABELS.get(visual.get('weakest_dimension'), visual.get('weakest_dimension') or '-')}")
+    insight_cols[2].success(f"报告结论：{_score_band(score)}")
+
+
 def main():
     render_sidebar()
     check_auth()
@@ -156,6 +288,8 @@ def main():
         # LLM-generated overall summary callout
         if summary.get("overall_summary"):
             st.info(f"**AI 综合评估**: {summary['overall_summary']}")
+
+        _render_ai_visual_report(summary)
 
         # Strategy trace (agentic innovation)
         if summary.get("strategy_trace"):

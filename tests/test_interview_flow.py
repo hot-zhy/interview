@@ -3,7 +3,8 @@ import pytest
 from sqlalchemy.orm import Session
 from backend.db.base import Base, engine, SessionLocal
 from backend.db.models import User, InterviewSession, QuestionBank, Resume, AskedQuestion, InterviewTurn
-from backend.services.interview_engine import create_session, start_interview, submit_answer, is_resume_qa_session
+from backend.services.interview_engine import create_session, start_interview, submit_answer, is_resume_qa_session, end_interview
+from backend.services.report_generator import generate_report
 from backend.core.security import get_password_hash
 
 
@@ -188,6 +189,36 @@ def test_low_effort_answer_gets_followup(db_session: Session, test_user, test_qu
     assert result["followup"] is True
     assert result["evaluation"]["_answer_quality"]["severity"] == "weak"
     assert "追问" in result["interviewer_message"] or "补充" in result["interviewer_message"]
+
+
+def test_report_contains_visual_analytics_without_llm(db_session: Session, test_user, test_questions, monkeypatch):
+    """Report generation should expose chart-ready analytics even without an LLM key."""
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "zhipuai_api_key", None)
+    session = create_session(
+        db=db_session,
+        user_id=test_user.id,
+        track="Java Backend",
+        level=1,
+        total_rounds=5,
+    )
+    start_interview(db_session, session.id)
+    submit_answer(
+        db=db_session,
+        session_id=session.id,
+        answer_text="Java is a programming language developed by Sun Microsystems and runs on the JVM.",
+    )
+    end_interview(db_session, session.id)
+
+    report = generate_report(db_session, session.id)
+    summary = report["summary_json"]
+
+    assert "llm_scoring" in summary
+    assert summary["llm_scoring"]["enabled"] is False
+    assert "visual_analytics" in summary
+    assert summary["visual_analytics"]["heatmap_rows"]
+    assert summary["per_question_scores"]
 
 
 def test_resume_qa_uses_only_resume_probes_until_complete(db_session: Session, test_user, test_questions):
