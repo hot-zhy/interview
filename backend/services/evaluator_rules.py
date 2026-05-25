@@ -2,6 +2,7 @@
 import re
 from typing import Dict, List
 from difflib import SequenceMatcher
+from backend.services.answer_quality import classify_answer_quality
 
 try:
     from rapidfuzz import fuzz as _rf_fuzz  # type: ignore
@@ -37,15 +38,30 @@ def evaluate_answer(
             "next_direction": str
         }
     """
-    # Quality gate: very short or empty answers get zero across the board
+    # Quality gate: empty / meaningless / very short answers get an explicit
+    # interview-style response and should be handled as a re-prompt upstream.
     stripped = (user_answer or "").strip()
-    if len(stripped) < 10:
+    quality = classify_answer_quality(stripped)
+    if not quality["meaningful"] or quality["severity"] == "weak":
+        if quality["category"] == "meaningless":
+            feedback = (
+                "这个回答不是一个有效的面试回答。真实面试里我会先暂停当前题，"
+                "请你认真补充：定义、核心原理、使用场景，以及你自己的理解。"
+            )
+        elif quality["category"] == "low_effort":
+            feedback = (
+                "你直接说不知道也可以，但面试里我会继续确认你的边界。"
+                "请你尝试从你知道的相关概念、使用场景或排查思路讲起。"
+            )
+        else:
+            feedback = "回答太短，暂时无法判断掌握程度。请展开说明关键概念、原因和例子。"
         return {
             "scores": {"correctness": 0, "depth": 0, "clarity": 0, "practicality": 0, "tradeoffs": 0},
             "overall_score": 0.0,
-            "feedback": "回答内容过短，无法进行有效评估。请尝试详细回答。",
+            "feedback": feedback,
             "missing_points": _extract_key_points(correct_answer)[:5],
             "next_direction": _suggest_next_direction(_extract_key_points(correct_answer)[:3], question),
+            "_answer_quality": quality,
         }
 
     # Extract key points from correct answer
@@ -109,7 +125,8 @@ def evaluate_answer(
         "overall_score": overall_score,
         "feedback": feedback,
         "missing_points": missing_points,
-        "next_direction": next_direction
+        "next_direction": next_direction,
+        "_answer_quality": quality,
     }
 
 

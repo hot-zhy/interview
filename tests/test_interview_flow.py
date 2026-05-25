@@ -125,6 +125,60 @@ def test_submit_answer(db_session: Session, test_user, test_questions):
     assert session.current_round > 1
 
 
+def test_meaningless_answer_reprompts_same_question(db_session: Session, test_user, test_questions):
+    """A nonsense answer should be rejected and should not advance the interview."""
+    session = create_session(
+        db=db_session,
+        user_id=test_user.id,
+        track="Java Backend",
+        level=1,
+        total_rounds=5,
+    )
+    start_interview(db_session, session.id)
+    db_session.refresh(session)
+    current_round = session.current_round
+
+    result = submit_answer(
+        db=db_session,
+        session_id=session.id,
+        answer_text="1",
+    )
+
+    db_session.refresh(session)
+    assert "error" not in result
+    assert result["followup"] is True
+    assert session.current_round == current_round
+    assert result["evaluation"]["_answer_quality"]["category"] == "meaningless"
+    assert (
+        "进入下一题" in result["interviewer_message"]
+        or "重新回答" in result["interviewer_message"]
+        or "认真补充" in result["interviewer_message"]
+    )
+
+
+def test_low_effort_answer_gets_followup(db_session: Session, test_user, test_questions):
+    """An honest weak answer should trigger interviewer-style probing."""
+    session = create_session(
+        db=db_session,
+        user_id=test_user.id,
+        track="Java Backend",
+        level=1,
+        total_rounds=5,
+    )
+    start_interview(db_session, session.id)
+
+    result = submit_answer(
+        db=db_session,
+        session_id=session.id,
+        answer_text="不知道",
+    )
+
+    assert "error" not in result
+    assert result["followup"] is True
+    assert result["evaluation"]["_answer_quality"]["severity"] == "weak"
+    assert "追问" in result["interviewer_message"] or "补充" in result["interviewer_message"]
+
+
 def test_resume_qa_uses_only_resume_probes_until_complete(db_session: Session, test_user, test_questions):
     """Resume-only interview should keep asking resume probes and never enter the question bank."""
     resume = Resume(

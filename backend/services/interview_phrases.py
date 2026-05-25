@@ -81,6 +81,36 @@ FOLLOWUP_TEMPLATES_GENERIC = [
     "如果在实际开发中遇到这个问题，你会怎么处理？",
 ]
 
+INVALID_ANSWER_REPROMPTS = [
+    "我先打断一下，这个回答目前不能算有效面试回答。请你重新回答当前问题：先给结论，再讲原理、场景和一个例子。\n\n当前问题：{question}",
+    "这个回答信息量太少，我没法据此判断你的掌握程度。我们不急着进入下一题，你再试一次：{question}",
+    "真实面试里我会把这里追清楚。请认真补充当前题，至少说明核心概念、为什么这么做，以及实际使用时要注意什么。\n\n{question}",
+]
+
+WEAK_ANSWER_PROBES = [
+    "我理解你这题还不太确定。那我换个角度问：如果让你从最基础的定义和使用场景开始讲，你会怎么说明？",
+    "先别急着跳过。你可以从你知道的一点点开始：这个概念解决什么问题？常见用法是什么？有哪些风险？",
+    "我会继续追一下边界：如果项目里真的遇到这个问题，你第一步会怎么判断，接下来会查什么？",
+]
+
+GOOD_ANSWER_PRAISE = [
+    "这轮回答不错，核心点比较完整，表达也清楚。",
+    "很好，这个回答能看出你不是只背概念，而是在理解使用场景。",
+    "答得漂亮，关键点和取舍都比较到位。",
+]
+
+FAIR_ANSWER_ACK = [
+    "这轮有一些有效信息，但还可以再具体一点。",
+    "方向基本对，不过细节和边界还需要补齐。",
+    "我能看到你有一定理解，但回答还不够扎实。",
+]
+
+WEAK_ANSWER_ACK = [
+    "这轮回答偏弱，我需要继续追问确认你的真实掌握程度。",
+    "这个回答还撑不起面试判断，我会沿着缺口再问一下。",
+    "这里暴露出一些知识缺口，我们先把这个点追清楚。",
+]
+
 
 def get_first_question_phrase(question: str, has_resume: bool = False) -> str:
     if has_resume:
@@ -126,3 +156,33 @@ def get_followup_phrase(missing_points: List[str], feedback: str = "") -> str:
         tpl = random.choice(FOLLOWUP_TEMPLATES_WITH_POINT)
         return tpl.format(point=point)
     return random.choice(FOLLOWUP_TEMPLATES_GENERIC)
+
+
+def get_invalid_answer_reprompt(question: str) -> str:
+    return random.choice(INVALID_ANSWER_REPROMPTS).format(question=question)
+
+
+def get_weak_answer_probe(missing_points: List[str], feedback: str = "") -> str:
+    if missing_points:
+        point = missing_points[0]
+        return f"这个点我需要追问一下：你刚才没有讲清楚「{point}」。请你结合原理或项目经验，再补充说明。"
+    return random.choice(WEAK_ANSWER_PROBES)
+
+
+def get_interviewer_reaction(score: Optional[float], is_followup: bool = False) -> str:
+    if score is None:
+        return ""
+    if score >= 0.75:
+        return random.choice(GOOD_ANSWER_PRAISE)
+    if score >= 0.55:
+        return random.choice(FAIR_ANSWER_ACK)
+    if is_followup:
+        return random.choice(WEAK_ANSWER_ACK)
+    return ""
+
+
+def prepend_reaction(message: str, score: Optional[float], is_followup: bool = False) -> str:
+    reaction = get_interviewer_reaction(score, is_followup=is_followup)
+    if not reaction:
+        return message
+    return f"{reaction}\n\n{message}"

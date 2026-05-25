@@ -9,6 +9,7 @@ from backend.db.models import (
 )
 from backend.core.config import settings
 from backend.services.question_selector import select_question, adjust_difficulty
+from backend.services.answer_quality import classify_answer_quality
 from backend.services.evaluator_rules import evaluate_answer
 from backend.services.llm_provider import evaluate_with_llm, generate_followup_with_llm
 from backend.services.adaptive_interview import AdaptiveInterviewEngine
@@ -16,8 +17,11 @@ from backend.services.audio_processor import process_audio_answer
 from backend.services.expression_analyzer import analyze_expression
 from backend.services.interview_phrases import (
     get_first_question_phrase,
+    get_invalid_answer_reprompt,
     get_next_question_phrase,
     get_followup_phrase,
+    get_weak_answer_probe,
+    prepend_reaction,
 )
 
 RESUME_QA_SUFFIX = " · 简历专项"
@@ -369,6 +373,7 @@ def submit_answer(
         correct_answer=asked_q.correct_answer_text,
         user_answer=answer_text
     )
+    answer_quality = evaluation_result.get("_answer_quality") or {}
     _emit(
         "evaluated",
         {
@@ -452,6 +457,54 @@ def submit_answer(
     
     # Check if should end interview
     should_end, end_reason = adaptive_engine.should_end_interview()
+
+    if not answer_quality.get("meaningful", True):
+        _emit("action_picked", {"action": "follow_up", "reason": answer_quality.get("reason", "invalid answer")})
+        _emit("generating_followup", {"reason": "invalid_answer_reprompt"})
+        followup_content = get_invalid_answer_reprompt(asked_q.question_text)
+        interviewer_turn = InterviewTurn(
+            session_id=session_id,
+            role="interviewer",
+            content=followup_content,
+        )
+        db.add(interviewer_turn)
+        db.commit()
+        _emit("ready", {"action": "follow_up", "text": followup_content})
+        return {
+            "evaluation": evaluation_result,
+            "followup": True,
+            "interviewer_message": followup_content,
+            "round": session.current_round,
+            "followup_reason": answer_quality.get("reason", "invalid answer"),
+        }
+
+    if answer_quality.get("severity") == "weak" and session.current_round < session.total_rounds:
+        _emit("action_picked", {"action": "follow_up", "reason": answer_quality.get("reason", "weak answer")})
+        _emit("generating_followup", {"reason": "weak_answer_probe"})
+        followup_content = get_weak_answer_probe(
+            evaluation_result.get("missing_points", []),
+            evaluation_result.get("feedback", ""),
+        )
+        interviewer_turn = InterviewTurn(
+            session_id=session_id,
+            role="interviewer",
+            content=prepend_reaction(
+                followup_content,
+                evaluation_result.get("overall_score"),
+                is_followup=True,
+            ),
+        )
+        db.add(interviewer_turn)
+        session.current_round += 1
+        db.commit()
+        _emit("ready", {"action": "follow_up", "text": interviewer_turn.content})
+        return {
+            "evaluation": evaluation_result,
+            "followup": True,
+            "interviewer_message": interviewer_turn.content,
+            "round": session.current_round,
+            "followup_reason": answer_quality.get("reason", "weak answer"),
+        }
     
     if should_end:
         # End interview
@@ -476,17 +529,21 @@ def submit_answer(
         interviewer_turn = InterviewTurn(
             session_id=session_id,
             role="interviewer",
-            content=followup_content
+            content=prepend_reaction(
+                followup_content,
+                evaluation_result.get("overall_score"),
+                is_followup=True,
+            )
         )
         db.add(interviewer_turn)
         session.current_round += 1
         db.commit()
-        _emit("ready", {"action": "follow_up", "text": followup_content})
+        _emit("ready", {"action": "follow_up", "text": interviewer_turn.content})
         
         return {
             "evaluation": evaluation_result,
             "followup": True,
-            "interviewer_message": followup_content,
+            "interviewer_message": interviewer_turn.content,
             "round": session.current_round,
             "followup_reason": followup_reason
         }
@@ -573,6 +630,11 @@ def submit_answer(
             after_followup=was_followup,
             next_chapter=next_question.chapter,
         )
+        next_content = prepend_reaction(
+            next_content,
+            evaluation_result.get("overall_score"),
+            is_followup=False,
+        )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
             role="interviewer",
@@ -623,8 +685,9 @@ def _evaluate_answer_with_fallback(
     user_answer: str
 ) -> Dict:
     """Evaluate answer: LLM primary (semantic understanding), rules as fallback."""
-    # Short/garbage answers — fast reject without LLM cost
-    if len((user_answer or "").strip()) < 10:
+    # Short/garbage answers: fast reject without LLM cost.
+    answer_quality = classify_answer_quality(user_answer or "")
+    if not answer_quality.get("meaningful", True) or answer_quality.get("severity") == "weak":
         return evaluate_answer(question, correct_answer, user_answer)
 
     # Try LLM first (understands semantics, gives fair partial credit)
@@ -789,18 +852,44 @@ def _submit_answer_agentic(
     if not asked_q:
         return {"error": "未找到当前题目"}
 
-    # --- Agent controller ---
-    from backend.agent.controller import AgentController
+    answer_quality = classify_answer_quality(answer_text or "")
+    if not answer_quality.get("meaningful", True) or answer_quality.get("severity") == "weak":
+        _emit("evaluating", {"question": asked_q.question_text[:120]})
+        quick_eval = evaluate_answer(
+            asked_q.question_text,
+            asked_q.correct_answer_text,
+            answer_text or "",
+        )
+        quick_followup = (
+            get_invalid_answer_reprompt(asked_q.question_text)
+            if not answer_quality.get("meaningful", True)
+            else get_weak_answer_probe(
+                quick_eval.get("missing_points", []),
+                quick_eval.get("feedback", ""),
+            )
+        )
+        agent_result = {
+            "_agent_action": "follow_up",
+            "_agent_reason": answer_quality.get("reason", "weak answer"),
+            "evaluation": quick_eval,
+            "followup": True,
+            "followup_text": quick_followup,
+        }
+        _emit("action_picked", {"action": "follow_up", "reason": agent_result["_agent_reason"]})
+        _emit("generating_followup", {"reason": agent_result["_agent_reason"]})
+    else:
+        # --- Agent controller ---
+        from backend.agent.controller import AgentController
 
-    agent = AgentController(db, session)
-    _emit("evaluating", {"question": asked_q.question_text[:120]})
-    agent_result = agent.process_answer(
-        answer_text=answer_text or "",
-        asked_question=asked_q,
-        audio_analysis=audio_analysis,
-        expression_analysis=expression_analysis,
-        on_event=_emit,
-    )
+        agent = AgentController(db, session)
+        _emit("evaluating", {"question": asked_q.question_text[:120]})
+        agent_result = agent.process_answer(
+            answer_text=answer_text or "",
+            asked_question=asked_q,
+            audio_analysis=audio_analysis,
+            expression_analysis=expression_analysis,
+            on_event=_emit,
+        )
 
     evaluation_result = agent_result.get("evaluation", {})
     _emit("evaluated", {
@@ -869,12 +958,19 @@ def _submit_answer_agentic(
     if agent_action == "follow_up":
         followup_content = agent_result.get("followup_text", "")
         interviewer_turn = InterviewTurn(
-            session_id=session_id, role="interviewer", content=followup_content
+            session_id=session_id,
+            role="interviewer",
+            content=prepend_reaction(
+                followup_content,
+                evaluation_result.get("overall_score"),
+                is_followup=True,
+            ),
         )
         db.add(interviewer_turn)
-        session.current_round += 1
+        if (evaluation_result.get("_answer_quality") or {}).get("meaningful", True):
+            session.current_round += 1
         db.commit()
-        _emit("ready", {"action": "follow_up", "text": followup_content})
+        _emit("ready", {"action": "follow_up", "text": interviewer_turn.content})
         return {
             "evaluation": evaluation_result,
             "followup": True,
