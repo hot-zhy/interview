@@ -2,7 +2,7 @@
 import pytest
 from sqlalchemy.orm import Session
 from backend.db.base import Base, engine, SessionLocal
-from backend.db.models import User, InterviewSession, QuestionBank, Resume, AskedQuestion
+from backend.db.models import User, InterviewSession, QuestionBank, Resume, AskedQuestion, InterviewTurn
 from backend.services.interview_engine import create_session, start_interview, submit_answer, is_resume_qa_session
 from backend.core.security import get_password_hash
 
@@ -154,6 +154,17 @@ def test_meaningless_answer_reprompts_same_question(db_session: Session, test_us
         or "重新回答" in result["interviewer_message"]
         or "认真补充" in result["interviewer_message"]
     )
+    turns = (
+        db_session.query(InterviewTurn)
+        .filter(InterviewTurn.session_id == session.id)
+        .order_by(InterviewTurn.created_at, InterviewTurn.id)
+        .all()
+    )
+    roles = [turn.role for turn in turns]
+    assert "analysis" in roles
+    candidate_idx = roles.index("candidate")
+    analysis_idx = roles.index("analysis")
+    assert analysis_idx > candidate_idx
 
 
 def test_low_effort_answer_gets_followup(db_session: Session, test_user, test_questions):

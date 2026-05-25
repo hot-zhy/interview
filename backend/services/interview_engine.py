@@ -1,4 +1,5 @@
 """Interview engine - state machine for interview flow."""
+import json
 from typing import Optional, Dict, List
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -25,6 +26,41 @@ from backend.services.interview_phrases import (
 )
 
 RESUME_QA_SUFFIX = " · 简历专项"
+
+
+def _record_analysis_turn(
+    db: Session,
+    session_id: int,
+    evaluation_result: Dict,
+    action: str,
+    reason: str = "",
+) -> None:
+    """Persist the AI analysis card as a real chat turn.
+
+    Streamlit placeholders disappear after rerun. Persisting the card in the
+    conversation stream keeps the evaluation visible after refreshes, follow-ups,
+    and question transitions.
+    """
+    payload = {
+        "version": 1,
+        "evaluation": {
+            "scores": evaluation_result.get("scores", {}),
+            "overall_score": evaluation_result.get("overall_score", 0.0),
+            "feedback": evaluation_result.get("feedback", ""),
+            "missing_points": evaluation_result.get("missing_points", []),
+            "next_direction": evaluation_result.get("next_direction", ""),
+            "answer_quality": evaluation_result.get("_answer_quality", {}),
+        },
+        "action": action,
+        "reason": reason or "",
+    }
+    db.add(
+        InterviewTurn(
+            session_id=session_id,
+            role="analysis",
+            content=json.dumps(payload, ensure_ascii=False),
+        )
+    )
 
 
 def base_track(track: str) -> str:
@@ -462,6 +498,13 @@ def submit_answer(
         _emit("action_picked", {"action": "follow_up", "reason": answer_quality.get("reason", "invalid answer")})
         _emit("generating_followup", {"reason": "invalid_answer_reprompt"})
         followup_content = get_invalid_answer_reprompt(asked_q.question_text)
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "follow_up",
+            answer_quality.get("reason", "invalid answer"),
+        )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
             role="interviewer",
@@ -484,6 +527,13 @@ def submit_answer(
         followup_content = get_weak_answer_probe(
             evaluation_result.get("missing_points", []),
             evaluation_result.get("feedback", ""),
+        )
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "follow_up",
+            answer_quality.get("reason", "weak answer"),
         )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
@@ -510,6 +560,7 @@ def submit_answer(
         # End interview
         _emit("action_picked", {"action": "terminate", "reason": end_reason})
         _emit("ready", {"action": "terminate", "text": end_reason})
+        _record_analysis_turn(db, session_id, evaluation_result, "terminate", end_reason)
         return end_interview(db, session_id)
     
     if should_followup and session.current_round < session.total_rounds:
@@ -524,6 +575,13 @@ def submit_answer(
             user_answer=answer_text or "",
             followup_count=followup_count,
             correct_answer=asked_q.correct_answer_text or "",
+        )
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "follow_up",
+            followup_reason,
         )
         
         interviewer_turn = InterviewTurn(
@@ -550,6 +608,13 @@ def submit_answer(
     elif is_resume_qa_session(session) and asked_q.qbank_id is None:
         _emit("action_picked", {"action": "terminate", "reason": "resume_qa_completed"})
         _emit("ready", {"action": "terminate", "text": "resume_qa_completed"})
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "terminate",
+            "简历专项追问已结束，停止本次专项问答",
+        )
         end_result = end_interview(db, session_id)
         end_result.update(
             {
@@ -569,6 +634,7 @@ def submit_answer(
         if should_end:
             _emit("action_picked", {"action": "terminate", "reason": end_reason})
             _emit("ready", {"action": "terminate", "text": end_reason})
+            _record_analysis_turn(db, session_id, evaluation_result, "terminate", end_reason)
             return end_interview(db, session_id)
         
         # Get resume skills and missing chapters
@@ -608,6 +674,7 @@ def submit_answer(
             # No more questions, end interview
             _emit("action_picked", {"action": "terminate", "reason": "no_questions_available"})
             _emit("ready", {"action": "terminate", "text": "no_questions_available"})
+            _record_analysis_turn(db, session_id, evaluation_result, "terminate", "no_questions_available")
             return end_interview(db, session_id)
         
         # Create asked question
@@ -634,6 +701,13 @@ def submit_answer(
             next_content,
             evaluation_result.get("overall_score"),
             is_followup=False,
+        )
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "ask_next",
+            "proceeding to next question",
         )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
@@ -764,7 +838,7 @@ def get_session_turns(db: Session, session_id: int) -> List[Dict]:
     """Get all turns for a session. Candidate voice placeholders are normalized for display."""
     turns = db.query(InterviewTurn).filter(
         InterviewTurn.session_id == session_id
-    ).order_by(InterviewTurn.created_at).all()
+    ).order_by(InterviewTurn.created_at, InterviewTurn.id).all()
     
     return [
         {
@@ -944,6 +1018,13 @@ def _submit_answer_agentic(
 
     if agent_action == "terminate":
         _emit("ready", {"action": "terminate", "text": agent_result.get("_agent_reason", "")})
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "terminate",
+            agent_result.get("_agent_reason", ""),
+        )
         end_result = end_interview(db, session_id)
         end_result.update(
             {
@@ -957,6 +1038,13 @@ def _submit_answer_agentic(
 
     if agent_action == "follow_up":
         followup_content = agent_result.get("followup_text", "")
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "follow_up",
+            agent_result.get("_agent_reason", ""),
+        )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
             role="interviewer",
@@ -982,6 +1070,13 @@ def _submit_answer_agentic(
     if agent_action == "ask_resume_next":
         next_resume_q = agent_result.get("next_resume_question")
         if not next_resume_q:
+            _record_analysis_turn(
+                db,
+                session_id,
+                evaluation_result,
+                "terminate",
+                "resume QA evidence probes completed",
+            )
             return end_interview(db, session_id)
 
         new_diff = agent_result.get("new_difficulty", session.level)
@@ -994,6 +1089,13 @@ def _submit_answer_agentic(
             correct_answer_text=next_resume_q.reference_answer,
         )
         db.add(next_asked_q)
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "ask_resume_next",
+            agent_result.get("_agent_reason", ""),
+        )
         interviewer_turn = InterviewTurn(
             session_id=session_id,
             role="interviewer",
@@ -1018,6 +1120,13 @@ def _submit_answer_agentic(
     # ask_next
     next_q_obj = agent_result.get("next_question_obj")
     if not next_q_obj:
+        _record_analysis_turn(
+            db,
+            session_id,
+            evaluation_result,
+            "terminate",
+            "no_questions_available",
+        )
         return end_interview(db, session_id)
 
     new_diff = agent_result.get("new_difficulty", session.level)
@@ -1038,6 +1147,13 @@ def _submit_answer_agentic(
         last_score=last_score,
         after_followup=was_followup,
         next_chapter=next_q_obj.chapter,
+    )
+    _record_analysis_turn(
+        db,
+        session_id,
+        evaluation_result,
+        "ask_next",
+        agent_result.get("_agent_reason", ""),
     )
     interviewer_turn = InterviewTurn(
         session_id=session_id, role="interviewer", content=next_content

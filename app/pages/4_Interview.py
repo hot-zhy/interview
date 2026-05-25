@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import html
+import json
 import sys
 from pathlib import Path
 from typing import Optional
@@ -361,10 +362,47 @@ def _render_note(note: dict):
         _bubble(note.get("title", "系统"), note.get("content", ""), "system")
 
 
+def _analysis_turn_html(content: str) -> str:
+    try:
+        payload = json.loads(content or "{}")
+    except Exception:
+        return _system_html("面试官 · AI 分析与评价", content or "")
+
+    evaluation = payload.get("evaluation") or {}
+    action = payload.get("action") or "ask_next"
+    reason = payload.get("reason") or ""
+    flow_html = _analysis_steps_bubble_html(
+        title="面试官 · AI 分析中（已完成）",
+        subtitle="本轮分析流程已完成，并已保留在对话记录中。",
+        active_step=4,
+        completed=True,
+        extra_detail_html=_format_thinking_detail(
+            {
+                "stage": "ready",
+                "evaluation_payload": evaluation,
+                "action": action,
+                "action_reason": reason,
+                "timeline": [],
+            }
+        ),
+    )
+    summary = _build_analysis_summary(
+        {
+            "evaluation": evaluation,
+            "followup": action == "follow_up",
+            "followup_reason": reason,
+        }
+    )
+    if summary:
+        flow_html += _system_html("面试官 · AI 分析与评价", summary)
+    return flow_html
+
+
 def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = "", saved_notes=None):
     notes_by_anchor = {}
     unanchored_notes = []
     saved_notes = saved_notes or []
+    has_analysis_turns = any(turn.get("role") == "analysis" for turn in turns)
     saved_anchors = {
         note.get("anchor_candidate_idx")
         for note in saved_notes
@@ -377,7 +415,7 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
         else:
             unanchored_notes.append(note)
 
-    for note in _get_chat_notes(session_id):
+    for note in ([] if has_analysis_turns else _get_chat_notes(session_id)):
         anchor = note.get("anchor_candidate_idx")
         if (
             anchor in saved_anchors
@@ -396,6 +434,8 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
             candidate_idx += 1
             for note in notes_by_anchor.get(candidate_idx, []):
                 _render_note(note)
+        elif turn["role"] == "analysis":
+            st.markdown(_analysis_turn_html(turn["content"]), unsafe_allow_html=True)
         else:
             _bubble(t("interview.interviewer"), turn["content"], "interviewer")
 
@@ -677,6 +717,18 @@ def _build_analysis_summary(result: dict) -> str:
 
 
 def _build_saved_analysis_notes(db, session_id: int):
+    has_persisted_analysis = (
+        db.query(InterviewTurn)
+        .filter(
+            InterviewTurn.session_id == session_id,
+            InterviewTurn.role == "analysis",
+        )
+        .count()
+        > 0
+    )
+    if has_persisted_analysis:
+        return []
+
     candidate_turns = (
         db.query(InterviewTurn)
         .filter(
