@@ -79,12 +79,21 @@ class AgentController:
         asked_question: AskedQuestion,
         audio_analysis: Optional[Dict] = None,
         expression_analysis: Optional[Dict] = None,
+        on_event=None,
     ) -> Dict:
         """Process a candidate answer through the full agentic loop.
 
         Returns a dict compatible with the legacy ``submit_answer`` output so
         the caller (interview_engine / Streamlit page) can use it unchanged.
         """
+        def _emit(stage: str, payload: Optional[Dict] = None) -> None:
+            if on_event is None:
+                return
+            try:
+                on_event(stage, payload or {})
+            except Exception:
+                pass
+        self._emit = _emit
         turn_number = self.memory.turn_count + 1
         trace = self.tracer.begin_turn(turn_number)
 
@@ -119,6 +128,7 @@ class AgentController:
             )
         )
         routing_state["subtask_plan"] = subtask_plan
+        _emit("evaluating", {"question_chapter": asked_question.topic or ""})
         eval_result, tool_records = self.judge_router.evaluate(
             question=asked_question.question_text,
             correct_answer=asked_question.correct_answer_text,
@@ -128,6 +138,12 @@ class AgentController:
         annotate_result_with_subtasks(eval_result, subtask_plan)
         self.tracer.record_evaluation(eval_result)
         self.tracer.record_tools(tool_records)
+        _emit("evaluated", {
+            "overall_score": eval_result.overall_score,
+            "scores": eval_result.scores,
+            "feedback": eval_result.feedback,
+            "missing_points": eval_result.missing_points,
+        })
 
         # 3. Update memory
         MemoryManager.update_after_evaluation(
@@ -157,8 +173,18 @@ class AgentController:
         self.tracer.record_state_snapshot(state)
 
         # 5. Choose action (pass answer_text for memory-aware follow-up)
+        _emit(
+            "planning",
+            {
+                "state": {
+                    "remaining_budget": state.remaining_budget,
+                    "current_round": self.session.current_round,
+                }
+            },
+        )
         action = self._choose_action(state, asked_question, eval_result, answer_text)
         self.tracer.record_action(action)
+        _emit("action_picked", {"action": action.action.value, "reason": action.reason})
 
         # 6. Execute action
         return self._execute_action(action, state, eval_result, asked_question, answer_text)
@@ -327,6 +353,7 @@ class AgentController:
             }
 
         if action.action == ActionType.FOLLOW_UP:
+            self._emit("generating_followup", {"reason": action.reason})
             return {
                 "_agent_action": "follow_up",
                 "_agent_reason": action.reason,
@@ -339,6 +366,7 @@ class AgentController:
         new_difficulty = action.new_difficulty or state.current_difficulty
 
         if is_resume_qa_session(self.session):
+            self._emit("generating_next", {"mode": "resume_qa", "difficulty": new_difficulty})
             from backend.agent.resume_qa_agent import ResumeQAAgent
             from backend.services.interview_engine import base_track
 
@@ -363,6 +391,7 @@ class AgentController:
             }
 
         resume_skills = self.memory.resume_skills
+        self._emit("generating_next", {"mode": "question_bank", "difficulty": new_difficulty})
 
         # Collect missing chapters from memory
         missing_chapters = list(self.memory.missing_concepts)

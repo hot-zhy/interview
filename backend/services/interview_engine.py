@@ -258,10 +258,11 @@ def submit_answer(
     answer_text: Optional[str] = None,
     answer_type: str = "text",
     audio_data: Optional[Dict] = None,
-    expression_data: Optional[Dict] = None
+    expression_data: Optional[Dict] = None,
+    on_event=None,
 ) -> Dict:
     """Submit answer and get evaluation + next question.
-    
+
     Args:
         db: Database session
         session_id: Interview session ID
@@ -271,17 +272,31 @@ def submit_answer(
         expression_data: Optional. Supports:
             - {"imageData": base64_str}: legacy single-photo mode
             - {"analyses": [...]}: real-time video mode, pre-computed analyses from video stream
+        on_event: Optional callback ``on_event(stage, payload)`` invoked at major phases
+            (received / evaluating / evaluated / planning / action_picked /
+            generating_followup / generating_next / ready). Used by the resume QA
+            UI to surface agent thinking in real time.
     """
     # --- Agentic controller gate (feature flag) ---
     if getattr(settings, "enable_agent_controller", False):
         return _submit_answer_agentic(
-            db, session_id, answer_text, answer_type, audio_data, expression_data
+            db, session_id, answer_text, answer_type, audio_data, expression_data,
+            on_event=on_event,
         )
     # --- End agentic gate; legacy path below ---
+
+    def _emit(stage: str, payload: Optional[Dict] = None) -> None:
+        if on_event is None:
+            return
+        try:
+            on_event(stage, payload or {})
+        except Exception:
+            pass
 
     session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
     if not session or session.status != "active":
         return {"error": "面试会话不存在或已结束"}
+    _emit("received", {"answer_type": answer_type})
     
     # Process answer based on type
     audio_analysis = None
@@ -348,10 +363,20 @@ def submit_answer(
         return {"error": "未找到当前题目"}
     
     # Evaluate answer
+    _emit("evaluating", {"question": asked_q.question_text[:120]})
     evaluation_result = _evaluate_answer_with_fallback(
         question=asked_q.question_text,
         correct_answer=asked_q.correct_answer_text,
         user_answer=answer_text
+    )
+    _emit(
+        "evaluated",
+        {
+            "overall_score": evaluation_result.get("overall_score", 0.0),
+            "scores": evaluation_result.get("scores", {}),
+            "missing_points": evaluation_result.get("missing_points", []),
+            "feedback": evaluation_result.get("feedback", ""),
+        },
     )
     
     # Save evaluation - use upsert pattern with try-except for race conditions
@@ -415,6 +440,7 @@ def submit_answer(
     adaptive_engine = AdaptiveInterviewEngine(db, session)
     
     # Calculate adaptive difficulty
+    _emit("planning", {"current_round": session.current_round})
     new_difficulty = adaptive_engine.calculate_adaptive_difficulty()
     
     # Check if should ask follow-up using adaptive algorithm
@@ -429,9 +455,13 @@ def submit_answer(
     
     if should_end:
         # End interview
+        _emit("action_picked", {"action": "terminate", "reason": end_reason})
+        _emit("ready", {"action": "terminate", "text": end_reason})
         return end_interview(db, session_id)
     
     if should_followup and session.current_round < session.total_rounds:
+        _emit("action_picked", {"action": "follow_up", "reason": followup_reason})
+        _emit("generating_followup", {"reason": followup_reason})
         # Generate follow-up question (LLM 优先，否则模板)
         followup_count = adaptive_engine._count_followups_for_question(asked_q.id)
         followup_content = _generate_followup(
@@ -451,6 +481,7 @@ def submit_answer(
         db.add(interviewer_turn)
         session.current_round += 1
         db.commit()
+        _emit("ready", {"action": "follow_up", "text": followup_content})
         
         return {
             "evaluation": evaluation_result,
@@ -460,6 +491,8 @@ def submit_answer(
             "followup_reason": followup_reason
         }
     elif is_resume_qa_session(session) and asked_q.qbank_id is None:
+        _emit("action_picked", {"action": "terminate", "reason": "resume_qa_completed"})
+        _emit("ready", {"action": "terminate", "text": "resume_qa_completed"})
         end_result = end_interview(db, session_id)
         end_result.update(
             {
@@ -471,10 +504,14 @@ def submit_answer(
         )
         return end_result
     else:
+        _emit("action_picked", {"action": "ask_next", "reason": "proceeding to next question"})
+        _emit("generating_next", {"difficulty": new_difficulty})
         # Move to next question
         # Double check if should end (adaptive check)
         should_end, end_reason = adaptive_engine.should_end_interview()
         if should_end:
+            _emit("action_picked", {"action": "terminate", "reason": end_reason})
+            _emit("ready", {"action": "terminate", "text": end_reason})
             return end_interview(db, session_id)
         
         # Get resume skills and missing chapters
@@ -512,6 +549,8 @@ def submit_answer(
         
         if not next_question:
             # No more questions, end interview
+            _emit("action_picked", {"action": "terminate", "reason": "no_questions_available"})
+            _emit("ready", {"action": "terminate", "text": "no_questions_available"})
             return end_interview(db, session_id)
         
         # Create asked question
@@ -543,6 +582,7 @@ def submit_answer(
         
         session.current_round += 1
         db.commit()
+        _emit("ready", {"action": "ask_next", "text": next_question.question})
         
         return {
             "evaluation": evaluation_result,
@@ -685,6 +725,7 @@ def _submit_answer_agentic(
     answer_type: str = "text",
     audio_data: Optional[Dict] = None,
     expression_data: Optional[Dict] = None,
+    on_event=None,
 ) -> Dict:
     """Agentic version of submit_answer.
 
@@ -692,9 +733,19 @@ def _submit_answer_agentic(
     DB writes (InterviewTurn, AskedQuestion, Evaluation) and return
     format so the Streamlit UI remains unaffected.
     """
+    def _emit(stage: str, payload: Optional[Dict] = None) -> None:
+        if on_event is None:
+            return
+        try:
+            on_event(stage, payload or {})
+        except Exception:
+            pass
+
     session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
     if not session or session.status != "active":
         return {"error": "面试会话不存在或已结束"}
+
+    _emit("received", {"answer_type": answer_type})
 
     # --- Pre-processing (identical to legacy) ---
     audio_analysis = None
@@ -742,14 +793,22 @@ def _submit_answer_agentic(
     from backend.agent.controller import AgentController
 
     agent = AgentController(db, session)
+    _emit("evaluating", {"question": asked_q.question_text[:120]})
     agent_result = agent.process_answer(
         answer_text=answer_text or "",
         asked_question=asked_q,
         audio_analysis=audio_analysis,
         expression_analysis=expression_analysis,
+        on_event=_emit,
     )
 
     evaluation_result = agent_result.get("evaluation", {})
+    _emit("evaluated", {
+        "overall_score": evaluation_result.get("overall_score", 0.0),
+        "scores": evaluation_result.get("scores", {}),
+        "missing_points": evaluation_result.get("missing_points", []),
+        "feedback": evaluation_result.get("feedback", ""),
+    })
 
     # --- Save evaluation (same upsert pattern as legacy) ---
     from sqlalchemy.exc import IntegrityError as _IntegrityError
@@ -795,6 +854,7 @@ def _submit_answer_agentic(
     agent_action = agent_result.get("_agent_action", "terminate")
 
     if agent_action == "terminate":
+        _emit("ready", {"action": "terminate", "text": agent_result.get("_agent_reason", "")})
         end_result = end_interview(db, session_id)
         end_result.update(
             {
@@ -814,6 +874,7 @@ def _submit_answer_agentic(
         db.add(interviewer_turn)
         session.current_round += 1
         db.commit()
+        _emit("ready", {"action": "follow_up", "text": followup_content})
         return {
             "evaluation": evaluation_result,
             "followup": True,
@@ -848,6 +909,7 @@ def _submit_answer_agentic(
         db.add(interviewer_turn)
         session.current_round += 1
         db.commit()
+        _emit("ready", {"action": "ask_resume_next", "text": next_resume_q.question})
         return {
             "evaluation": evaluation_result,
             "followup": False,
@@ -887,6 +949,7 @@ def _submit_answer_agentic(
     db.add(interviewer_turn)
     session.current_round += 1
     db.commit()
+    _emit("ready", {"action": "ask_next", "text": next_q_obj.question})
 
     return {
         "evaluation": evaluation_result,
@@ -895,4 +958,3 @@ def _submit_answer_agentic(
         "interviewer_message": interviewer_turn.content,
         "round": session.current_round,
     }
-

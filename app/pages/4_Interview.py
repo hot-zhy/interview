@@ -31,10 +31,11 @@ from app.components.styles import inject_global_styles
 from app.i18n import t
 from backend.core.config import settings
 from backend.db.base import get_db
-from backend.db.models import AskedQuestion, Evaluation, InterviewSession, Resume
+from backend.db.models import AskedQuestion, Evaluation, InterviewSession, InterviewTurn, Resume
 from backend.services.interview_engine import (
     create_session,
     get_session_turns,
+    is_resume_qa_session,
     start_interview,
     submit_answer,
 )
@@ -179,6 +180,83 @@ def _inject_interview_styles():
         @keyframes pulseDot {
             0%, 100% { opacity: 0.55; transform: scale(0.92); }
             50% { opacity: 1; transform: scale(1); }
+        }
+        .thinking-detail {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(8, 145, 178, 0.20);
+            display: grid;
+            gap: 8px;
+        }
+        .thinking-row {
+            display: grid;
+            grid-template-columns: 72px 1fr;
+            gap: 10px;
+            align-items: center;
+            font-size: 0.82rem;
+            color: #1e293b;
+        }
+        .thinking-label {
+            color: #64748b;
+            font-weight: 700;
+        }
+        .thinking-score {
+            font-weight: 800;
+            color: #0f766e;
+            font-size: 1rem;
+        }
+        .thinking-chips {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        .thinking-chip {
+            background: rgba(8, 145, 178, 0.10);
+            color: #0f766e;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            font-weight: 650;
+        }
+        .thinking-tags {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .thinking-tag {
+            background: rgba(244, 114, 182, 0.10);
+            color: #be185d;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.74rem;
+        }
+        .thinking-feedback {
+            color: #334155;
+            line-height: 1.5;
+        }
+        .thinking-action {
+            color: #1d4ed8;
+            font-weight: 700;
+        }
+        .thinking-timeline ul {
+            margin: 4px 0 0;
+            padding-left: 0;
+            list-style: none;
+            display: grid;
+            gap: 3px;
+        }
+        .thinking-timeline li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.74rem;
+            color: #475569;
+            border-left: 2px solid rgba(37, 99, 235, 0.40);
+            padding-left: 8px;
+        }
+        .timeline-elapsed {
+            color: #94a3b8;
+            font-variant-numeric: tabular-nums;
         }
         .followup-chip {
             display: inline-flex;
@@ -344,6 +422,7 @@ def _analysis_steps_bubble_html(
     subtitle: str = "我正在分析你的回答，请稍等。",
     active_step: int = 1,
     completed: bool = False,
+    extra_detail_html: str = "",
 ) -> str:
     steps = [
         "收到回答并写入本轮记录",
@@ -373,6 +452,7 @@ def _analysis_steps_bubble_html(
         '<div class="chat-bubble system">'
         f'<div class="analysis-title">{html.escape(subtitle)}</div>'
         f'<div class="analysis-steps">{"".join(rows)}</div>'
+        f'{extra_detail_html}'
         '</div>'
     )
     return processing
@@ -387,6 +467,147 @@ def _build_persistent_analysis_flow(result: dict) -> str:
         f"已整理面试官评价，并决定下一步：{action}。",
     ]
     return "AI 分析流程：\n" + "\n".join(f"✓ {step}" for step in steps)
+
+
+# ---------------------------------------------------------------
+# 简历专项问答：实时 agent 思考过程渲染
+# ---------------------------------------------------------------
+
+_STAGE_TO_STEP = {
+    "received": 1,
+    "evaluating": 2,
+    "evaluated": 2,
+    "planning": 3,
+    "action_picked": 3,
+    "generating_followup": 4,
+    "generating_next": 4,
+    "ready": 4,
+}
+
+_STAGE_TITLE = {
+    "received": "已接收回答，开始分析",
+    "evaluating": "正在调用 LLM 对回答多维评分",
+    "evaluated": "评分完成",
+    "planning": "正在判断追问还是切下一题",
+    "action_picked": "决策完成",
+    "generating_followup": "正在结合简历证据生成针对性追问",
+    "generating_next": "正在沿着简历下一条证据生成新问题",
+    "ready": "已就绪",
+}
+
+_ACTION_LABEL = {
+    "follow_up": "决定追问",
+    "ask_next": "切换下一题",
+    "ask_resume_next": "进入下一组简历证据",
+    "terminate": "结束本组简历专项问答",
+}
+
+
+def _format_thinking_detail(state: dict) -> str:
+    """Render the rich detail block under the step list."""
+    rows = []
+    eval_payload = state.get("evaluation_payload") or {}
+    if eval_payload:
+        overall = float(eval_payload.get("overall_score") or 0.0)
+        scores = eval_payload.get("scores") or {}
+        missing = eval_payload.get("missing_points") or []
+        feedback = (eval_payload.get("feedback") or "").strip()
+        dim_html = ""
+        if scores:
+            chips = []
+            for key, label in [
+                ("correctness", "正确"),
+                ("depth", "深度"),
+                ("clarity", "清晰"),
+                ("practicality", "实用"),
+                ("tradeoffs", "权衡"),
+            ]:
+                if key in scores:
+                    chips.append(
+                        f'<span class="thinking-chip">{label} {float(scores.get(key, 0)):.0%}</span>'
+                    )
+            if chips:
+                dim_html = '<div class="thinking-chips">' + "".join(chips) + "</div>"
+        rows.append(
+            '<div class="thinking-row">'
+            f'<span class="thinking-label">综合评分</span>'
+            f'<span class="thinking-score">{overall:.0%}</span>'
+            f'{dim_html}'
+            '</div>'
+        )
+        if missing:
+            tags = "".join(
+                f'<span class="thinking-tag">{html.escape(str(point))}</span>'
+                for point in missing[:4]
+            )
+            rows.append(
+                '<div class="thinking-row">'
+                '<span class="thinking-label">缺失要点</span>'
+                f'<span class="thinking-tags">{tags}</span>'
+                '</div>'
+            )
+        if feedback:
+            rows.append(
+                '<div class="thinking-row">'
+                '<span class="thinking-label">面试官反馈</span>'
+                f'<span class="thinking-feedback">{html.escape(feedback[:180])}</span>'
+                '</div>'
+            )
+
+    action = state.get("action")
+    reason = state.get("action_reason")
+    if action:
+        rows.append(
+            '<div class="thinking-row">'
+            '<span class="thinking-label">下一步</span>'
+            f'<span class="thinking-action">{_ACTION_LABEL.get(action, action)}</span>'
+            '</div>'
+        )
+    if reason:
+        rows.append(
+            '<div class="thinking-row">'
+            '<span class="thinking-label">决策依据</span>'
+            f'<span class="thinking-feedback">{html.escape(str(reason)[:160])}</span>'
+            '</div>'
+        )
+
+    timeline = state.get("timeline") or []
+    if timeline:
+        items = "".join(
+            f'<li><span class="timeline-stage">{html.escape(item.get("title", ""))}</span>'
+            f'<span class="timeline-elapsed">{item.get("elapsed", "")}</span></li>'
+            for item in timeline
+        )
+        rows.append(
+            f'<div class="thinking-timeline"><div class="thinking-label">流程日志</div><ul>{items}</ul></div>'
+        )
+
+    if not rows:
+        return ""
+    return '<div class="thinking-detail">' + "".join(rows) + "</div>"
+
+
+def _render_thinking_state(
+    placeholder,
+    candidate_text: str,
+    state: dict,
+    completed: bool = False,
+) -> None:
+    stage = state.get("stage") or "received"
+    active_step = _STAGE_TO_STEP.get(stage, 1)
+    title = "面试官 · AI 分析中" + (("（已完成）") if completed else "")
+    subtitle = _STAGE_TITLE.get(stage, "正在分析你的回答…")
+    placeholder.markdown(
+        _candidate_html(candidate_text)
+        + _analysis_steps_bubble_html(
+            title=title,
+            subtitle=subtitle,
+            active_step=active_step,
+            completed=completed,
+            extra_detail_html=_format_thinking_detail(state),
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def _scroll_chat_to_bottom():
@@ -456,23 +677,42 @@ def _build_analysis_summary(result: dict) -> str:
 
 
 def _build_saved_analysis_notes(db, session_id: int):
-    asked_questions = (
-        db.query(AskedQuestion)
+    candidate_turns = (
+        db.query(InterviewTurn)
+        .filter(
+            InterviewTurn.session_id == session_id,
+            InterviewTurn.role == "candidate",
+        )
+        .order_by(InterviewTurn.created_at)
+        .all()
+    )
+    evaluations = (
+        db.query(Evaluation)
+        .join(AskedQuestion)
         .filter(AskedQuestion.session_id == session_id)
-        .order_by(AskedQuestion.created_at)
+        .order_by(Evaluation.created_at)
         .all()
     )
     notes = []
-    candidate_idx = 0
-    for asked_q in asked_questions:
-        evaluation = (
-            db.query(Evaluation)
-            .filter(Evaluation.asked_question_id == asked_q.id)
-            .first()
-        )
-        if not evaluation:
-            continue
-        candidate_idx += 1
+    used_candidate_indexes = set()
+
+    def _anchor_for_evaluation(evaluation: Evaluation, fallback_idx: int) -> int:
+        answer = (evaluation.answer_text or "").strip()
+        for idx, turn in enumerate(candidate_turns, start=1):
+            if idx in used_candidate_indexes:
+                continue
+            content = (turn.content or "").strip()
+            if answer and (content == answer or _normalize_candidate_display_content(answer) == content):
+                used_candidate_indexes.add(idx)
+                return idx
+        for idx, _turn in enumerate(candidate_turns, start=1):
+            if idx not in used_candidate_indexes:
+                used_candidate_indexes.add(idx)
+                return idx
+        return fallback_idx
+
+    for fallback_idx, evaluation in enumerate(evaluations, start=1):
+        candidate_idx = _anchor_for_evaluation(evaluation, fallback_idx)
         result = {
             "evaluation": {
                 "scores": evaluation.scores_json or {},
@@ -489,6 +729,15 @@ def _build_saved_analysis_notes(db, session_id: int):
             subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
             active_step=4,
             completed=True,
+            extra_detail_html=_format_thinking_detail(
+                {
+                    "stage": "ready",
+                    "evaluation_payload": result["evaluation"],
+                    "action": "follow_up" if result.get("followup") else "ask_next",
+                    "action_reason": result.get("followup_reason", ""),
+                    "timeline": [],
+                }
+            ),
         )
         summary = _build_analysis_summary(result)
         notes.append(
@@ -528,11 +777,37 @@ def _submit_and_update(
     live_placeholder,
     display_answer: str,
     audio_data: Optional[dict] = None,
+    is_resume_qa: bool = False,
 ):
-    live_placeholder.markdown(
-        _analysis_progress_html(display_answer, active_step=2),
-        unsafe_allow_html=True,
-    )
+    import time as _time_mod
+
+    thinking_state = {
+        "stage": "received",
+        "evaluation_payload": None,
+        "action": None,
+        "action_reason": None,
+        "timeline": [],
+    }
+    start_ts = _time_mod.time()
+
+    def _stage_label(stage: str) -> str:
+        return _STAGE_TITLE.get(stage, stage)
+
+    def _on_event(stage: str, payload: dict) -> None:
+        elapsed = f"{_time_mod.time() - start_ts:.1f}s"
+        thinking_state["stage"] = stage
+        thinking_state.setdefault("timeline", []).append({
+            "title": _stage_label(stage),
+            "elapsed": elapsed,
+        })
+        if stage == "evaluated":
+            thinking_state["evaluation_payload"] = payload
+        elif stage == "action_picked":
+            thinking_state["action"] = payload.get("action")
+            thinking_state["action_reason"] = payload.get("reason")
+        _render_thinking_state(live_placeholder, display_answer, thinking_state)
+
+    _render_thinking_state(live_placeholder, display_answer, thinking_state)
     expr_data = _collect_expression_payload()
     result = submit_answer(
         db,
@@ -541,6 +816,7 @@ def _submit_and_update(
         answer_type=answer_type,
         audio_data=audio_data,
         expression_data=expr_data,
+        on_event=_on_event,
     )
 
     if "error" in result:
@@ -566,6 +842,7 @@ def _submit_and_update(
             subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
             active_step=4,
             completed=True,
+            extra_detail_html=_format_thinking_detail(thinking_state),
         ),
         anchor_candidate_idx,
         render_html=True,
@@ -579,16 +856,8 @@ def _submit_and_update(
             anchor_candidate_idx,
         )
 
-    live_placeholder.markdown(
-        _candidate_html(display_answer)
-        + _analysis_steps_bubble_html(
-            title="面试官 · AI 分析中（已完成）",
-            subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
-            active_step=4,
-            completed=True,
-        )
-        + _system_html("面试官 · AI 分析与评价", analysis_summary),
-        unsafe_allow_html=True,
+    _render_thinking_state(
+        live_placeholder, display_answer, thinking_state, completed=True
     )
 
     ev = result.get("evaluation", {})
@@ -713,6 +982,8 @@ def main():
                 st.error(result["error"])
                 return
             st.rerun()
+
+    resume_qa_session = is_resume_qa_session(session)
 
     progress_ratio = session.current_round / session.total_rounds if session.total_rounds else 0
     remain = max(session.total_rounds - session.current_round, 0)
@@ -844,6 +1115,7 @@ def main():
                         candidate_count + 1,
                         live_processing_placeholder,
                         answer_clean,
+                        is_resume_qa=resume_qa_session,
                     )
         else:
             st.caption(t("interview.audio_tip"))
@@ -886,6 +1158,7 @@ def main():
                             live_processing_placeholder,
                             pending_text,
                             audio_data=audio_data,
+                            is_resume_qa=resume_qa_session,
                         )
             st.session_state.avatar_state = "listening"
 
