@@ -33,7 +33,7 @@ engine_kwargs = {}
 if "sqlite" in settings.database_url:
     database_url = _resolve_sqlite_url(settings.database_url)
     # Increase lock wait time and avoid connection reuse locks in Streamlit reruns.
-    connect_args = {"check_same_thread": False, "timeout": 30}
+    connect_args = {"check_same_thread": False, "timeout": 60}
     engine_kwargs["poolclass"] = NullPool
 elif "mysql" in settings.database_url:
     # MySQL connection arguments
@@ -58,7 +58,7 @@ if database_url.startswith("sqlite"):
         # Better concurrent read/write behavior for local app usage.
         cursor.execute("PRAGMA journal_mode=WAL;")
         cursor.execute("PRAGMA synchronous=NORMAL;")
-        cursor.execute("PRAGMA busy_timeout=5000;")
+        cursor.execute("PRAGMA busy_timeout=60000;")
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

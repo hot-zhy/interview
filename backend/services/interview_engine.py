@@ -1,8 +1,9 @@
 """Interview engine - state machine for interview flow."""
 import json
+import time
 from typing import Optional, Dict, List
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from datetime import datetime
 from backend.db.models import (
     InterviewSession, InterviewTurn, AskedQuestion, Evaluation,
@@ -89,19 +90,29 @@ def create_session(
     stored_track = track
     if interview_mode == "resume_qa" and resume_id and not stored_track.endswith(RESUME_QA_SUFFIX):
         stored_track = f"{track}{RESUME_QA_SUFFIX}"
-    session = InterviewSession(
-        user_id=user_id,
-        resume_id=resume_id,
-        track=stored_track,
-        level=level,
-        total_rounds=total_rounds,
-        current_round=0,
-        status="active"
-    )
-    db.add(session)
-    db.commit()
-    db.refresh(session)
-    return session
+    last_error = None
+    for attempt in range(4):
+        session = InterviewSession(
+            user_id=user_id,
+            resume_id=resume_id,
+            track=stored_track,
+            level=level,
+            total_rounds=total_rounds,
+            current_round=0,
+            status="active"
+        )
+        try:
+            db.add(session)
+            db.commit()
+            db.refresh(session)
+            return session
+        except OperationalError as exc:
+            db.rollback()
+            last_error = exc
+            if "database is locked" not in str(exc).lower() or attempt == 3:
+                raise
+            time.sleep(0.4 * (attempt + 1))
+    raise last_error
 
 
 def start_interview(db: Session, session_id: int) -> Optional[Dict]:

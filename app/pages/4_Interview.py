@@ -1041,6 +1041,7 @@ def main():
                     else:
                         st.rerun()
             except Exception as exc:
+                db.rollback()
                 st.error(f"Error: {exc}")
         return
 
