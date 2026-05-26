@@ -211,6 +211,21 @@ def _inject_interview_styles():
             color: #64748b;
             font-weight: 700;
         }
+        .thinking-row.conclusion {
+            align-items: start;
+            background: rgba(37, 99, 235, 0.06);
+            border: 1px solid rgba(37, 99, 235, 0.14);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+        .thinking-row.conclusion .thinking-label {
+            color: #1d4ed8;
+        }
+        .thinking-conclusion {
+            color: #1e293b;
+            font-weight: 720;
+            line-height: 1.5;
+        }
         .thinking-score {
             font-weight: 800;
             color: #0f766e;
@@ -396,15 +411,6 @@ def _analysis_turn_html(content: str) -> str:
             }
         ),
     )
-    summary = _build_analysis_summary(
-        {
-            "evaluation": evaluation,
-            "followup": action == "follow_up",
-            "followup_reason": reason,
-        }
-    )
-    if summary:
-        flow_html += _system_html("面试官 · AI 分析与评价", summary)
     return flow_html
 
 
@@ -412,6 +418,7 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
     notes_by_anchor = {}
     unanchored_notes = []
     saved_notes = saved_notes or []
+    has_analysis_turns = any(turn.get("role") == "analysis" for turn in turns)
     saved_anchors = {
         note.get("anchor_candidate_idx")
         for note in saved_notes
@@ -424,7 +431,7 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
         else:
             unanchored_notes.append(note)
 
-    for note in _get_chat_notes(session_id):
+    for note in ([] if has_analysis_turns else _get_chat_notes(session_id)):
         anchor = note.get("anchor_candidate_idx")
         if (
             anchor in saved_anchors
@@ -444,12 +451,7 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
             for note in notes_by_anchor.get(candidate_idx, []):
                 _render_note(note)
         elif turn["role"] == "analysis":
-            has_frontend_flow = any(
-                str(note.get("token", "")).endswith(":flow")
-                for note in notes_by_anchor.get(candidate_idx, [])
-            )
-            if not has_frontend_flow:
-                st.markdown(_analysis_turn_html(turn["content"]), unsafe_allow_html=True)
+            st.markdown(_analysis_turn_html(turn["content"]), unsafe_allow_html=True)
         else:
             _bubble(t("interview.interviewer"), turn["content"], "interviewer")
 
@@ -563,11 +565,23 @@ def _format_thinking_detail(state: dict) -> str:
     """Render the rich detail block under the step list."""
     rows = []
     eval_payload = state.get("evaluation_payload") or {}
+    action = state.get("action")
+    reason = state.get("action_reason")
     if eval_payload:
         overall = float(eval_payload.get("overall_score") or 0.0)
         scores = eval_payload.get("scores") or {}
         missing = eval_payload.get("missing_points") or []
         feedback = (eval_payload.get("feedback") or "").strip()
+        if action:
+            conclusion = f"本轮综合评分 {overall:.0%}，下一步：{_ACTION_LABEL.get(action, action)}。"
+            if reason:
+                conclusion += f"依据：{str(reason)[:120]}"
+            rows.append(
+                '<div class="thinking-row conclusion">'
+                '<span class="thinking-label">结论</span>'
+                f'<span class="thinking-conclusion">{html.escape(conclusion)}</span>'
+                '</div>'
+            )
         dim_html = ""
         if scores:
             chips = []
@@ -610,8 +624,6 @@ def _format_thinking_detail(state: dict) -> str:
                 '</div>'
             )
 
-    action = state.get("action")
-    reason = state.get("action_reason")
     if action:
         rows.append(
             '<div class="thinking-row">'
@@ -918,30 +930,6 @@ def _submit_and_update(
         st.session_state["_pending_candidate_message"] = {}
         st.error(result["error"])
         return
-
-    analysis_summary = _build_analysis_summary(result)
-    _remember_chat_note(
-        session_id,
-        f"{token}:flow",
-        "面试官 · AI 分析中（已完成）",
-        _analysis_steps_bubble_html(
-            title="面试官 · AI 分析中（已完成）",
-            subtitle="本轮分析流程已完成，以下步骤会保留在对话中。",
-            active_step=4,
-            completed=True,
-            extra_detail_html=_format_thinking_detail(thinking_state),
-        ),
-        anchor_candidate_idx,
-        render_html=True,
-    )
-    if analysis_summary:
-        _remember_chat_note(
-            session_id,
-            f"{token}:analysis",
-            "面试官 · AI 分析与评价",
-            analysis_summary,
-            anchor_candidate_idx,
-        )
 
     _render_thinking_state(
         live_placeholder, display_answer, thinking_state, completed=True, animate=False
