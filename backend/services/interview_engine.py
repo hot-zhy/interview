@@ -397,7 +397,7 @@ def submit_answer(
     # Get current asked question
     asked_q = db.query(AskedQuestion).filter(
         AskedQuestion.session_id == session_id
-    ).order_by(AskedQuestion.created_at.desc()).first()
+    ).order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc()).first()
     
     if not asked_q:
         return {"error": "未找到当前题目"}
@@ -606,6 +606,84 @@ def submit_answer(
             "followup_reason": followup_reason
         }
     elif is_resume_qa_session(session) and asked_q.qbank_id is None:
+        from backend.agent.resume_qa_agent import ResumeQAAgent
+
+        resume_agent = ResumeQAAgent(db, session)
+        completed_resume_questions = resume_agent._completed_resume_questions_count()
+        planned_resume_questions = min(
+            len(resume_agent.probes),
+            session.total_rounds or len(resume_agent.probes),
+        )
+        min_resume_questions = min(planned_resume_questions, max(2, min(3, session.total_rounds or 3)))
+        round_budget = session.total_rounds or planned_resume_questions
+        if session.current_round >= round_budget and completed_resume_questions >= min_resume_questions:
+            _emit(
+                "action_picked",
+                {
+                    "action": "terminate",
+                    "reason": "resume_qa_round_budget_reached_with_enough_evidence",
+                },
+            )
+            _emit("ready", {"action": "terminate", "text": "resume_qa_round_budget_reached_with_enough_evidence"})
+            _record_analysis_turn(
+                db,
+                session_id,
+                evaluation_result,
+                "terminate",
+                "resume_qa_round_budget_reached_with_enough_evidence",
+            )
+            end_result = end_interview(db, session_id)
+            end_result.update(
+                {
+                    "evaluation": evaluation_result,
+                    "followup": False,
+                    "round": session.current_round,
+                    "followup_reason": "resume_qa_round_budget_reached_with_enough_evidence",
+                }
+            )
+            return end_result
+        if completed_resume_questions < planned_resume_questions:
+            _emit("action_picked", {"action": "ask_resume_next", "reason": "resume_qa_needs_more_evidence"})
+            _emit("generating_next", {"mode": "resume_qa", "difficulty": new_difficulty})
+            next_resume_q = resume_agent.next_question_after_current(
+                track=base_track(session.track),
+                difficulty=new_difficulty,
+            )
+            if next_resume_q:
+                next_asked_q = AskedQuestion(
+                    session_id=session_id,
+                    qbank_id=None,
+                    topic=next_resume_q.topic,
+                    difficulty=new_difficulty,
+                    question_text=next_resume_q.question,
+                    correct_answer_text=next_resume_q.reference_answer,
+                )
+                db.add(next_asked_q)
+                _record_analysis_turn(
+                    db,
+                    session_id,
+                    evaluation_result,
+                    "ask_resume_next",
+                    "resume_qa_needs_more_evidence",
+                )
+                interviewer_turn = InterviewTurn(
+                    session_id=session_id,
+                    role="interviewer",
+                    content=f"我们继续围绕你的简历往下核验。\n\n{next_resume_q.question}",
+                )
+                db.add(interviewer_turn)
+                session.current_round += 1
+                db.commit()
+                _emit("ready", {"action": "ask_resume_next", "text": next_resume_q.question})
+                return {
+                    "evaluation": evaluation_result,
+                    "followup": False,
+                    "next_question": next_resume_q.question,
+                    "interviewer_message": interviewer_turn.content,
+                    "round": session.current_round,
+                    "followup_reason": "resume_qa_needs_more_evidence",
+                }
+
         _emit("action_picked", {"action": "terminate", "reason": "resume_qa_completed"})
         _emit("ready", {"action": "terminate", "text": "resume_qa_completed"})
         _record_analysis_turn(
@@ -922,7 +1000,7 @@ def _submit_answer_agentic(
     # Current asked question
     asked_q = db.query(AskedQuestion).filter(
         AskedQuestion.session_id == session_id
-    ).order_by(AskedQuestion.created_at.desc()).first()
+    ).order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc()).first()
     if not asked_q:
         return {"error": "未找到当前题目"}
 

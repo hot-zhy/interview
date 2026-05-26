@@ -271,6 +271,26 @@ class AgentController:
             "feedback": eval_result.feedback,
             "missing_points": eval_result.missing_points,
         }
+        completed_resume_questions = resume_agent._completed_resume_questions_count()
+        planned_resume_questions = min(
+            len(resume_agent.probes),
+            self.session.total_rounds or len(resume_agent.probes),
+        )
+        min_resume_questions = min(planned_resume_questions, max(2, min(3, self.session.total_rounds or 3)))
+        round_budget = self.session.total_rounds or planned_resume_questions
+
+        if completed_resume_questions >= planned_resume_questions:
+            return ActionDecision(
+                action=ActionType.TERMINATE,
+                reason="resume QA planned rounds completed",
+            )
+
+        if self.session.current_round >= round_budget and completed_resume_questions >= min_resume_questions:
+            return ActionDecision(
+                action=ActionType.TERMINATE,
+                reason="resume QA round budget reached with enough evidence",
+            )
+
         followup_count = self._count_resume_followups(asked_question)
         should_follow, reason = resume_agent.should_follow_up(
             asked_question=asked_question,
@@ -291,10 +311,11 @@ class AgentController:
                 followup_text=followup_text,
             )
 
-        if self.session.current_round >= (self.session.total_rounds or 1):
+        if completed_resume_questions < min_resume_questions:
             return ActionDecision(
-                action=ActionType.TERMINATE,
-                reason="resume QA planned rounds completed",
+                action=ActionType.ASK_NEXT,
+                reason="resume_qa_needs_more_evidence",
+                new_difficulty=self.adaptive_engine.calculate_adaptive_difficulty(),
             )
 
         return ActionDecision(

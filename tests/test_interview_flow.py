@@ -2,7 +2,8 @@
 import pytest
 from sqlalchemy.orm import Session
 from backend.db.base import Base, engine, SessionLocal
-from backend.db.models import User, InterviewSession, QuestionBank, Resume, AskedQuestion, InterviewTurn
+from backend.db.models import User, InterviewSession, QuestionBank, Resume, AskedQuestion, InterviewTurn, Evaluation
+from backend.services.adaptive_interview import AdaptiveInterviewEngine
 from backend.services.interview_engine import create_session, start_interview, submit_answer, is_resume_qa_session, end_interview
 from backend.services.report_generator import generate_report
 from backend.core.security import get_password_hash
@@ -221,6 +222,46 @@ def test_report_contains_visual_analytics_without_llm(db_session: Session, test_
     assert summary["per_question_scores"]
 
 
+def test_followups_do_not_end_interview_before_enough_evidence(db_session: Session, test_user):
+    """Many prompt turns should not stop the interview if only one question has been evaluated."""
+    session = create_session(
+        db=db_session,
+        user_id=test_user.id,
+        track="Java Backend",
+        level=3,
+        total_rounds=5,
+    )
+    session.current_round = 5
+    asked = AskedQuestion(
+        session_id=session.id,
+        qbank_id=None,
+        topic="Java基础",
+        difficulty=3,
+        question_text="What is JVM?",
+        correct_answer_text="JVM runs Java bytecode and manages memory.",
+    )
+    db_session.add(asked)
+    db_session.flush()
+    db_session.add(
+        Evaluation(
+            asked_question_id=asked.id,
+            answer_text="JVM runs bytecode.",
+            scores_json={"correctness": 0.6, "depth": 0.4, "clarity": 0.6, "practicality": 0.3, "tradeoffs": 0.2},
+            overall_score=0.45,
+            feedback_text="partial",
+            missing_points_json=["memory", "class loading"],
+            next_direction="JVM memory",
+        )
+    )
+    db_session.commit()
+    db_session.refresh(session)
+
+    should_end, reason = AdaptiveInterviewEngine(db_session, session).should_end_interview()
+
+    assert should_end is False
+    assert "最少有效题数" in reason
+
+
 def test_resume_qa_uses_only_resume_probes_until_complete(db_session: Session, test_user, test_questions):
     """Resume-only interview should keep asking resume probes and never enter the question bank."""
     resume = Resume(
@@ -255,18 +296,18 @@ def test_resume_qa_uses_only_resume_probes_until_complete(db_session: Session, t
     asked_q = (
         db_session.query(AskedQuestion)
         .filter(AskedQuestion.session_id == session.id)
-        .order_by(AskedQuestion.created_at.desc())
+        .order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc())
         .first()
     )
     assert asked_q is not None
     assert asked_q.qbank_id is None
 
     result = {}
-    for _ in range(4):
+    for _ in range(8):
         asked_q = (
             db_session.query(AskedQuestion)
             .filter(AskedQuestion.session_id == session.id)
-            .order_by(AskedQuestion.created_at.desc())
+            .order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc())
             .first()
         )
         assert asked_q is not None
@@ -323,7 +364,7 @@ def test_resume_qa_never_falls_back_to_question_bank(db_session: Session, test_u
     asked_q = (
         db_session.query(AskedQuestion)
         .filter(AskedQuestion.session_id == session.id)
-        .order_by(AskedQuestion.created_at.desc())
+        .order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc())
         .first()
     )
     assert asked_q is not None

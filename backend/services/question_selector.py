@@ -533,7 +533,7 @@ def adjust_difficulty(
     # Get last evaluation
     last_asked = db.query(AskedQuestion).filter(
         AskedQuestion.session_id == session_id
-    ).order_by(AskedQuestion.created_at.desc()).first()
+    ).order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc()).first()
     
     if not last_asked or not last_asked.evaluation:
         return current_difficulty

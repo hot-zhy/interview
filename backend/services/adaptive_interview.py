@@ -109,19 +109,21 @@ class AdaptiveInterviewEngine:
         if not evaluations:
             return False, "尚无评估结果"
         
-        current = self.session.current_round
+        current = int(self.session.current_round or 0)
+        evidence_count = len(evaluations)
         
-        # 1. 硬上限：用户设置的轮数
-        if current >= self.user_total_rounds:
-            return True, f"已达到设定轮数（{self.user_total_rounds}轮）"
+        # 1. Hard cap by effective evaluated questions. Follow-ups should not
+        # prematurely exhaust the interview budget.
+        if evidence_count >= self.user_total_rounds:
+            return True, f"已达到设定有效题数（{self.user_total_rounds}题）"
         
-        # 2. 自适应上限
-        if current >= self.max_rounds:
-            return True, f"已达到最大轮次（{self.max_rounds}轮）"
+        # 2. Safety cap by total prompts, but only after enough evidence exists.
+        if current >= self.max_rounds and evidence_count >= max(2, self.min_rounds - 1):
+            return True, f"已达到安全交互上限（{self.max_rounds}轮）"
         
-        # 3. 未达最少轮次，不提前结束
-        if current < self.min_rounds:
-            return False, f"未达最少轮次（{self.min_rounds}轮）"
+        # 3. Do not end early before we have enough distinct evaluated questions.
+        if evidence_count < self.min_rounds:
+            return False, f"未达最少有效题数（{self.min_rounds}题）"
         
         # 4. 计算表现指标
         scores = [float(e.overall_score) for e in evaluations]
@@ -143,7 +145,7 @@ class AdaptiveInterviewEngine:
         if bool(getattr(settings, "enable_termination_policy_agent", False)):
             recent_improvement = scores[-1] - scores[-2] if len(scores) >= 2 else 0.0
             termination_state = TerminationPolicyState(
-                round_idx=int(current),
+                round_idx=int(evidence_count),
                 total_rounds=max(1, int(self.user_total_rounds)),
                 avg_score=float(avg_score),
                 recent_avg_score=float(recent_avg),
@@ -156,22 +158,23 @@ class AdaptiveInterviewEngine:
             action, reason = choose_termination_action(termination_state)
             if action == TerminationAction.TERMINATE:
                 return True, (
-                    f"策略判定结束（{reason}，当前{current}轮，"
+                    f"策略判定结束（{reason}，当前{evidence_count}个有效题，"
                     f"均分{avg_score:.2f}，最近均分{recent_avg:.2f}）"
                 )
             return False, (
-                f"策略判定继续（{reason}，当前{current}轮，"
+                f"策略判定继续（{reason}，当前{evidence_count}个有效题，"
                 f"均分{avg_score:.2f}，最近均分{recent_avg:.2f}）"
             )
 
         # 6. 兼容旧逻辑（仅在策略关闭时生效）
-        if avg_score >= 0.85 and recent_avg >= 0.85 and std_dev < 0.15:
+        enough_early_stop_evidence = evidence_count >= max(self.min_rounds, 4)
+        if enough_early_stop_evidence and avg_score >= 0.85 and recent_avg >= 0.85 and std_dev < 0.15:
             return True, f"表现优秀且稳定（平均分{avg_score:.2f}），提前结束"
-        if avg_score < 0.4 and recent_avg < 0.4:
+        if enough_early_stop_evidence and avg_score < 0.4 and recent_avg < 0.4:
             return True, f"表现较差且无改善（平均分{avg_score:.2f}），结束面试"
-        if std_dev < 0.2 and difficulty_range >= 2 and chapter_coverage >= 3 and recent_avg >= 0.7:
+        if enough_early_stop_evidence and std_dev < 0.2 and difficulty_range >= 2 and chapter_coverage >= 3 and recent_avg >= 0.7:
             return True, f"表现稳定、覆盖充分（平均分{recent_avg:.2f}），结束面试"
-        return False, f"继续面试（当前{current}轮，平均分{avg_score:.2f}）"
+        return False, f"继续面试（当前{evidence_count}个有效题，平均分{avg_score:.2f}）"
     
     def calculate_adaptive_difficulty(self) -> int:
         """
@@ -187,7 +190,7 @@ class AdaptiveInterviewEngine:
         # 获取最近的评估
         recent_asked = self.db.query(AskedQuestion).filter(
             AskedQuestion.session_id == self.session.id
-        ).order_by(AskedQuestion.created_at.desc()).limit(self.window_size).all()
+        ).order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc()).limit(self.window_size).all()
         
         if not recent_asked:
             return self.session.level
@@ -245,7 +248,7 @@ class AdaptiveInterviewEngine:
         """
         recent_asked = self.db.query(AskedQuestion).filter(
             AskedQuestion.session_id == self.session.id
-        ).order_by(AskedQuestion.created_at.desc()).limit(self.window_size).all()
+        ).order_by(AskedQuestion.created_at.desc(), AskedQuestion.id.desc()).limit(self.window_size).all()
 
         if not recent_asked:
             return self.session.level
@@ -354,4 +357,3 @@ class AdaptiveInterviewEngine:
                 return True
         
         return False
-
