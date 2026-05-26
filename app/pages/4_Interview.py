@@ -178,9 +178,19 @@ def _inject_interview_styles():
             font-weight: 750;
             margin-bottom: 7px;
         }
+        .typewriter-caret {
+            display: inline-block;
+            margin-left: 2px;
+            color: #2563eb;
+            animation: caretBlink 0.8s steps(1) infinite;
+        }
         @keyframes pulseDot {
             0%, 100% { opacity: 0.55; transform: scale(0.92); }
             50% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes caretBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
         }
         .thinking-detail {
             margin-top: 12px;
@@ -402,7 +412,6 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
     notes_by_anchor = {}
     unanchored_notes = []
     saved_notes = saved_notes or []
-    has_analysis_turns = any(turn.get("role") == "analysis" for turn in turns)
     saved_anchors = {
         note.get("anchor_candidate_idx")
         for note in saved_notes
@@ -415,7 +424,7 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
         else:
             unanchored_notes.append(note)
 
-    for note in ([] if has_analysis_turns else _get_chat_notes(session_id)):
+    for note in _get_chat_notes(session_id):
         anchor = note.get("anchor_candidate_idx")
         if (
             anchor in saved_anchors
@@ -435,7 +444,12 @@ def _render_chat_timeline(turns, session_id: int, optimistic_candidate: str = ""
             for note in notes_by_anchor.get(candidate_idx, []):
                 _render_note(note)
         elif turn["role"] == "analysis":
-            st.markdown(_analysis_turn_html(turn["content"]), unsafe_allow_html=True)
+            has_frontend_flow = any(
+                str(note.get("token", "")).endswith(":flow")
+                for note in notes_by_anchor.get(candidate_idx, [])
+            )
+            if not has_frontend_flow:
+                st.markdown(_analysis_turn_html(turn["content"]), unsafe_allow_html=True)
         else:
             _bubble(t("interview.interviewer"), turn["content"], "interviewer")
 
@@ -487,10 +501,12 @@ def _analysis_steps_bubble_html(
             f'<span>{html.escape(label)}</span>'
             f'</div>'
         )
+    caret_html = " " if completed else '<span class="typewriter-caret">|</span>'
     processing = (
         f'<div class="chat-role">{html.escape(title)}</div>'
         '<div class="chat-bubble system">'
-        f'<div class="analysis-title">{html.escape(subtitle)}</div>'
+        f'<div class="analysis-title">{html.escape(subtitle)}'
+        f'{caret_html}</div>'
         f'<div class="analysis-steps">{"".join(rows)}</div>'
         f'{extra_detail_html}'
         '</div>'
@@ -632,22 +648,40 @@ def _render_thinking_state(
     candidate_text: str,
     state: dict,
     completed: bool = False,
+    animate: bool = True,
 ) -> None:
+    import time as _time_mod
+
     stage = state.get("stage") or "received"
     active_step = _STAGE_TO_STEP.get(stage, 1)
     title = "面试官 · AI 分析中" + (("（已完成）") if completed else "")
     subtitle = _STAGE_TITLE.get(stage, "正在分析你的回答…")
-    placeholder.markdown(
-        _candidate_html(candidate_text)
-        + _analysis_steps_bubble_html(
-            title=title,
-            subtitle=subtitle,
-            active_step=active_step,
-            completed=completed,
-            extra_detail_html=_format_thinking_detail(state),
-        ),
-        unsafe_allow_html=True,
-    )
+    detail_html = _format_thinking_detail(state)
+
+    def _paint(text: str) -> None:
+        placeholder.markdown(
+            _candidate_html(candidate_text)
+            + _analysis_steps_bubble_html(
+                title=title,
+                subtitle=text,
+                active_step=active_step,
+                completed=completed,
+                extra_detail_html=detail_html,
+            ),
+            unsafe_allow_html=True,
+        )
+
+    last_subtitle = state.get("_rendered_subtitle", "")
+    should_type = animate and not completed and subtitle != last_subtitle
+    if should_type:
+        start_at = len(last_subtitle) if subtitle.startswith(last_subtitle) else 0
+        for idx in range(start_at + 1, len(subtitle) + 1):
+            _paint(subtitle[:idx])
+            _time_mod.sleep(0.012)
+    else:
+        _paint(subtitle)
+    state["_rendered_subtitle"] = subtitle
+    _scroll_chat_to_bottom()
 
 
 def _scroll_chat_to_bottom():
@@ -848,6 +882,7 @@ def _submit_and_update(
     def _on_event(stage: str, payload: dict) -> None:
         elapsed = f"{_time_mod.time() - start_ts:.1f}s"
         thinking_state["stage"] = stage
+        thinking_state["_rendered_subtitle"] = ""
         thinking_state.setdefault("timeline", []).append({
             "title": _stage_label(stage),
             "elapsed": elapsed,
@@ -909,8 +944,9 @@ def _submit_and_update(
         )
 
     _render_thinking_state(
-        live_placeholder, display_answer, thinking_state, completed=True
+        live_placeholder, display_answer, thinking_state, completed=True, animate=False
     )
+    _scroll_chat_to_bottom()
 
     ev = result.get("evaluation", {})
     if ev:

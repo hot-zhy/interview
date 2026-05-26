@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk -F',' 'NR>1 {print $3}' reproduce_results/data/question_bank.csv)",
+      "Bash(awk -F',' 'NR>1 {print $4}' reproduce_results/data/question_bank.csv)"
+    ]
+  }
+}
